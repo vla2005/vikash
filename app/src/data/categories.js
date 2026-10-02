@@ -1,0 +1,31 @@
+export const categoryColors = [
+  { key: 'sage', label: 'Verde', background: '#DCEBDB', foreground: '#51866B' },
+  { key: 'terracotta', label: 'Terracota', background: '#F4D8CD', foreground: '#BD704E' },
+  { key: 'ochre', label: 'Amarelo', background: '#FAEEC9', foreground: '#B68B25' },
+  { key: 'blue', label: 'Azul', background: '#D8E6FF', foreground: '#3C70B7' },
+  { key: 'lavender', label: 'Lilás', background: '#E8DDF2', foreground: '#9672B2' },
+  { key: 'gray', label: 'Cinza', background: '#E6E6E7', foreground: '#747579' },
+  { key: 'mint', label: 'Menta', background: '#D5F1E7', foreground: '#287D63' },
+  { key: 'emerald', label: 'Esmeralda', background: '#C9E9DE', foreground: '#216F53' },
+  { key: 'olive', label: 'Oliva', background: '#E6EACD', foreground: '#727B38' },
+  { key: 'lime', label: 'Lima', background: '#EDF3CE', foreground: '#748428' },
+  { key: 'peach', label: 'Pêssego', background: '#FFE2CD', foreground: '#B97038' },
+  { key: 'orange', label: 'Laranja', background: '#FFDFC0', foreground: '#B96620' },
+  { key: 'coral', label: 'Coral', background: '#FFDCD6', foreground: '#BA6055' },
+  { key: 'rose', label: 'Rosa', background: '#F8DCE9', foreground: '#AC567E' },
+  { key: 'red', label: 'Vermelho', background: '#F5D3D6', foreground: '#B34B58' },
+  { key: 'purple', label: 'Roxo', background: '#E2D7F3', foreground: '#7754A6' },
+  { key: 'cyan', label: 'Ciano', background: '#D4EFF5', foreground: '#367E94' },
+  { key: 'sand', label: 'Areia', background: '#EEDFCC', foreground: '#967653' },
+];
+export const categoryIcons = [
+  ['paw', 'Pets'], ['gift', 'Presente'], ['suitcase', 'Viagem'], ['book', 'Livro'],
+  ['dumbbell', 'Exercício'], ['game', 'Jogos'], ['heart', 'Coração'], ['car', 'Carro'],
+  ['bag', 'Compras'], ['coffee', 'Café'], ['music', 'Música'], ['leaf', 'Natureza'],
+  ['health', 'Saúde'], ['basket', 'Mercado'], ['house', 'Casa'], ['food', 'Alimentação'], ['ticket', 'Lazer'],
+  ['plane', 'Avião'], ['bus', 'Ônibus'], ['train', 'Trem'], ['bike', 'Bicicleta'], ['fuel', 'Combustível'],
+  ['wallet', 'Carteira'], ['card', 'Cartão'], ['bank', 'Banco'], ['briefcase', 'Trabalho'], ['graduation', 'Educação'],
+  ['phone', 'Celular'], ['laptop', 'Computador'], ['wifi', 'Internet'], ['lightbulb', 'Energia'], ['water', 'Água'],
+  ['tools', 'Manutenção'], ['shirt', 'Roupas'], ['baby', 'Bebê'], ['beauty', 'Beleza'],
+];
+export const normalizeCategoryName = name => name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');

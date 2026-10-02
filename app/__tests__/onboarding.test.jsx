@@ -6,6 +6,8 @@ import RegisterScreen from '../src/screens/RegisterScreen';
 import CreateAccountScreen from '../src/screens/CreateAccountScreen';
 import FinancialInstitutionPicker from '../src/components/FinancialInstitutionPicker';
 import LoginScreen from '../src/screens/LoginScreen';
+import useToast from '../src/hooks/useToast';
+jest.mock('../src/hooks/useToast', () => { const showToast = jest.fn(); return { __esModule: true, default: () => ({ showToast }) }; });
 import AccountsSummaryScreen from '../src/screens/AccountsSummaryScreen';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(async () => null), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}) }));
@@ -54,6 +56,7 @@ test('cadastro valido navega para primeira conta sem guardar a senha', async () 
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/auth/register', expect.objectContaining({ body: JSON.stringify({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }) }));
   expect(currentState.session.password).toBeUndefined();
   expect(input('register-password').props.value).toBe('');
+  expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Cadastro realizado!' }));
 });
 test('conta sem descricao nao avanca; conta valida envia JSON autenticado e usa o ID do banco', async () => {
   await renderScreen(<CreateAccountScreen navigation={navigation} route={{ params: {} }} />);

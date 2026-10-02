@@ -8,6 +8,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import Icon from '../components/Icon';
 import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
+import useToast from '../hooks/useToast';
 import { validateLogin } from '../utils/validation';
 import { colors, fontFamily, typography } from '../theme';
 
@@ -18,6 +19,7 @@ export default function LoginScreen({ navigation }) {
   const [recoveryVisible, setRecoveryVisible] = useState(false);
   const passwordRef = useRef(null);
   const { login } = useOnboarding();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [requestError, setRequestError] = useState('');
   const submitting = useRef(false);
@@ -26,15 +28,16 @@ export default function LoginScreen({ navigation }) {
     if (submitting.current) { return; }
     const next = validateLogin({ email, password });
     setErrors(next);
-    if (Object.keys(next).length) { return; }
+    if (Object.keys(next).length) { showToast({ type: 'warn', message: 'Confira os campos destacados antes de entrar.' }); return; }
     submitting.current = true;
     setLoading(true);
     setRequestError('');
     try {
       await login({ email, password });
+      showToast({ type: 'success', title: 'Bem-vindo de volta!', message: 'Login realizado com sucesso.' });
       setPassword('');
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
-    } catch (cause) { setRequestError(cause.message); }
+    } catch (cause) { setRequestError(cause.message); showToast({ type: 'error', title: 'Não foi possível entrar', message: cause.message }); }
     finally { submitting.current = false; setLoading(false); }
   }
 

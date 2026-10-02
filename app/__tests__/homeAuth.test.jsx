@@ -5,6 +5,7 @@ import { OnboardingProvider, useOnboarding } from '../src/contexts/OnboardingCon
 import AppNavigator from '../src/navigation/AppNavigator.web';
 import HomeScreen from '../src/screens/HomeScreen';
 import ProtectedScreen from '../src/navigation/ProtectedScreen';
+jest.mock('../src/hooks/useToast', () => ({ __esModule: true, default: () => ({ showToast: jest.fn() }) }));
 import { loadSession, clearSession } from '../src/services/sessionStorage';
 
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));

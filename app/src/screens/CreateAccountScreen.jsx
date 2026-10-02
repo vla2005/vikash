@@ -9,11 +9,13 @@ import PrimaryButton from '../components/PrimaryButton';
 import Icon from '../components/Icon';
 import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
+import useToast from '../hooks/useToast';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
 import { colors, fontFamily, typography } from '../theme';
 
 export default function CreateAccountScreen({ navigation, route }) {
   const { accounts, saveAccount } = useOnboarding();
+  const { showToast } = useToast();
   const editing = accounts.find(account => account.id === route.params?.accountId);
   const [name, setName] = useState(editing?.name || '');
   const [balance, setBalance] = useState(formatCurrency(editing?.balance || 0));
@@ -31,15 +33,17 @@ export default function CreateAccountScreen({ navigation, route }) {
     if (name.trim().length < 2) { next.name = 'Informe uma descrição para sua conta.'; }
     if (parseCurrency(balance) > 9999999999999.99) { next.balance = 'Informe um saldo menor.'; }
     setErrors(next);
-    if (Object.keys(next).length) { return; }
+    if (Object.keys(next).length) { showToast({ type: 'warn', message: 'Confira os campos destacados para criar sua conta.' }); return; }
     submitting.current = true;
     setLoading(true);
     setRequestError('');
     try {
       await saveAccount({ name: name.trim(), type, balance: parseCurrency(balance), financialInstitutionId: type === 'CARTEIRA' ? null : financialInstitutionId }, editing?.id);
+      showToast({ type: 'success', title: 'Conta criada!', message: 'Sua conta financeira foi salva com sucesso.' });
       navigation.reset({ index: 0, routes: [{ name: 'Accounts' }] });
     } catch (cause) {
       setRequestError(cause.message);
+      showToast({ type: 'error', title: 'Não foi possível salvar a conta', message: cause.message });
       setErrors({ ...cause.fieldErrors, name: cause.fieldErrors?.description });
     } finally { submitting.current = false; setLoading(false); }
   }

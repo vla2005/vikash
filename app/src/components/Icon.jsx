@@ -5,6 +5,7 @@ import { colors } from '../theme';
 export default function Icon({ name, size = 24, color = colors.text }) {
   const props = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shapes = {
+    warning: <><Path d="M12 3L2 21h20zM12 9v5" {...props} /><Circle cx="12" cy="17.5" r="1" fill={color} /></>,
     home: <><Path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1z" {...props} /></>,
     statement: <><Path d="M5 3h10l4 4v14H5zM15 3v5h4M8 11h8M8 14h8M8 17h5" {...props} /></>,
     categories: <><Rect x="3" y="3" width="7" height="7" rx="2" {...props} /><Rect x="14" y="3" width="7" height="7" rx="2" {...props} /><Rect x="3" y="14" width="7" height="7" rx="2" {...props} /><Rect x="14" y="14" width="7" height="7" rx="2" {...props} /></>,

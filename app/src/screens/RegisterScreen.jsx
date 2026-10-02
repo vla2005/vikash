@@ -7,6 +7,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import Icon from '../components/Icon';
 import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
+import useToast from '../hooks/useToast';
 import { validateRegistration } from '../utils/validation';
 import { colors, fontFamily, typography } from '../theme';
 
@@ -14,6 +15,7 @@ export default function RegisterScreen({ navigation }) {
   const [values, setValues] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
   const { register } = useOnboarding();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [requestError, setRequestError] = useState('');
   const submitting = useRef(false);
@@ -25,16 +27,18 @@ export default function RegisterScreen({ navigation }) {
     if (submitting.current) { return; }
     const next = validateRegistration(values);
     setErrors(next);
-    if (Object.keys(next).length) { return; }
+    if (Object.keys(next).length) { showToast({ type: 'warn', message: 'Confira os campos destacados para continuar.' }); return; }
     submitting.current = true;
     setLoading(true);
     setRequestError('');
     try {
       await register(values);
+      showToast({ type: 'success', title: 'Cadastro realizado!', message: 'Seu acesso está pronto. Agora crie sua primeira conta.' });
       setValues(previous => ({ ...previous, password: '', confirmPassword: '' }));
       navigation.reset({ index: 0, routes: [{ name: 'CreateAccount' }] });
     } catch (cause) {
       setRequestError(cause.message);
+      showToast({ type: 'error', title: 'Não foi possível cadastrar', message: cause.message });
       setErrors(cause.fieldErrors || {});
     } finally { submitting.current = false; setLoading(false); }
   }
