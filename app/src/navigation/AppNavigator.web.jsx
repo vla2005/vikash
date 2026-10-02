@@ -24,7 +24,7 @@ export default function AppNavigator() {
   };
   if (!ready) { return null; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
-  const key = `${route.name}-${route.params?.accountId || ''}`;
+  const key = `${route.name}-${route.params?.accountUuid || ''}`;
   return ['Home', 'CreateAccount', 'Accounts'].includes(route.name)
     ? <ProtectedScreen key={key} component={Screen} route={route} navigation={navigation} />
     : <Screen key={key} route={route} navigation={navigation} />;

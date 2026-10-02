@@ -4,7 +4,7 @@ import com.vikash_api.dtos.requests.LoginRequest;
 import com.vikash_api.dtos.requests.RefreshTokenRequest;
 import com.vikash_api.dtos.requests.RegisterRequest;
 import com.vikash_api.dtos.responses.AuthResponse;
-import com.vikash_api.dtos.requests.CreateAccountRequest;
+import com.vikash_api.dtos.requests.AccountRequest;
 import com.vikash_api.dtos.responses.AccountResponse;
 import com.vikash_api.enums.AccountType;
 import com.vikash_api.repositories.AccountRepository;
@@ -60,7 +60,7 @@ class AuthIntegrationTest {
     @BeforeEach
     void setUp() {
         restClient = RestClient.builder()
-                .baseUrl("http://localhost:" + port + "/api/v1/auth")
+                .baseUrl("http://localhost:" + port + "/api/auth")
                 .build();
         accountRepository.deleteAll();
         refreshTokenRepository.deleteAll();
@@ -74,22 +74,23 @@ class AuthIntegrationTest {
                 .body(new RegisterRequest("Novo usuário", "account-flow@example.com", "Password123!"))
                 .retrieve().body(AuthResponse.class);
         RestClient accountClient = RestClient.builder()
-                .baseUrl("http://localhost:" + port + "/api/v1/account")
+                .baseUrl("http://localhost:" + port + "/api/account")
                 .defaultHeader("Authorization", "Bearer " + auth.getAccessToken()).build();
 
         var result = accountClient.post().uri("/create").contentType(MediaType.APPLICATION_JSON)
-                .body(new CreateAccountRequest(AccountType.CARTEIRA, null, "Dinheiro de bolso", new BigDecimal("35.50")))
+                .body(new AccountRequest(AccountType.CARTEIRA, null, "Dinheiro de bolso", new BigDecimal("35.50")))
                 .retrieve().toEntity(AccountResponse.class);
 
         assertThat(result.getStatusCode().value()).isEqualTo(201);
         AccountResponse account = result.getBody();
-        assertThat(account.id()).isNotNull();
+        assertThat(account.uuid()).isNotNull();
         assertThat(account.description()).isEqualTo("Dinheiro de bolso");
         assertThat(account.type()).isEqualTo(AccountType.CARTEIRA);
         assertThat(account.balance()).isEqualByComparingTo("35.50");
         assertThat(account.financialInstitution()).isNull();
-        var stored = accountRepository.findById(account.id()).orElseThrow();
-        assertThat(stored.getUuid()).isNotNull();
+        var stored = accountRepository.findAll().stream()
+                .filter(entity -> account.uuid().equals(entity.getUuid())).findFirst().orElseThrow();
+        assertThat(stored.getUuid()).isEqualTo(account.uuid());
         assertThat(stored.getUser().getId()).isEqualTo(userRepository.findByEmail("account-flow@example.com").orElseThrow().getId());
 
         FinancialInstitutionEntity institution = new FinancialInstitutionEntity();
@@ -97,18 +98,19 @@ class AuthIntegrationTest {
         ReflectionTestUtils.setField(institution, "logoUrl", "/images/test.webp");
         institution = institutionRepository.save(institution);
         AccountResponse bankAccount = accountClient.post().uri("/create").contentType(MediaType.APPLICATION_JSON)
-                .body(new CreateAccountRequest(AccountType.CONTA_CORRENTE, institution.getId(), "Conta principal", new BigDecimal("1200.25")))
+                .body(new AccountRequest(AccountType.CONTA_CORRENTE, institution.getId(), "Conta principal", new BigDecimal("1200.25")))
                 .retrieve().body(AccountResponse.class);
         assertThat(bankAccount.financialInstitution().id()).isEqualTo(institution.getId());
         assertThat(bankAccount.financialInstitution().name()).isEqualTo("Banco de teste");
         assertThat(bankAccount.financialInstitution().logoUrl()).isEqualTo("/images/test.webp");
-        assertThat(accountRepository.findById(bankAccount.id())).isPresent();
+        assertThat(bankAccount.uuid()).isNotNull();
+        assertThat(accountRepository.findAll()).anyMatch(entity -> bankAccount.uuid().equals(entity.getUuid()));
 
         assertThatThrownBy(() -> accountClient.post().uri("/create").contentType(MediaType.APPLICATION_JSON)
-                .body(new CreateAccountRequest(AccountType.CARTEIRA, 1L, "Carteira", BigDecimal.ZERO))
+                .body(new AccountRequest(AccountType.CARTEIRA, 1L, "Carteira", BigDecimal.ZERO))
                 .retrieve().toBodilessEntity()).isInstanceOf(HttpClientErrorException.BadRequest.class);
         assertThatThrownBy(() -> accountClient.post().uri("/create").contentType(MediaType.APPLICATION_JSON)
-                .body(new CreateAccountRequest(AccountType.POUPANCA, Long.MAX_VALUE, "Reserva", BigDecimal.ZERO))
+                .body(new AccountRequest(AccountType.POUPANCA, Long.MAX_VALUE, "Reserva", BigDecimal.ZERO))
                 .retrieve().toBodilessEntity()).isInstanceOf(HttpClientErrorException.NotFound.class);
         assertThat(accountRepository.count()).isEqualTo(2);
     }

@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { registerUser, loginUser, fetchCurrentUser, refreshSession } from '../services/auth';
 import { ApiError, configureAuth } from '../services/apiClient';
-import { createAccount } from '../services/accounts';
+import { createAccount, fetchAccounts, updateAccount } from '../services/accounts';
 import { loadSession, storeSession, clearSession } from '../services/sessionStorage';
 
 const OnboardingContext = createContext(null);
@@ -128,8 +128,13 @@ export function OnboardingProvider({ children }) {
     setAccounts([]);
     setCompleted(false);
   }
-  async function saveAccount(values, id) {
-    if (id != null) { throw new Error('A edição estará disponível quando o endpoint de atualização estiver pronto.'); }
+  async function saveAccount(values, uuid) {
+    if (uuid != null) {
+      const account = await updateAccount(uuid, values, session?.accessToken);
+      if (account) { setAccounts(previous => previous.map(item => item.uuid === uuid ? account : item)); }
+      else { setAccounts(await fetchAccounts(sessionRef.current?.accessToken)); }
+      return account;
+    }
     const account = await createAccount(values, session?.accessToken);
     setAccounts(previous => [...previous, account]);
     return account;

@@ -19,7 +19,7 @@ export default function useFinancialInstitutions(visible) {
     setError('');
     setInstitutions([]);
 
-    fetchFinancialInstitutions('/api/v1/institutions', { signal: controller.signal, accessToken })
+    fetchFinancialInstitutions('/api/institutions', { signal: controller.signal, accessToken })
       .then(data => { if (active) { setInstitutions(data); } })
       .catch(cause => {
         if (active) {

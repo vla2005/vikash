@@ -7,7 +7,7 @@ Expo SDK **57**, React Native **0.86.3**, React **19.2.3** e código de interfac
 - Login com validação visual, mostrar/ocultar senha e acesso ao cadastro.
 - Cadastro com nome, e-mail, senha e confirmação; segue para a primeira conta.
 - Criação de conta com descrição, saldo em reais e tipo: conta corrente, poupança, carteira ou investimentos.
-- Seletor opcional de instituição financeira que consulta `GET /api/v1/institutions` ao abrir. A busca filtra os nomes retornados pela API, ignorando acentos e maiúsculas. Mostra carregamento, erro com nova tentativa e lista vazia. Carteira não consulta instituições.
+- Seletor opcional de instituição financeira que consulta `GET /api/institutions` ao abrir. A busca filtra os nomes retornados pela API, ignorando acentos e maiúsculas. Mostra carregamento, erro com nova tentativa e lista vazia. Carteira não consulta instituições.
 - Logos locais em WebP de 96 × 96 px, aproximadamente 35 KB no total. As fontes estão documentadas em `assets/institutions/FONTES.md`.
 - Resumo com saldo total, adicionar outra conta e editar as existentes.
 - Identidade visual baseada nas referências aprovadas, com a logo em `assets/brand`.

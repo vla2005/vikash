@@ -2,8 +2,10 @@ package com.vikash_api.service;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.List;
+import java.util.UUID;
 
-import com.vikash_api.dtos.requests.CreateAccountRequest;
+import com.vikash_api.dtos.requests.AccountRequest;
 import com.vikash_api.entities.AccountEntity;
 import com.vikash_api.entities.FinancialInstitutionEntity;
 import com.vikash_api.entities.UserEntity;
@@ -13,7 +15,7 @@ import com.vikash_api.exceptions.InvalidAccountException;
 import com.vikash_api.repositories.AccountRepository;
 import com.vikash_api.repositories.InstitutionRepository;
 import com.vikash_api.services.AuthenticatedUserService;
-import com.vikash_api.services.CreateAccountService;
+import com.vikash_api.services.AccountService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,16 +30,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CreateAccountServiceTest {
+class AccountServiceTest {
     @Mock AccountRepository accountRepository;
     @Mock InstitutionRepository institutionRepository;
     @Mock AuthenticatedUserService authenticatedUserService;
-    @InjectMocks CreateAccountService service;
+    @InjectMocks AccountService service;
 
     @ParameterizedTest
     @EnumSource(value = AccountType.class, names = "CARTEIRA", mode = EnumSource.Mode.EXCLUDE)
     void createsAccountWithInstitutionAndReturnsDto(AccountType type) {
         UserEntity user = new UserEntity();
+        UUID accountUuid = UUID.randomUUID();
         FinancialInstitutionEntity institution = new FinancialInstitutionEntity();
         ReflectionTestUtils.setField(institution, "id", 7L);
         ReflectionTestUtils.setField(institution, "name", "Itaú");
@@ -50,12 +53,13 @@ class CreateAccountServiceTest {
             assertThat(account.getFinancialInstitution()).isSameAs(institution);
             assertThat(account.getActive()).isTrue();
             account.setId(10L);
+            account.setUuid(accountUuid);
             return account;
         });
 
-        var response = service.createAccount(new CreateAccountRequest(type, 7L, "Conta principal", new BigDecimal("125.50")));
+        var response = service.create(new AccountRequest(type, 7L, "Conta principal", new BigDecimal("125.50")));
 
-        assertThat(response.id()).isEqualTo(10L);
+        assertThat(response.uuid()).isEqualTo(accountUuid);
         assertThat(response.description()).isEqualTo("Conta principal");
         assertThat(response.type()).isEqualTo(type);
         assertThat(response.balance()).isEqualByComparingTo("125.50");
@@ -70,7 +74,7 @@ class CreateAccountServiceTest {
         when(authenticatedUserService.getCurrentUser()).thenReturn(new UserEntity());
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = service.createAccount(new CreateAccountRequest(type, null, "Minha conta", null));
+        var response = service.create(new AccountRequest(type, null, "Minha conta", null));
 
         assertThat(response.financialInstitution()).isNull();
         assertThat(response.balance()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -79,7 +83,7 @@ class CreateAccountServiceTest {
 
     @Test
     void rejectsWalletWithInstitutionBeforeSaving() {
-        assertThatThrownBy(() -> service.createAccount(new CreateAccountRequest(AccountType.CARTEIRA, 7L, "Carteira", BigDecimal.ZERO)))
+        assertThatThrownBy(() -> service.create(new AccountRequest(AccountType.CARTEIRA, 7L, "Carteira", BigDecimal.ZERO)))
                 .isInstanceOf(InvalidAccountException.class);
         verifyNoInteractions(institutionRepository, accountRepository);
     }
@@ -87,14 +91,35 @@ class CreateAccountServiceTest {
     @Test
     void rejectsMissingInstitutionBeforeSaving() {
         when(institutionRepository.findById(7L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.createAccount(new CreateAccountRequest(AccountType.POUPANCA, 7L, "Reserva", BigDecimal.ZERO)))
+        assertThatThrownBy(() -> service.create(new AccountRequest(AccountType.POUPANCA, 7L, "Reserva", BigDecimal.ZERO)))
                 .isInstanceOf(FinancialInstitutionNotFoundException.class);
         verifyNoInteractions(accountRepository);
     }
 
     @Test
+    void listsOnlyCurrentUsersAccountsAndReturnsWalletWithoutInstitution() {
+        UserEntity user = new UserEntity();
+        ReflectionTestUtils.setField(user, "id", 42L);
+        AccountEntity wallet = new AccountEntity();
+        wallet.setId(10L);
+        wallet.setDescription("Carteira");
+        wallet.setType(AccountType.CARTEIRA);
+        wallet.setBalance(BigDecimal.TEN);
+        when(authenticatedUserService.getCurrentUser()).thenReturn(user);
+        when(accountRepository.findByUserIdOrderByBalanceDesc(42L)).thenReturn(List.of(wallet));
+
+        var response = service.get();
+
+        assertThat(response.accounts()).hasSize(1);
+        assertThat(response.accounts().getFirst().description()).isEqualTo("Carteira");
+        assertThat(response.accounts().getFirst().financialInstitution()).isNull();
+        verify(accountRepository).findByUserIdOrderByBalanceDesc(42L);
+        verifyNoInteractions(institutionRepository);
+    }
+
+    @Test
     void rejectsMissingTypeBeforeSaving() {
-        assertThatThrownBy(() -> service.createAccount(new CreateAccountRequest(null, null, "Conta", BigDecimal.ZERO)))
+        assertThatThrownBy(() -> service.create(new AccountRequest(null, null, "Conta", BigDecimal.ZERO)))
                 .isInstanceOf(InvalidAccountException.class);
         verifyNoInteractions(institutionRepository, accountRepository);
     }

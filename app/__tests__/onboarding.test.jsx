@@ -31,7 +31,7 @@ function apiFetch(url, options) {
   if (url.endsWith('/auth/me')) { return Promise.resolve(response(session.user)); }
   if (url.includes('/auth/')) { return Promise.resolve(response(session)); }
   const request = JSON.parse(options.body);
-  return Promise.resolve(response({ id: 10, ...request, financialInstitution: request.financialInstitutionId ? { id: request.financialInstitutionId, name: 'Itaú', logoUrl: '/images/financial-institutions/itau.webp' } : null }));
+  return Promise.resolve(response({ uuid: 'account-test-uuid', ...request, financialInstitution: request.financialInstitutionId ? { id: request.financialInstitutionId, name: 'Itaú', logoUrl: '/images/financial-institutions/itau.webp' } : null }));
 }
 beforeEach(() => { global.fetch = jest.fn(apiFetch); });
 afterEach(async () => { if (renderer) { await act(() => renderer.unmount()); } global.fetch = originalFetch; jest.clearAllMocks(); });
@@ -53,7 +53,7 @@ test('cadastro valido navega para primeira conta sem guardar a senha', async () 
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'CreateAccount' }] });
   expect(currentState.profile).toEqual(session.user);
   expect(currentState.session.accessToken).toBe('access-test');
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/auth/register', expect.objectContaining({ body: JSON.stringify({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }) }));
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/register', expect.objectContaining({ body: JSON.stringify({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }) }));
   expect(currentState.session.password).toBeUndefined();
   expect(input('register-password').props.value).toBe('');
   expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Cadastro realizado!' }));
@@ -66,8 +66,8 @@ test('conta sem descricao nao avanca; conta valida envia JSON autenticado e usa 
   await act(() => button('Criar conta').props.onPress());
   expect(currentState.accounts).toHaveLength(1);
   expect(currentState.accounts[0]).toMatchObject({ name: 'Itaú pessoal', type: 'POUPANCA', balance: 9350.27 });
-  expect(currentState.accounts[0].id).toBe(10);
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/account/create', expect.objectContaining({
+  expect(currentState.accounts[0].uuid).toBe('account-test-uuid');
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/account/create', expect.objectContaining({
     headers: expect.objectContaining({ Authorization: 'Bearer access-test' }),
     body: JSON.stringify({ description: 'Itaú pessoal', type: 'POUPANCA', balance: 9350.27, financialInstitutionId: null }),
   }));
@@ -75,8 +75,48 @@ test('conta sem descricao nao avanca; conta valida envia JSON autenticado e usa 
 });
 test('edicao nao simula sucesso sem endpoint de atualizacao', async () => {
   await renderScreen(null);
-  await expect(currentState.saveAccount({ name: 'Itaú' }, 10)).rejects.toThrow('atualização');
-  expect(global.fetch).not.toHaveBeenCalled();
+  await act(() => currentState.login({ email: 'viktor@exemplo.com', password: 'senha-segura' }));
+  global.fetch.mockClear();
+  global.fetch.mockResolvedValue({ ok: false, status: 404, json: async () => ({ message: 'Endpoint não encontrado' }) });
+  await act(async () => { await expect(currentState.saveAccount({ name: 'Itaú', type: 'CONTA_CORRENTE', balance: 10 }, 'account-uuid')).rejects.toMatchObject({ status: 404 }); });
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/account/update/account-uuid', expect.objectContaining({ method: 'PUT' }));
+  expect(currentState.accounts).toHaveLength(0);
+});
+
+test('formulario de edicao preenche conta da listagem e preserva dados quando PUT falha', async () => {
+  await renderScreen(null);
+  await act(() => currentState.login({ email: 'viktor@exemplo.com', password: 'senha-segura' }));
+  const account = { uuid: 'account-uuid', description: 'Reserva pessoal', type: 'POUPANCA', balance: -350.5, financialInstitution: { id: 42, name: 'Itaú', logoUrl: '/images/financial-institutions/itau.webp' } };
+  await act(() => renderer.update(<OnboardingProvider><Observer /><CreateAccountScreen navigation={navigation} route={{ params: { fromManagement: true, account } }} /></OnboardingProvider>));
+  expect(input('account-name').props.value).toBe('Reserva pessoal');
+  expect(input('account-balance').props.value).toContain('350,50');
+  expect(button('Poupança').props.accessibilityState.checked).toBe(true);
+  expect(renderer.root.findByType(FinancialInstitutionPicker).props.value).toBe(42);
+  expect(renderer.root.findByType(FinancialInstitutionPicker).props.selectedInstitution).toEqual(account.financialInstitution);
+  expect(button('Salvar alterações').props.disabled).toBe(false);
+  global.fetch.mockResolvedValue({ ok: false, status: 404, json: async () => ({ message: 'Endpoint não encontrado' }) });
+  await act(() => input('account-name').props.onChangeText('Reserva atualizada'));
+  await act(() => button('Salvar alterações').props.onPress());
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/account/update/account-uuid', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ description: 'Reserva atualizada', type: 'POUPANCA', balance: -350.5, financialInstitutionId: 42 }), headers: expect.objectContaining({ Authorization: 'Bearer access-test' }) }));
+  expect(navigation.reset).not.toHaveBeenCalled();
+  expect(input('account-name').props.value).toBe('Reserva atualizada');
+  expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+});
+
+test('edicao bem sucedida atualiza conta pelo UUID sem adicionar outra e exibe toast', async () => {
+  await renderScreen(null);
+  await act(() => currentState.login({ email: 'viktor@exemplo.com', password: 'senha-segura' }));
+  await act(() => currentState.saveAccount({ name: 'Dinheiro', type: 'CARTEIRA', balance: 10 }));
+  const account = currentState.accounts[0];
+  await act(() => renderer.update(<OnboardingProvider><Observer /><CreateAccountScreen navigation={navigation} route={{ params: { account } }} /></OnboardingProvider>));
+  global.fetch.mockClear();
+  global.fetch.mockResolvedValue(response({ uuid: account.uuid, description: 'Carteira pessoal', type: 'CARTEIRA', balance: 10, financialInstitution: null }));
+  await act(() => input('account-name').props.onChangeText('Carteira pessoal'));
+  await act(() => button('Salvar alterações').props.onPress());
+  expect(currentState.accounts).toHaveLength(1);
+  expect(currentState.accounts[0]).toMatchObject({ uuid: account.uuid, name: 'Carteira pessoal' });
+  expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Accounts' }] });
+  expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Conta atualizada!' }));
 });
 
 test('carteira oculta e nao salva instituicao; voltar a um tipo bancario restaura a escolha antes de salvar', async () => {
@@ -102,7 +142,7 @@ test('busca instituicoes somente ao abrir seletor e salva o ID do banco com nome
   ])));
   expect(global.fetch).not.toHaveBeenCalled();
   await act(async () => button('Selecionar instituição financeira').props.onPress());
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/institutions', expect.objectContaining({ method: 'GET' }));
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/institutions', expect.objectContaining({ method: 'GET' }));
   const search = renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'Buscar instituição financeira');
   await act(() => search.props.onChangeText('itau'));
   expect(button('Santander')).toBeUndefined();
@@ -161,7 +201,7 @@ test('login usa endpoint real antes de liberar criacao de conta', async () => {
   await renderScreen(<LoginScreen navigation={navigation} />);
   await act(() => { input('login-email').props.onChangeText('viktor@exemplo.com'); input('login-password').props.onChangeText('senha-segura'); });
   await act(() => button('Entrar').props.onPress());
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/auth/login', expect.objectContaining({ method: 'POST' }));
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/login', expect.objectContaining({ method: 'POST' }));
   expect(currentState.session.accessToken).toBe('access-test');
   expect(input('login-password').props.value).toBe('');
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Home' }] });

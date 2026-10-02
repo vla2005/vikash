@@ -51,7 +51,7 @@ test('sessao salva so abre HOME depois da validacao na API', async () => {
   expect(labels()).toEqual([]);
   await act(async () => { finish({ ok: true, json: async () => user }); });
   expect(labels()).toContain('HOME');
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer saved-token' }) }));
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer saved-token' }) }));
 });
 
 test('sessao expirada e removida e redireciona ao login', async () => {

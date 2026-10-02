@@ -12,7 +12,7 @@ import com.vikash_api.repositories.InstitutionRepository;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/v1/institutions")
+@RequestMapping("/api/institutions")
 @RequiredArgsConstructor
 public class InstitutionController {
 

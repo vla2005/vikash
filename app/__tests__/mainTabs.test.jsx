@@ -2,14 +2,17 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
 import MainTabs from '../src/navigation/MainTabs';
+jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 import BottomNavigator from '../src/components/BottomNavigator';
 import VoiceDrawer from '../src/components/VoiceDrawer';
+import { fetchAccounts } from '../src/services/accounts';
+jest.mock('../src/services/accounts', () => ({ fetchAccounts: jest.fn(), createAccount: jest.fn() }));
 import useToast from '../src/hooks/useToast';
 jest.mock('../src/hooks/useToast', () => { const showToast = jest.fn(); return { __esModule: true, default: () => ({ showToast }) }; });
 import { createCategory, fetchCategories, updateCategory } from '../src/services/categories';
 
 jest.mock('../src/services/categories', () => ({ createCategory: jest.fn(async values => ({ ...values })), fetchCategories: jest.fn(), updateCategory: jest.fn(async () => null) }));
-jest.mock('../src/contexts/OnboardingContext', () => ({ useOnboarding: () => ({ session: { accessToken: 'test-access' } }) }));
+jest.mock('../src/contexts/OnboardingContext', () => ({ useOnboarding: () => ({ session: { accessToken: 'test-access' }, profile: { name: 'Viktor Lucena' }, accounts: [] }) }));
 
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }) }));
 jest.mock('react-native-svg', () => {
@@ -21,6 +24,8 @@ jest.mock('../src/hooks/useReducedMotion', () => () => true);
 
 let renderer;
 beforeEach(() => {
+  fetchAccounts.mockReset();
+  fetchAccounts.mockResolvedValue([]);
   fetchCategories.mockReset();
   fetchCategories.mockResolvedValue({ defaultCategories: [{ name: 'Saúde', icon: 'health', color: 'sage' }, { name: 'Mercado', icon: 'basket', color: 'ochre' }], customCategories: [] });
 });
@@ -31,7 +36,7 @@ function labels() { return renderer.root.findAllByType(Text).map(node => node.pr
 test('as quatro abas mudam o conteudo e mantem a barra com estado selecionado', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   expect(labels()).toContain('HOME');
-  for (const [tab, heading] of [['Extrato', 'EXTRATO'], ['Contas', 'CONTAS'], ['Categorias', 'Categorias'], ['Início', 'HOME']]) {
+  for (const [tab, heading] of [['Extrato', 'EXTRATO'], ['Contas', 'Contas'], ['Categorias', 'Categorias'], ['Início', 'HOME']]) {
     await act(async () => button(tab).props.onPress());
     expect(labels()).toContain(heading);
     expect(button(tab).props.accessibilityState.selected).toBe(true);
@@ -50,6 +55,53 @@ test('microfone abre e fecha drawer sem mudar a aba nem simular gravacao', async
   await act(async () => button('Fechar microfone').props.onPress());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(false);
   expect(button('Extrato').props.accessibilityState.selected).toBe(true);
+});
+
+test('contas consulta ao abrir e reabrir, soma saldo e abre criacao mantendo a barra', async () => {
+  fetchAccounts.mockResolvedValue([
+    { uuid: 'one', description: 'Itaú', type: 'CONTA_CORRENTE', balance: 9350, financialInstitution: { id: 1, name: 'Itaú', logoUrl: '/images/financial-institutions/itau.webp' } },
+    { uuid: 'two', description: 'Santander', type: 'POUPANCA', balance: 5500, financialInstitution: null },
+    { uuid: 'three', description: 'Dinheiro', type: 'CARTEIRA', balance: 0, financialInstitution: null },
+  ]);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  expect(fetchAccounts).not.toHaveBeenCalled();
+  await act(async () => button('Contas').props.onPress());
+  expect(fetchAccounts).toHaveBeenCalledWith('test-access', expect.anything());
+  expect(labels()).toContain('Itaú');
+  expect(labels()).toContain('Carteira');
+  const total = renderer.root.findAll(node => node.props.accessibilityLabel === 'Saldo total em contas')[0];
+  expect(total.props.children.replace(/\s/g, '')).toBe('R$14.850,00');
+  await act(async () => button('Nova conta').props.onPress());
+  expect(labels()).toContain('Onde seu dinheiro fica?');
+  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(1);
+  await act(async () => button('Voltar às contas').props.onPress());
+  expect(fetchAccounts).toHaveBeenCalledTimes(2);
+  await act(async () => button('Início').props.onPress());
+  await act(async () => button('Contas').props.onPress());
+  expect(fetchAccounts).toHaveBeenCalledTimes(3);
+});
+
+test('contas permite tentar novamente apos erro e mostra vazio sem mocks', async () => {
+  fetchAccounts.mockRejectedValueOnce(new Error('Falha de conexão'));
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  expect(labels()).toContain('Falha de conexão');
+  expect(labels()).not.toContain('Suas contas começam aqui');
+  await act(async () => button('Tentar carregar contas novamente').props.onPress());
+  expect(labels()).toContain('Suas contas começam aqui');
+});
+
+test('tocar conta abre o mesmo formulario preenchido usando dados do GET', async () => {
+  fetchAccounts.mockResolvedValue([{ uuid: 'one', description: 'Conta do dia a dia', type: 'CONTA_CORRENTE', balance: 9350, financialInstitution: { id: 42, name: 'Itaú', logoUrl: '/images/financial-institutions/itau.webp' } }]);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  await act(async () => button('Editar conta Conta do dia a dia').props.onPress());
+  expect(labels()).toContain('Editar sua conta.');
+  const input = renderer.root.findAll(node => node.props.testID === 'account-name' && typeof node.props.onChangeText === 'function')[0];
+  expect(input.props.value).toBe('Conta do dia a dia');
+  expect(button('Salvar alterações').props.disabled).toBe(false);
+  await act(async () => button('Voltar às contas').props.onPress());
+  expect(fetchAccounts).toHaveBeenCalledTimes(2);
 });
 
 test('cria e edita categoria pela API usando UUID e consulta novamente a listagem', async () => {

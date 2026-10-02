@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 import com.vikash_api.enums.AccountType;
 
-public record CreateAccountRequest(
+public record AccountRequest(
     AccountType type,
     Long financialInstitutionId,
     String description,

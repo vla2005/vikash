@@ -53,7 +53,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/register - Should return 201 Created and auth payload")
+    @DisplayName("POST /api/auth/register - Should return 201 Created and auth payload")
     void shouldRegisterSuccessfully() throws Exception {
         RegisterRequest request = RegisterRequest.builder()
                 .name("Vikash")
@@ -77,7 +77,7 @@ class AuthControllerTest {
 
         when(authService.register(any(RegisterRequest.class))).thenReturn(authResponse);
 
-        mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -89,7 +89,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/register - Should return 400 Bad Request on validation failure")
+    @DisplayName("POST /api/auth/register - Should return 400 Bad Request on validation failure")
     void shouldFailValidationOnRegister() throws Exception {
         RegisterRequest invalidRequest = RegisterRequest.builder()
                 .name("")
@@ -97,7 +97,7 @@ class AuthControllerTest {
                 .password("123") // too short
                 .build();
 
-        mockMvc.perform(post("/api/v1/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
@@ -107,7 +107,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/login - Should return 200 OK and tokens")
+    @DisplayName("POST /api/auth/login - Should return 200 OK and tokens")
     void shouldLoginSuccessfully() throws Exception {
         LoginRequest request = LoginRequest.builder()
                 .email("vikash@example.com")
@@ -129,7 +129,7 @@ class AuthControllerTest {
 
         when(authService.login(any(LoginRequest.class))).thenReturn(authResponse);
 
-        mockMvc.perform(post("/api/v1/auth/login")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -138,7 +138,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/refresh - Should return 200 OK and rotated tokens")
+    @DisplayName("POST /api/auth/refresh - Should return 200 OK and rotated tokens")
     void shouldRefreshTokenSuccessfully() throws Exception {
         RefreshTokenRequest request = new RefreshTokenRequest("old_refresh_token");
 
@@ -151,7 +151,7 @@ class AuthControllerTest {
 
         when(authService.refreshToken(any(RefreshTokenRequest.class))).thenReturn(authResponse);
 
-        mockMvc.perform(post("/api/v1/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

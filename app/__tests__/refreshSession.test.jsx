@@ -29,8 +29,8 @@ test('ao reabrir com access expirado renova, salva os dois tokens e valida o usu
   expect(state.session).toMatchObject(rotated);
   expect(state.ready).toBe(true);
   expect(storeSession).toHaveBeenCalledWith(expect.objectContaining(rotated));
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/auth/refresh', expect.objectContaining({ body: JSON.stringify({ refreshToken: 'old-refresh' }) }));
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/v1/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer new-access' }) }));
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/refresh', expect.objectContaining({ body: JSON.stringify({ refreshToken: 'old-refresh' }) }));
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer new-access' }) }));
 });
 
 test('401 repete o POST uma vez com token novo e atualiza ambos os headers', async () => {
@@ -117,7 +117,7 @@ test('ao voltar apos expirar renova antes de consultar a API e conserva o novo r
   try {
     global.fetch.mockClear();
     await act(async () => { expect(await state.validateSession()).toBe(true); });
-    expect(global.fetch.mock.calls[0][0]).toBe('http://api.test/api/v1/auth/refresh');
+    expect(global.fetch.mock.calls[0][0]).toBe('http://api.test/api/auth/refresh');
     expect(state.session.refreshToken).toBe('new-refresh');
     expect(clearSession).not.toHaveBeenCalled();
   } finally { now.mockRestore(); }
