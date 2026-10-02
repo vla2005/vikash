@@ -6,6 +6,6 @@ export async function loadSession() {
   return value ? JSON.parse(value) : null;
 }
 export async function storeSession(session) {
-  await SecureStore.setItemAsync(key, JSON.stringify({ accessToken: session.accessToken, expiresAt: session.expiresAt }));
+  await SecureStore.setItemAsync(key, JSON.stringify({ accessToken: session.accessToken, refreshToken: session.refreshToken, expiresAt: session.expiresAt }));
 }
 export const clearSession = () => SecureStore.deleteItemAsync(key);

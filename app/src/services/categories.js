@@ -1,11 +1,10 @@
-import { postJson, putJson } from './apiClient';
-import { API_BASE_URL } from '../config/api';
+import { authenticatedFetch, postJson, putJson } from './apiClient';
 
 export async function fetchCategories(accessToken, signal) {
-  const response = await fetch(`${API_BASE_URL}/api/category`, {
+  const response = await authenticatedFetch('/api/category', {
     method: 'GET',
     headers: { Accept: 'application/json', access_token: accessToken, Authorization: `Bearer ${accessToken}` }, signal,
-  });
+  }, accessToken);
   if (!response.ok) { throw new Error('Não foi possível carregar as categorias. Tente novamente.'); }
   const data = await response.json();
   if (!data || !['defaultCategories', 'customCategories'].every(key => Array.isArray(data[key]) && data[key].every(item => item && ['name', 'icon', 'color'].every(field => typeof item[field] === 'string')))) {

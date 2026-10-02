@@ -71,11 +71,13 @@ test('token rejeitado pela API nao libera HOME', async () => {
   expect(clearSession).toHaveBeenCalled();
 });
 
-test('indisponibilidade da API nao permite acesso sem validacao', async () => {
+test('indisponibilidade da API preserva a sessao e oferece tentar novamente sem liberar HOME', async () => {
   loadSession.mockResolvedValue({ accessToken: 'saved', expiresAt: Date.now() + 60000 });
   global.fetch.mockRejectedValue(new TypeError('Network error'));
   await render();
-  expect(labels()).toEqual(['LOGIN']);
+  expect(labels()).toContain('Tentar novamente');
+  expect(labels()).not.toContain('HOME');
+  expect(clearSession).not.toHaveBeenCalled();
 });
 
 test('guarda bloqueia acesso direto e remove HOME quando sessao e encerrada', async () => {

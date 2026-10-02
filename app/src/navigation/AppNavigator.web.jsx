@@ -6,12 +6,13 @@ import AccountsSummaryScreen from '../screens/AccountsSummaryScreen';
 import MainTabs from './MainTabs';
 import ProtectedScreen from './ProtectedScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
+import SessionRetry from '../components/SessionRetry';
 
 const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, CreateAccount: CreateAccountScreen, Accounts: AccountsSummaryScreen };
 
 // A previa web usa as mesmas telas; o app nativo usa o stack nativo.
 export default function AppNavigator() {
-  const { ready } = useOnboarding();
+  const { ready, restoreError, retryRestore } = useOnboarding();
   const [stack, setStack] = useState([{ name: 'Home' }]);
   const route = stack[stack.length - 1];
   const Screen = screens[route.name];
@@ -22,6 +23,7 @@ export default function AppNavigator() {
     reset: ({ routes }) => setStack(routes),
   };
   if (!ready) { return null; }
+  if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   const key = `${route.name}-${route.params?.accountId || ''}`;
   return ['Home', 'CreateAccount', 'Accounts'].includes(route.name)
     ? <ProtectedScreen key={key} component={Screen} route={route} navigation={navigation} />

@@ -1,11 +1,11 @@
-import { API_BASE_URL } from '../config/api';
+import { authenticatedFetch } from './apiClient';
 
 export async function fetchFinancialInstitutions(path, { signal, accessToken } = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await authenticatedFetch(path, {
     method: 'GET',
     headers: { Accept: 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
     signal,
-  });
+  }, accessToken);
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {

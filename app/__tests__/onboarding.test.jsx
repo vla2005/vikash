@@ -114,7 +114,7 @@ test('busca instituicoes somente ao abrir seletor e salva o ID do banco com nome
 
 test('erro da API nao vira lista local; tentar novamente recarrega instituicoes', async () => {
   await renderScreen(<CreateAccountScreen navigation={navigation} route={{ params: {} }} />);
-  global.fetch = jest.fn().mockResolvedValueOnce({ ok: false, status: 401 })
+  global.fetch = jest.fn().mockResolvedValueOnce({ ok: false, status: 500 })
     .mockResolvedValueOnce({ ok: true, json: async () => [{ id: 500, name: 'Banco do teste', logoUrl: '/images/test.webp' }] });
   await act(async () => button('Selecionar instituição financeira').props.onPress());
   expect(button('Itaú')).toBeUndefined();
