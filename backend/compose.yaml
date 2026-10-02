@@ -1,0 +1,68 @@
+name: vikash
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vikash_db
+      POSTGRES_USER: ${DB_USERNAME:?Preencha DB_USERNAME no .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Preencha DB_PASSWORD no .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    image: vikash-api:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: ${DB_USERNAME:?Preencha DB_USERNAME no .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Preencha DB_PASSWORD no .env}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Preencha JWT_ACCESS_SECRET no .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Preencha JWT_REFRESH_SECRET no .env}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Preencha GEMINI_API_KEY no .env}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vikash_db
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8080:8080"
+    mem_limit: 768m
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/api/v1/institutions"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
