@@ -51,6 +51,7 @@ test('sessao salva so abre HOME depois da validacao na API', async () => {
   expect(labels()).toEqual([]);
   await act(async () => { finish({ ok: true, json: async () => user }); });
   expect(labels()).toContain('HOME');
+  expect(global.fetch).toHaveBeenCalledTimes(1);
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer saved-token' }) }));
 });
 
@@ -88,4 +89,21 @@ test('guarda bloqueia acesso direto e remove HOME quando sessao e encerrada', as
   await act(() => state.reset());
   expect(labels()).toEqual([]);
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Login' }] });
+});
+
+test('telas protegidas nao repetem me com o tempo ou ao recuperar o foco', async () => {
+  jest.useFakeTimers();
+  try {
+    loadSession.mockResolvedValue({ accessToken: 'saved', expiresAt: Date.now() + 600000 });
+    const navigation = { reset: jest.fn() };
+    const content = active => <OnboardingProvider><Observer /><ProtectedScreen component={HomeScreen} navigation={navigation} active={active} /></OnboardingProvider>;
+    await act(async () => { renderer = TestRenderer.create(content(true)); });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    await act(async () => jest.advanceTimersByTime(180000));
+    await act(async () => renderer.update(content(false)));
+    await act(async () => renderer.update(content(true)));
+    expect(labels()).toEqual(['HOME']);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(navigation.reset).not.toHaveBeenCalled();
+  } finally { jest.useRealTimers(); }
 });

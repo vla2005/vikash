@@ -12,7 +12,11 @@
       "package": "com.vikash"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      ["expo-speech-recognition", {
+        "microphonePermission": "Permita que o Vikash use o microfone para transcrever seus lançamentos.",
+        "speechRecognitionPermission": "Permita que o Vikash transforme sua fala em texto para você revisar."
+      }]
     ]
   }
 }

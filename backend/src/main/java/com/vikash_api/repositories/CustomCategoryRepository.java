@@ -13,4 +13,6 @@ import com.vikash_api.entities.CustomCategoryEntity;
 public interface CustomCategoryRepository extends JpaRepository<CustomCategoryEntity, Long> {
     List<CustomCategoryEntity> findByUserId(Long userId);
     Optional<CustomCategoryEntity> findByUuidAndUserId(UUID uuid, Long userId);
+
+    Optional<CustomCategoryEntity> findByUuid(UUID uuid);
 }

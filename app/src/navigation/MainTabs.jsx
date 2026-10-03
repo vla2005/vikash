@@ -13,6 +13,7 @@ import useAccounts from '../hooks/useAccounts';
 import useToast from '../hooks/useToast';
 import BottomNavigator from '../components/BottomNavigator';
 import VoiceDrawer from '../components/VoiceDrawer';
+import { createTransaction } from '../services/transactions';
 import { colors } from '../theme';
 
 const titles = { Statement: 'EXTRATO' };
@@ -41,6 +42,17 @@ export default function MainTabs() {
     const saved = await persistCategory(values, categoryForm.category);
     if (saved) { setCategoryForm(null); }
   }
+  async function confirmTranscription(transcription) {
+    try {
+      const transaction = await createTransaction(transcription, onboarding?.session?.accessToken);
+      showToast({ type: 'success', title: 'Transação registrada!', message: 'Seu lançamento foi salvo com sucesso.' });
+      if (selected === 'AccountManagement') { accountList.retry(); }
+      return transaction;
+    } catch (failure) {
+      showToast({ type: 'error', title: 'Não foi possível registrar', message: failure.message });
+      throw failure;
+    }
+  }
   function renderContent() {
     if (selected === 'Home') { return <HomeScreen />; }
     if (selected === 'AccountManagement') {
@@ -61,7 +73,7 @@ export default function MainTabs() {
       <View style={styles.content}>{renderContent()}</View>
       <BottomNavigator selected={selected} onSelect={key => { setCategoryForm(null); setAccountForm(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />
     </View>
-    <VoiceDrawer visible={voiceVisible} onClose={() => setVoiceVisible(false)} />
+    <VoiceDrawer visible={voiceVisible} onClose={() => setVoiceVisible(false)} onConfirm={confirmTranscription} />
   </View>;
 }
 const styles = StyleSheet.create({

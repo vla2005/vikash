@@ -3,41 +3,50 @@ import { Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-n
 import Icon from './Icon';
 import useReducedMotion from '../hooks/useReducedMotion';
 
-function AnimatedMicButton({ onPress, large = false, animate = true }) {
-  const pulse = useRef(new Animated.Value(0)).current;
+function AnimatedMicButton({ onPress, large = false, animate = true, diameter }) {
+  const waves = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
+  const breathing = useRef(new Animated.Value(1)).current;
   const reduced = useReducedMotion();
   useEffect(() => {
-    if (!animate) { pulse.setValue(0); return; }
-    const animation = Animated.loop(Animated.timing(pulse, {
-      toValue: 1, duration: reduced ? 4000 : 2000, easing: Easing.linear, useNativeDriver: Platform.OS !== 'web', isInteraction: false,
-    }));
-    animation.start();
-    return () => { animation.stop(); pulse.setValue(0); };
-  }, [pulse, reduced, animate]);
-  const size = large ? 96 : 64;
+    waves.forEach(wave => wave.setValue(0));
+    breathing.setValue(1);
+    if (!animate) { return; }
+    const duration = reduced ? 2400 : 1400;
+    const nativeDriver = Platform.OS !== 'web';
+    // Cada onda começa depois da anterior; o reinício acontece enquanto está invisível.
+    const ripples = waves.map((wave, index) => Animated.sequence([
+      Animated.delay(index * duration / 3),
+      Animated.loop(Animated.timing(wave, { toValue: 1, duration, easing: Easing.out(Easing.quad), useNativeDriver: nativeDriver, isInteraction: false })),
+    ]));
+    const breath = Animated.loop(Animated.sequence([
+      Animated.timing(breathing, { toValue: reduced ? 1.015 : 1.055, duration: reduced ? 1200 : 650, easing: Easing.inOut(Easing.sin), useNativeDriver: nativeDriver, isInteraction: false }),
+      Animated.timing(breathing, { toValue: 1, duration: reduced ? 1200 : 650, easing: Easing.inOut(Easing.sin), useNativeDriver: nativeDriver, isInteraction: false }),
+    ]));
+    ripples.forEach(animation => animation.start());
+    breath.start();
+    return () => { ripples.forEach(animation => animation.stop()); breath.stop(); waves.forEach(wave => wave.setValue(0)); breathing.setValue(1); };
+  }, [waves, breathing, reduced, animate]);
+  const size = diameter || (large ? 96 : 64);
   return <View style={[styles.container, { width: size, height: size }]}>
-    <View pointerEvents="none" style={[styles.ring, { width: size + 12, height: size + 12, borderRadius: (size + 12) / 2 }]} />
-    <View pointerEvents="none" style={[styles.ring, styles.outerRing, { width: size + 24, height: size + 24, borderRadius: (size + 24) / 2 }]} />
-    {[0, 1].map(index => {
-      const waveStyle = {
+    {waves.map((wave, index) => <Animated.View key={index} pointerEvents="none" style={[styles.wave, {
       borderRadius: size / 2,
-      opacity: !animate ? 0 : pulse.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: index ? [0.28, 0.12, 0, 0.5, 0.28] : [0.5, 0.35, 0.22, 0.1, 0] }),
-      transform: [{ scale: pulse.interpolate({ inputRange: [0, 0.49, 0.5, 1], outputRange: reduced ? (index ? [1.3, 1.4, 1.2, 1.3] : [1.2, 1.3, 1.31, 1.4]) : (index ? [1.3, 1.6, 1.02, 1.3] : [1.02, 1.3, 1.31, 1.6]) }) }],
-      };
-      return <Animated.View key={index} style={[styles.wave, waveStyle]} />;
-    })}
+      opacity: wave.interpolate({ inputRange: [0, 0.06, 0.45, 0.8, 1], outputRange: reduced ? [0, 0.5, 0.35, 0.12, 0] : [0, 0.65, 0.45, 0.15, 0] }),
+      transform: [{ scale: wave.interpolate({ inputRange: [0, 1], outputRange: [1.16, reduced ? 1.5 : 1.9] }) }],
+    }]} />)}
+    <View pointerEvents="none" style={[styles.halo, { width: size + 10, height: size + 10, borderRadius: (size + 10) / 2 }]} />
+    <Animated.View style={{ transform: [{ scale: breathing }] }}>
     <Pressable accessibilityRole="button" accessibilityLabel={large ? 'Microfone' : 'Registrar por voz'}
       onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.button, { width: size, height: size, borderRadius: size / 2 }, pressed && styles.pressed]}>
-      <Icon name="microphone" size={large ? 40 : 34} color="#FFFFFF" />
+      <Icon name="microphone" size={large ? size * 0.42 : 34} color="#FFFFFF" />
     </Pressable>
+    </Animated.View>
   </View>;
 }
 export default memo(AnimatedMicButton);
 const styles = StyleSheet.create({
   container: { alignItems: 'center', justifyContent: 'center' },
-  ring: { position: 'absolute', borderWidth: 2.5, borderColor: '#A8C7FF', backgroundColor: '#FFFFFF' },
-  outerRing: { borderColor: '#E2ECFF', backgroundColor: 'transparent' },
-  wave: { pointerEvents: 'none', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderWidth: 2, borderColor: '#0666FF' },
+  halo: { position: 'absolute', borderWidth: 1.5, borderColor: '#D6E4FF', backgroundColor: '#FFFFFF' },
+  wave: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderWidth: 2, borderColor: '#0666FF' },
   button: { backgroundColor: '#0666FF', alignItems: 'center', justifyContent: 'center' },
   pressed: { transform: [{ scale: 0.96 }], backgroundColor: '#0054DE' },
 });

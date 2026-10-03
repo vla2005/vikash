@@ -15,4 +15,6 @@ public interface AccountRepository extends JpaRepository<AccountEntity, Long>{
     @EntityGraph(attributePaths = "financialInstitution")
     List<AccountEntity> findByUserIdOrderByBalanceDesc(Long userId);
     Optional<AccountEntity> findByUuidAndUserId(UUID uuid, Long userId);
+
+    Optional<AccountEntity> findByUuid(UUID uuid);
 }

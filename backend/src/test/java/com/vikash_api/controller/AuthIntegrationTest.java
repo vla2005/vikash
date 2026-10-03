@@ -57,6 +57,23 @@ class AuthIntegrationTest {
 
     private RestClient restClient;
 
+    @Test
+    void allowsTransactionPreflightWithAccessTokenHeaderWithoutAuthentication() {
+        var response = RestClient.create()
+                .method(org.springframework.http.HttpMethod.OPTIONS)
+                .uri("http://localhost:" + port + "/api/transaction/create")
+                .header("Origin", "http://localhost:5173")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "access_token,authorization,content-type")
+                .retrieve()
+                .toBodilessEntity();
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getHeaders().getAccessControlAllowOrigin()).isEqualTo("http://localhost:5173");
+        assertThat(response.getHeaders().getAccessControlAllowHeaders())
+                .contains("access_token", "authorization", "content-type");
+    }
+
     @BeforeEach
     void setUp() {
         restClient = RestClient.builder()

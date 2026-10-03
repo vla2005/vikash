@@ -8,6 +8,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,6 +23,31 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidBody(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        String message = "Corpo da requisição inválido. Confira o JSON, os tipos dos campos e os valores dos enums.";
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Request", message,
+                request.getRequestURI(), Map.of("body", message));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidParameter(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String message = "O parâmetro " + ex.getName() + " está em formato inválido.";
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Parameter", message,
+                request.getRequestURI(), Map.of(ex.getName(), message));
+    }
+
+    @ExceptionHandler(CategoryAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateCategory(CategoryAlreadyExistsException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.CONFLICT, "Category Conflict", ex.getMessage(),
+                request.getRequestURI(), Map.of("name", ex.getMessage()));
+    }
+
+    @ExceptionHandler(CategoryNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCategoryNotFound(CategoryNotFoundException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Category Not Found", ex.getMessage(), request.getRequestURI(), null);
+    }
 
     @ExceptionHandler(InvalidAccountException.class)
     public ResponseEntity<ErrorResponse> handleInvalidAccount(InvalidAccountException ex, HttpServletRequest request) {
@@ -63,7 +90,7 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
                 "Validation Error",
-                "One or more fields failed validation",
+                "Confira os campos informados.",
                 request.getRequestURI(),
                 errors
         );

@@ -99,21 +99,6 @@ export function OnboardingProvider({ children }) {
     return () => { active = false; };
   }, [reset, restoreAttempt]);
 
-  const validateSession = useCallback(async () => {
-    const current = sessionRef.current;
-    if (!current) { return false; }
-    const version = generation.current;
-    try {
-      const user = await fetchCurrentUser(current.accessToken);
-      if (generation.current !== version) { return false; }
-      setProfile(user);
-      return true;
-    } catch (cause) {
-      if ([401, 403].includes(cause.status)) { if (generation.current === version) { reset(); } return false; }
-      throw cause;
-    }
-  }, [reset]);
-
   async function authenticate(action, values) {
     const nextSession = await action(values);
     const user = await fetchCurrentUser(nextSession.accessToken, false);
@@ -140,6 +125,6 @@ export function OnboardingProvider({ children }) {
     return account;
   }
 
-  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), validateSession, register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, completeSetup: () => setCompleted(true), reset }}>{children}</OnboardingContext.Provider>;
+  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, completeSetup: () => setCompleted(true), reset }}>{children}</OnboardingContext.Provider>;
 }
 export const useOnboarding = () => useContext(OnboardingContext);

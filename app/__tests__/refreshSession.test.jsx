@@ -111,13 +111,15 @@ test('logout durante renovacao nao restaura sessao antiga', async () => {
   expect(storeSession).not.toHaveBeenCalled();
 });
 
-test('ao voltar apos expirar renova antes de consultar a API e conserva o novo refresh', async () => {
+test('primeira operacao apos expirar renova sem consultar me e conserva o novo refresh', async () => {
   await render();
   const now = jest.spyOn(Date, 'now').mockReturnValue(saved.expiresAt + 1);
   try {
     global.fetch.mockClear();
-    await act(async () => { expect(await state.validateSession()).toBe(true); });
+    await act(async () => { await postJson('/api/transaction/create', { transcription: 'Almoço' }, saved.accessToken); });
     expect(global.fetch.mock.calls[0][0]).toBe('http://api.test/api/auth/refresh');
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch.mock.calls[1][0]).toBe('http://api.test/api/transaction/create');
     expect(state.session.refreshToken).toBe('new-refresh');
     expect(clearSession).not.toHaveBeenCalled();
   } finally { now.mockRestore(); }

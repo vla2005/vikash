@@ -100,4 +100,30 @@ class CategoryServiceTest {
                 .isInstanceOf(CategoryNotFoundException.class);
         verify(customCategoryRepository, never()).save(any());
     }
+
+    @Test
+    void rejectsNameMatchingDefaultIgnoringAccentsAndCase() {
+        currentUser();
+        var category = new DefaultCategoriesEntity();
+        ReflectionTestUtils.setField(category, "name", "Saúde");
+        when(defaultCategoryRepository.findAll()).thenReturn(List.of(category));
+        assertThatThrownBy(() -> service.create(new CategoryRequest(" SAUDE ", "health", "sage")))
+                .isInstanceOf(com.vikash_api.exceptions.CategoryAlreadyExistsException.class);
+        verify(customCategoryRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectsDuplicateCustomNameButAllowsUpdatingSameCategory() {
+        currentUser();
+        var category = new CustomCategoryEntity();
+        category.setUuid(UUID.randomUUID());
+        category.setName("Pets");
+        when(customCategoryRepository.findByUserId(42L)).thenReturn(List.of(category));
+        assertThatThrownBy(() -> service.create(new CategoryRequest("pets", "paw", "blue")))
+                .isInstanceOf(com.vikash_api.exceptions.CategoryAlreadyExistsException.class);
+        when(customCategoryRepository.findByUuidAndUserId(category.getUuid(), 42L)).thenReturn(Optional.of(category));
+        when(customCategoryRepository.save(category)).thenReturn(category);
+        assertThat(service.update(category.getUuid(), new CategoryRequest("Pets", "paw", "rose")).color())
+                .isEqualTo("rose");
+    }
 }

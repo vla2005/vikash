@@ -45,7 +45,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody(required = false) RefreshTokenRequest request) {
+    public ResponseEntity<Void> logout(@Valid @RequestBody(required = false) RefreshTokenRequest request) {
         String token = (request != null) ? request.getRefreshToken() : null;
         authService.logout(token);
         return ResponseEntity.noContent().build();

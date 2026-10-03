@@ -5,6 +5,8 @@ import MainTabs from '../src/navigation/MainTabs';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 import BottomNavigator from '../src/components/BottomNavigator';
 import VoiceDrawer from '../src/components/VoiceDrawer';
+import { createTransaction } from '../src/services/transactions';
+jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn() }));
 import { fetchAccounts } from '../src/services/accounts';
 jest.mock('../src/services/accounts', () => ({ fetchAccounts: jest.fn(), createAccount: jest.fn() }));
 import useToast from '../src/hooks/useToast';
@@ -21,13 +23,35 @@ jest.mock('react-native-svg', () => {
   return { __esModule: true, default: Shape, Svg: Shape, Path: Shape, Rect: Shape, Circle: Shape, Ellipse: Shape, Line: Shape, Polyline: Shape };
 });
 jest.mock('../src/hooks/useReducedMotion', () => () => true);
+jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition: () => { throw new Error('Transcrição indisponível neste dispositivo.'); } }));
 
 let renderer;
 beforeEach(() => {
+  createTransaction.mockReset();
+  useToast().showToast.mockClear();
   fetchAccounts.mockReset();
   fetchAccounts.mockResolvedValue([]);
   fetchCategories.mockReset();
   fetchCategories.mockResolvedValue({ defaultCategories: [{ name: 'Saúde', icon: 'health', color: 'sage' }, { name: 'Mercado', icon: 'basket', color: 'ochre' }], customCategories: [] });
+});
+
+test('confirmacao envia transcricao com token e mostra sucesso somente depois de salvar', async () => {
+  createTransaction.mockResolvedValue({ uuid: 'saved' });
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Registrar por voz').props.onPress());
+  expect(createTransaction).not.toHaveBeenCalled();
+  await act(async () => renderer.root.findByType(VoiceDrawer).props.onConfirm('Texto revisado'));
+  expect(createTransaction).toHaveBeenCalledWith('Texto revisado', 'test-access');
+  expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Transação registrada!' }));
+});
+
+test('falha ao salvar mostra toast e propaga erro para manter a revisao', async () => {
+  createTransaction.mockRejectedValue(new Error('Falha ao salvar'));
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => {
+    await expect(renderer.root.findByType(VoiceDrawer).props.onConfirm('Texto revisado')).rejects.toThrow('Falha ao salvar');
+  });
+  expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: 'Falha ao salvar' }));
 });
 afterEach(async () => { if (renderer) { await act(async () => renderer.unmount()); } });
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
@@ -45,13 +69,13 @@ test('as quatro abas mudam o conteudo e mantem a barra com estado selecionado', 
   }
 });
 
-test('microfone abre e fecha drawer sem mudar a aba nem simular gravacao', async () => {
+test('microfone abre e fecha drawer sem mudar a aba e informa captura indisponivel', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Extrato').props.onPress());
   await act(async () => button('Registrar por voz').props.onPress());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(true);
   expect(renderer.root.findByType(BottomNavigator).props.selected).toBe('Statement');
-  expect(labels()).toContain('O registro por voz estará disponível em breve.');
+  expect(labels()).toContain('Transcrição indisponível neste dispositivo.');
   await act(async () => button('Fechar microfone').props.onPress());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(false);
   expect(button('Extrato').props.accessibilityState.selected).toBe(true);
