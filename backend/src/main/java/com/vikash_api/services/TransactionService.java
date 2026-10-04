@@ -2,7 +2,10 @@ package com.vikash_api.services;
 
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.vikash_api.dtos.requests.TransactionRequest;
 import com.vikash_api.dtos.requests.AiAnalysisContext;
@@ -11,6 +14,7 @@ import com.vikash_api.dtos.responses.AiAnalysisResponse;
 import com.vikash_api.dtos.responses.AllAccountsResponse;
 import com.vikash_api.dtos.responses.AllCategoriesResponse;
 import com.vikash_api.dtos.responses.TransactionResponse;
+import com.vikash_api.dtos.responses.TransactionSummaryResponse;
 import com.vikash_api.entities.AccountEntity;
 import com.vikash_api.entities.CustomCategoryEntity;
 import com.vikash_api.entities.DefaultCategoriesEntity;
@@ -36,6 +40,7 @@ public class TransactionService {
     private final CustomCategoryRepository customCategoryRepository;
     private final TransactionRepository transactionRepository;
 
+    @Transactional
     public TransactionResponse create(TransactionRequest request) {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         AllAccountsResponse accounts = accountService.get();
@@ -98,6 +103,13 @@ public class TransactionService {
         TransactionEntity savedTransaction = transactionRepository.save(transaction);
 
         return toResponse(savedTransaction);
+    }
+
+    @Transactional (readOnly = true)
+    public Slice<TransactionSummaryResponse> getSummaries(int page, int size) {
+        UserEntity currentUser = authenticatedUserService.getCurrentUser();
+        Pageable pageable = Pageable.ofSize(size).withPage(page);
+        return transactionRepository.findSummariesByUserId(currentUser.getId(), pageable);
     }
 
     private TransactionResponse toResponse(TransactionEntity transaction) {

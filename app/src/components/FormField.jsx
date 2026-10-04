@@ -1,18 +1,24 @@
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useContext, useImperativeHandle, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Icon from './Icon';
 import { colors, fontFamily, typography } from '../theme';
+import FormFocusContext from '../contexts/FormFocusContext';
 
-const FormField = forwardRef(function FormField({ label, password = false, error, hint, large = false, style, ...inputProps }, ref) {
+const FormField = forwardRef(function FormField({ label, password = false, error, hint, large = false, style, onFocus, onBlur, ...inputProps }, ref) {
+  const inputRef = useRef(null);
+  const formFocus = useContext(FormFocusContext);
+  useImperativeHandle(ref, () => inputRef.current);
   const [visible, setVisible] = useState(false);
   const [focused, setFocused] = useState(false);
   return (
     <View style={[styles.field, style]}>
       <Text style={typography.label} nativeID={`${inputProps.testID || label}-label`}>{label}</Text>
       <View style={[styles.inputContainer, focused && styles.focused, error && styles.invalid]}>
-        <TextInput ref={ref} accessibilityLabel={label} placeholderTextColor="#A0A0A3" selectionColor={colors.primary}
+        <TextInput ref={inputRef} accessibilityLabel={label} placeholderTextColor="#A0A0A3" selectionColor={colors.primary}
           style={[styles.input, large && styles.large]} secureTextEntry={password && !visible}
-          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} {...inputProps} />
+          {...inputProps}
+          onFocus={event => { setFocused(true); formFocus?.onFocus(inputRef.current); onFocus?.(event); }}
+          onBlur={event => { setFocused(false); formFocus?.onBlur(inputRef.current); onBlur?.(event); }} />
         {password && <Pressable onPress={() => setVisible(!visible)} accessibilityRole="button" accessibilityLabel={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`} hitSlop={8} style={styles.eye}>
           <Icon name={visible ? 'eyeOff' : 'eye'} size={24} />
         </Pressable>}

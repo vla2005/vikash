@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import CreateAccountScreen from '../screens/CreateAccountScreen';
+import AddFinancialItemScreen from '../screens/AddFinancialItemScreen';
+import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
 import AccountsSummaryScreen from '../screens/AccountsSummaryScreen';
 import MainTabs from './MainTabs';
 import ProtectedScreen from './ProtectedScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import SessionRetry from '../components/SessionRetry';
 
-const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, CreateAccount: CreateAccountScreen, Accounts: AccountsSummaryScreen };
+const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, CreateAccount: CreateAccountScreen, AddFinancialItem: AddFinancialItemScreen, CreateCreditCard: CreateCreditCardScreen, Accounts: AccountsSummaryScreen };
 
 // A previa web usa as mesmas telas; o app nativo usa o stack nativo.
 export default function AppNavigator() {
@@ -25,7 +27,7 @@ export default function AppNavigator() {
   if (!ready) { return null; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   const key = `${route.name}-${route.params?.accountUuid || ''}`;
-  return ['Home', 'CreateAccount', 'Accounts'].includes(route.name)
+  return ['Home', 'CreateAccount', 'AddFinancialItem', 'CreateCreditCard', 'Accounts'].includes(route.name)
     ? <ProtectedScreen key={key} component={Screen} route={route} navigation={navigation} />
     : <Screen key={key} route={route} navigation={navigation} />;
 }

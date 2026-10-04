@@ -5,8 +5,12 @@ import MainTabs from '../src/navigation/MainTabs';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 import BottomNavigator from '../src/components/BottomNavigator';
 import VoiceDrawer from '../src/components/VoiceDrawer';
+import { createCreditCard } from '../src/services/creditCards';
+import { fetchFinancialInstitutions } from '../src/services/financialInstitutions';
+jest.mock('../src/services/creditCards', () => ({ createCreditCard: jest.fn() }));
+jest.mock('../src/services/financialInstitutions', () => ({ fetchFinancialInstitutions: jest.fn() }));
 import { createTransaction } from '../src/services/transactions';
-jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn() }));
+jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn(), fetchTransactions: jest.fn(async () => ({ rows: [], page: 0, hasNext: false })) }));
 import { fetchAccounts } from '../src/services/accounts';
 jest.mock('../src/services/accounts', () => ({ fetchAccounts: jest.fn(), createAccount: jest.fn() }));
 import useToast from '../src/hooks/useToast';
@@ -27,6 +31,9 @@ jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition:
 
 let renderer;
 beforeEach(() => {
+  createCreditCard.mockReset();
+  fetchFinancialInstitutions.mockReset();
+  fetchFinancialInstitutions.mockResolvedValue([{ id: 42, name: 'Inter', logoUrl: '/images/financial-institutions/inter.webp' }]);
   createTransaction.mockReset();
   useToast().showToast.mockClear();
   fetchAccounts.mockReset();
@@ -60,7 +67,7 @@ function labels() { return renderer.root.findAllByType(Text).map(node => node.pr
 test('as quatro abas mudam o conteudo e mantem a barra com estado selecionado', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   expect(labels()).toContain('HOME');
-  for (const [tab, heading] of [['Extrato', 'EXTRATO'], ['Contas', 'Contas'], ['Categorias', 'Categorias'], ['Início', 'HOME']]) {
+  for (const [tab, heading] of [['Extrato', 'Extrato'], ['Contas', 'Contas'], ['Categorias', 'Categorias'], ['Início', 'HOME']]) {
     await act(async () => button(tab).props.onPress());
     expect(labels()).toContain(heading);
     expect(button(tab).props.accessibilityState.selected).toBe(true);
@@ -81,7 +88,7 @@ test('microfone abre e fecha drawer sem mudar a aba e informa captura indisponiv
   expect(button('Extrato').props.accessibilityState.selected).toBe(true);
 });
 
-test('contas consulta ao abrir e reabrir, soma saldo e abre criacao mantendo a barra', async () => {
+test('contas consulta ao abrir, soma saldo e abre escolha antes da criacao', async () => {
   fetchAccounts.mockResolvedValue([
     { uuid: 'one', description: 'Itaú', type: 'CONTA_CORRENTE', balance: 9350, financialInstitution: { id: 1, name: 'Itaú', logoUrl: '/images/financial-institutions/itau.webp' } },
     { uuid: 'two', description: 'Santander', type: 'POUPANCA', balance: 5500, financialInstitution: null },
@@ -96,13 +103,54 @@ test('contas consulta ao abrir e reabrir, soma saldo e abre criacao mantendo a b
   const total = renderer.root.findAll(node => node.props.accessibilityLabel === 'Saldo total em contas')[0];
   expect(total.props.children.replace(/\s/g, '')).toBe('R$14.850,00');
   await act(async () => button('Nova conta').props.onPress());
+  expect(labels()).toContain('O que você quer adicionar?');
+  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
+  await act(async () => button('Adicionar conta').props.onPress());
   expect(labels()).toContain('Onde seu dinheiro fica?');
-  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(1);
+  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
   await act(async () => button('Voltar às contas').props.onPress());
+  expect(labels()).toContain('O que você quer adicionar?');
+  await act(async () => button('Voltar').props.onPress());
   expect(fetchAccounts).toHaveBeenCalledTimes(2);
   await act(async () => button('Início').props.onPress());
   await act(async () => button('Contas').props.onPress());
   expect(fetchAccounts).toHaveBeenCalledTimes(3);
+});
+
+test('cartao valida dias, envia ID real e preserva dados na falha antes de voltar no sucesso', async () => {
+  const requests = jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Não deveria consultar API'));
+  try {
+    await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+    await act(async () => button('Contas').props.onPress());
+    await act(async () => button('Nova conta').props.onPress());
+    await act(async () => button('Adicionar cartão de crédito').props.onPress());
+    expect(labels()).toContain('Seu cartão de crédito.');
+    await act(async () => button('Criar cartão').props.onPress());
+    expect(labels()).toContain('Informe uma descrição para seu cartão.');
+    const input = label => renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onChangeText === 'function')[0];
+    await act(async () => input('Descrição').props.onChangeText('Meu cartão Inter'));
+    await act(async () => input('Limite de crédito').props.onChangeText('500000'));
+    await act(async () => button('Selecionar instituição financeira').props.onPress());
+    await act(async () => button('Inter').props.onPress());
+    await act(async () => input('Fechamento').props.onChangeText('0'));
+    await act(async () => input('Vencimento').props.onChangeText('32'));
+    await act(async () => button('Criar cartão').props.onPress());
+    expect(labels()).toContain('Informe um dia entre 1 e 31.');
+    expect(useToast().showToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'warn' }));
+    expect(createCreditCard).not.toHaveBeenCalled();
+    await act(async () => input('Fechamento').props.onChangeText('1'));
+    await act(async () => input('Vencimento').props.onChangeText('31'));
+    createCreditCard.mockRejectedValueOnce(new Error('Falha de conexão'));
+    await act(async () => button('Criar cartão').props.onPress());
+    expect(createCreditCard).toHaveBeenCalledWith({ financialInstitutionId: 42, description: 'Meu cartão Inter', creditLimit: 5000, closingDay: 1, dueDay: 31 }, 'test-access');
+    expect(labels()).toContain('Falha de conexão');
+    expect(input('Descrição').props.value).toBe('Meu cartão Inter');
+    expect(requests).not.toHaveBeenCalled();
+    createCreditCard.mockResolvedValueOnce({ uuid: 'saved-card' });
+    await act(async () => button('Criar cartão').props.onPress());
+    expect(useToast().showToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'success', title: 'Cartão criado!' }));
+    expect(labels()).toContain('Contas');
+  } finally { requests.mockRestore(); }
 });
 
 test('contas permite tentar novamente apos erro e mostra vazio sem mocks', async () => {

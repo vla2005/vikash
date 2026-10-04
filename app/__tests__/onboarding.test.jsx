@@ -50,7 +50,7 @@ test('cadastro valido navega para primeira conta sem guardar a senha', async () 
   await renderScreen(<RegisterScreen navigation={navigation} />);
   await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('senha-segura'); input('register-confirm').props.onChangeText('senha-segura'); });
   await act(() => button('Criar cadastro').props.onPress());
-  expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'CreateAccount' }] });
+  expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AddFinancialItem' }] });
   expect(currentState.profile).toEqual(session.user);
   expect(currentState.session.accessToken).toBe('access-test');
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/register', expect.objectContaining({ body: JSON.stringify({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }) }));

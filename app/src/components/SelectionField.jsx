@@ -1,0 +1,32 @@
+import React, { useState } from 'react';
+import { FlatList, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from './Icon';
+import { colors, fontFamily, typography } from '../theme';
+
+export default function SelectionField({ label, value, options, onChange, placeholder = 'Selecione', searchable = false, error, hint, renderLeading }) {
+  const [visible, setVisible] = useState(false);
+  const [query, setQuery] = useState('');
+  const insets = useSafeAreaInsets();
+  const selected = options.find(option => option.value === value);
+  const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const filtered = options.filter(option => normalize(option.label).includes(normalize(query.trim())));
+  return <View style={styles.field}>
+    <Text style={typography.label}>{label}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ expanded: visible }} onPress={() => { Keyboard.dismiss(); setQuery(''); setVisible(true); }} style={[styles.trigger, error && styles.invalid]}>{selected && renderLeading?.(selected)}<Text style={[styles.value, !selected && styles.placeholder]} numberOfLines={1}>{selected?.label || placeholder}</Text><Icon name="chevronDown" color={colors.secondary} size={20} /></Pressable>
+    {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : hint && <Text style={styles.hint}>{hint}</Text>}
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
+      <View style={styles.overlay}><Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Fechar seleção" onPress={() => setVisible(false)} />
+        <View accessibilityViewIsModal style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
+          <View style={styles.header}><Text style={styles.title}>{label}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar opções" hitSlop={12} onPress={() => setVisible(false)}><Icon name="close" /></Pressable></View>
+          {searchable && <TextInput accessibilityLabel={`Buscar ${label.toLowerCase()}`} placeholder="Buscar por nome" placeholderTextColor={colors.secondary} value={query} onChangeText={setQuery} style={styles.search} autoCorrect={false} />}
+          <FlatList data={filtered} keyExtractor={item => String(item.value)} keyboardShouldPersistTaps="handled" style={styles.list} renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={item.label} accessibilityState={{ selected: item.value === value }} onPress={() => { onChange(item.value); setVisible(false); }} style={styles.option}>{renderLeading?.(item)}<Text style={styles.value}>{item.label}</Text>{item.value === value && <Icon name="check" color={colors.primary} />}</Pressable>} ListEmptyComponent={<Text style={styles.hint}>Nenhuma opção encontrada.</Text>} />
+        </View>
+      </View>
+    </Modal>
+  </View>;
+}
+const styles = StyleSheet.create({
+  field: { gap: 7 }, trigger: { minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.surface, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }, value: { flex: 1, minWidth: 0, fontFamily, fontSize: 16, color: colors.text }, placeholder: { color: colors.secondary }, invalid: { borderColor: colors.error }, error: { fontFamily, fontSize: 13, color: colors.error }, hint: { fontFamily, fontSize: 13, lineHeight: 18, color: colors.secondary },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end', alignItems: 'center' }, sheet: { width: '100%', maxWidth: 460, maxHeight: '80%', backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 24, gap: 16 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, title: { ...typography.title, fontSize: 22, lineHeight: 28, flex: 1 }, search: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 15, fontFamily, fontSize: 16, color: colors.text }, list: { flexShrink: 1 }, option: { minHeight: 54, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+});

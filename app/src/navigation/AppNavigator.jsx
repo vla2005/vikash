@@ -4,6 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import CreateAccountScreen from '../screens/CreateAccountScreen';
+import AddFinancialItemScreen from '../screens/AddFinancialItemScreen';
+import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
 import AccountsSummaryScreen from '../screens/AccountsSummaryScreen';
 import { colors } from '../theme';
 import { useIsFocused } from '@react-navigation/native';
@@ -17,6 +19,8 @@ const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: c
 
 function ProtectedHome(props) { return <ProtectedScreen component={MainTabs} active={useIsFocused()} {...props} />; }
 function ProtectedCreateAccount(props) { return <ProtectedScreen component={CreateAccountScreen} active={useIsFocused()} {...props} />; }
+function ProtectedAddFinancialItem(props) { return <ProtectedScreen component={AddFinancialItemScreen} active={useIsFocused()} {...props} />; }
+function ProtectedCreateCreditCard(props) { return <ProtectedScreen component={CreateCreditCardScreen} active={useIsFocused()} {...props} />; }
 function ProtectedAccounts(props) { return <ProtectedScreen component={AccountsSummaryScreen} active={useIsFocused()} {...props} />; }
 
 export default function AppNavigator() {
@@ -29,6 +33,8 @@ export default function AppNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="CreateAccount" component={ProtectedCreateAccount} />
+      <Stack.Screen name="AddFinancialItem" component={ProtectedAddFinancialItem} />
+      <Stack.Screen name="CreateCreditCard" component={ProtectedCreateCreditCard} />
       <Stack.Screen name="Accounts" component={ProtectedAccounts} />
     </Stack.Navigator>
   </NavigationContainer>;

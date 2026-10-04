@@ -5,6 +5,7 @@ import { colors } from '../theme';
 export default function Icon({ name, size = 24, color = colors.text }) {
   const props = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shapes = {
+    creditCard: <><Rect x="2" y="4" width="20" height="16" rx="3" {...props} /><Path d="M2 9h20M6 15h4" {...props} /></>,
     archive: <><Path d="M3 8l2-5h14l2 5v12a1 1 0 01-1 1H4a1 1 0 01-1-1V8zM3 8h5l2 3h4l2-3h5" {...props} /></>,
     warning: <><Path d="M12 3L2 21h20zM12 9v5" {...props} /><Circle cx="12" cy="17.5" r="1" fill={color} /></>,
     home: <><Path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1z" {...props} /></>,
@@ -29,6 +30,7 @@ export default function Icon({ name, size = 24, color = colors.text }) {
     chevron: <Polyline points="9,5 16,12 9,19" {...props} />,
     chevronDown: <Polyline points="5,9 12,16 19,9" {...props} />,
     search: <><Circle cx="10.5" cy="10.5" r="6.5" {...props} /><Path d="M16 16l5 5" {...props} /></>,
+    filters: <><Path d="M3 6h18M3 12h18M3 18h18" {...props} /><Circle cx="8" cy="6" r="2" fill="#FFFFFF" {...props} /><Circle cx="16" cy="12" r="2" fill="#FFFFFF" {...props} /><Circle cx="10" cy="18" r="2" fill="#FFFFFF" {...props} /></>,
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>{shapes[name] || shapes.wallet}</Svg>;
 }

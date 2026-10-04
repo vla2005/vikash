@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
-import SectionScreen from '../screens/SectionScreen';
+import StatementScreen from '../screens/StatementScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import CategoryFormScreen from '../screens/CategoryFormScreen';
 import AccountsScreen from '../screens/AccountsScreen';
 import CreateAccountScreen from '../screens/CreateAccountScreen';
+import AddFinancialItemScreen from '../screens/AddFinancialItemScreen';
+import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useCategories from '../hooks/useCategories';
 import useAccounts from '../hooks/useAccounts';
@@ -15,8 +17,6 @@ import BottomNavigator from '../components/BottomNavigator';
 import VoiceDrawer from '../components/VoiceDrawer';
 import { createTransaction } from '../services/transactions';
 import { colors } from '../theme';
-
-const titles = { Statement: 'EXTRATO' };
 
 export default function MainTabs() {
   const [selected, setSelected] = useState('Home');
@@ -31,7 +31,7 @@ export default function MainTabs() {
   useEffect(() => {
     if (Platform.OS !== 'android') { return; }
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (accountForm) { setAccountForm(null); return true; }
+      if (accountForm) { setAccountForm(accountForm.kind === 'choose' || accountForm.account ? null : { kind: 'choose' }); return true; }
       if (categoryForm) { setCategoryForm(null); return true; }
       if (selected === 'Home') { return false; }
       setSelected('Home'); return true;
@@ -55,14 +55,17 @@ export default function MainTabs() {
   }
   function renderContent() {
     if (selected === 'Home') { return <HomeScreen />; }
+    if (selected === 'Statement') { return <StatementScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} />; }
     if (selected === 'AccountManagement') {
       if (accountForm) {
         const close = () => setAccountForm(null);
-        return <CreateAccountScreen key={accountForm.account?.uuid || 'new-account'} route={{ params: { fromManagement: true, account: accountForm.account } }} navigation={{ goBack: close, reset: close }} />;
+        const back = () => accountForm.account ? close() : setAccountForm({ kind: 'choose' });
+        if (accountForm.kind === 'choose') { return <AddFinancialItemScreen onCancel={close} onChoose={kind => setAccountForm({ kind, account: null })} />; }
+        if (accountForm.kind === 'card') { return <CreateCreditCardScreen onCancel={back} onCreated={close} />; }
+        return <CreateAccountScreen key={accountForm.account?.uuid || 'new-account'} route={{ params: { fromManagement: true, account: accountForm.account } }} navigation={{ goBack: back, reset: close }} />;
       }
-      return <AccountsScreen {...accountList} profile={onboarding?.profile} onRetry={accountList.retry} onCreate={() => setAccountForm({ account: null })} onEdit={account => setAccountForm({ account })} onArchived={() => showToast({ type: 'info', message: 'As contas arquivadas estarão disponíveis quando o endpoint estiver pronto.' })} />;
+      return <AccountsScreen {...accountList} profile={onboarding?.profile} onRetry={accountList.retry} onCreate={() => setAccountForm({ kind: 'choose' })} onEdit={account => setAccountForm({ kind: 'account', account })} onArchived={() => showToast({ type: 'info', message: 'As contas arquivadas estarão disponíveis quando o endpoint estiver pronto.' })} />;
     }
-    if (selected !== 'Categories') { return <SectionScreen title={titles[selected]} />; }
     if (categoryForm) {
       return <CategoryFormScreen key={categoryForm.category?.uuid ?? categoryForm.category?.name ?? 'new-category'} category={categoryForm.category} existingCategories={[...defaultCategories, ...categories]} saving={saving} onSave={saveCategory} onCancel={() => setCategoryForm(null)} />;
     }
@@ -71,7 +74,7 @@ export default function MainTabs() {
   return <View style={styles.background}>
     <View style={[styles.canvas, { paddingTop: insets.top }]}>
       <View style={styles.content}>{renderContent()}</View>
-      <BottomNavigator selected={selected} onSelect={key => { setCategoryForm(null); setAccountForm(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />
+      {!accountForm && <BottomNavigator selected={selected} onSelect={key => { setCategoryForm(null); setAccountForm(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />}
     </View>
     <VoiceDrawer visible={voiceVisible} onClose={() => setVoiceVisible(false)} onConfirm={confirmTranscription} />
   </View>;

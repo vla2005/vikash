@@ -7,7 +7,7 @@ import { colors, fontFamily, typography } from '../theme';
 import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
 
-export default function FinancialInstitutionPicker({ value, selectedInstitution, onChange }) {
+export default function FinancialInstitutionPicker({ value, selectedInstitution, onChange, required = false, error: fieldError }) {
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
@@ -28,12 +28,13 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
   }
 
   return <View style={styles.field}>
-    <Text style={typography.label}>Instituição financeira <Text style={styles.optional}>(opcional)</Text></Text>
+    <Text style={typography.label}>Instituição financeira{!required && <Text style={styles.optional}> (opcional)</Text>}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={selected ? `Instituição financeira: ${selected.name}` : 'Selecionar instituição financeira'} accessibilityState={{ expanded: visible }} onPress={open} style={styles.trigger}>
       <InstitutionLogo institution={selected} />
       <Text numberOfLines={1} style={[styles.value, !selected && styles.placeholder]}>{selected?.name || 'Selecione seu banco ou conta digital'}</Text>
       <Icon name="chevronDown" size={20} color={colors.secondary} />
     </Pressable>
+    {fieldError && <Text accessibilityRole="alert" style={styles.fieldError}>{fieldError}</Text>}
     <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <Pressable accessibilityRole="button" accessibilityLabel="Fechar seleção de instituição" onPress={() => setVisible(false)} style={StyleSheet.absoluteFill} />
@@ -58,7 +59,7 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
               {item.id === value && <Icon name="check" color={colors.primary} size={21} />}
             </Pressable>}
             ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyTitle}>{catalog.length ? 'Nenhuma instituição encontrada.' : 'Nenhuma instituição disponível.'}</Text><Text style={styles.description}>{catalog.length ? 'Tente outro nome ou continue sem instituição.' : 'Você pode continuar sem instituição.'}</Text></View>} />}
-          <Pressable accessibilityRole="button" onPress={() => select(null)} style={styles.skip}><Text style={styles.skipText}>Continuar sem instituição</Text></Pressable>
+          {!required && <Pressable accessibilityRole="button" onPress={() => select(null)} style={styles.skip}><Text style={styles.skipText}>Continuar sem instituição</Text></Pressable>}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -67,6 +68,7 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
 
 const styles = StyleSheet.create({
   field: { gap: 7 },
+  fieldError: { color: colors.error, fontFamily, fontSize: 13, lineHeight: 18 },
   optional: { fontWeight: '400', fontSize: 12 },
   trigger: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 62, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   value: { flex: 1, fontFamily, fontSize: 15, color: colors.text },

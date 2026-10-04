@@ -35,7 +35,7 @@ export default function RegisterScreen({ navigation }) {
       await register(values);
       showToast({ type: 'success', title: 'Cadastro realizado!', message: 'Seu acesso está pronto. Agora crie sua primeira conta.' });
       setValues(previous => ({ ...previous, password: '', confirmPassword: '' }));
-      navigation.reset({ index: 0, routes: [{ name: 'CreateAccount' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'AddFinancialItem' }] });
     } catch (cause) {
       setRequestError(cause.message);
       showToast({ type: 'error', title: 'Não foi possível cadastrar', message: cause.message });

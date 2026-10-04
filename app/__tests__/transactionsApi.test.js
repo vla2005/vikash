@@ -1,8 +1,24 @@
-import { createTransaction } from '../src/services/transactions';
+import { createTransaction, fetchTransactions } from '../src/services/transactions';
 import { configureAuth } from '../src/services/apiClient';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
 afterEach(() => { global.fetch = originalFetch; });
+
+test('GET consulta pagina do Slice com ambos os headers e converte os campos', async () => {
+  global.fetch = jest.fn(async () => ({ ok: true, json: async () => ({ number: 1, last: true, content: [
+    { uuid: 'real-uuid', description: 'Mercado', amount: '350.00', type: 'EXPENSE', paymentMethod: 'CREDIT_CARD', occurredAt: '2026-10-03T15:07:03', categoryName: 'Mercado', categoryColor: 'ochre', categoryIcon: 'basket', institutionName: 'Mercado Pago' },
+  ] }) }));
+  const result = await fetchTransactions('test-access', 1);
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/transaction?page=1&size=20', expect.objectContaining({
+    method: 'GET', headers: expect.objectContaining({ access_token: 'test-access', Authorization: 'Bearer test-access' }),
+  }));
+  expect(result).toMatchObject({ page: 1, hasNext: false, rows: [{ id: 'real-uuid', amount: 350, payment: 'Crédito', date: '2026-10-03', category: 'Mercado', account: 'Mercado Pago' }] });
+});
+
+test('GET rejeita resposta sem metadados de paginacao', async () => {
+  global.fetch = jest.fn(async () => ({ ok: true, json: async () => ({ content: [] }) }));
+  await expect(fetchTransactions('test-access')).rejects.toThrow('paginação');
+});
 
 test('envia somente a transcrição revisada por POST com access_token e retorna a transação', async () => {
   const transaction = { uuid: 'transaction-uuid', description: 'Almoço', amount: 45 };

@@ -16,7 +16,7 @@ import { colors, fontFamily, typography } from '../theme';
 export default function CreateAccountScreen({ navigation, route }) {
   const { accounts, saveAccount } = useOnboarding();
   const { showToast } = useToast();
-  const fromManagement = route.params?.fromManagement;
+  const fromManagement = route.params?.fromManagement || route.params?.fromChoice;
   const editing = route.params?.account || (route.params?.accountUuid ? accounts.find(account => account.uuid === route.params.accountUuid) : null);
   const [name, setName] = useState(editing?.description || editing?.name || '');
   const [balance, setBalance] = useState(formatCurrency(editing?.balance || 0));
