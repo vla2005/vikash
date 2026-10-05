@@ -42,9 +42,10 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
     setRequestError('');
     try {
       const values = { financialInstitutionId: institution, description, creditLimit: parseCurrency(limit), closingDay: Number(closingDay), dueDay: Number(dueDay) };
-      const card = editing ? await updateCreditCard(existingCard.uuid, values, session?.accessToken) : await createCreditCard(values, session?.accessToken);
+      if (editing) { await updateCreditCard(existingCard.uuid, values, session?.accessToken); }
+      else { await createCreditCard(values, session?.accessToken); }
       showToast({ type: 'success', title: editing ? 'Cartão atualizado!' : 'Cartão criado!', message: 'Seu cartão de crédito foi salvo com sucesso.' });
-      if (onCreated) { onCreated(card); }
+      if (onCreated) { onCreated(); }
       else { navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); }
     } catch (cause) {
       setRequestError(cause.message);
@@ -67,4 +68,4 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
     <View style={styles.bottom}><InlineNotice message={requestError} error /><Text style={styles.hint}>{editing ? 'As faturas existentes mantêm suas datas de fechamento e vencimento.' : 'Você pode editar os dados depois.'}</Text><PrimaryButton title={editing ? 'Salvar alterações' : 'Criar cartão'} onPress={submit} loading={loading} icon={null} /></View>
   </Screen>;
 }
-const styles = StyleSheet.create({ header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, heading: { marginTop: 32, gap: 10 }, form: { marginTop: 30, gap: 25 }, days: { flexDirection: 'row', gap: 14 }, day: { flex: 1 }, bottom: { marginTop: 30, gap: 22 }, hint: { fontFamily, color: colors.secondary, fontSize: 13, lineHeight: 19, textAlign: 'center' } });
+const styles = StyleSheet.create({ header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, heading: { marginTop: 32, gap: 10 }, form: { marginTop: 24, gap: 22, padding: 18, backgroundColor: colors.surface, borderRadius: 24 }, days: { flexDirection: 'row', gap: 14 }, day: { flex: 1 }, bottom: { marginTop: 30, gap: 22 }, hint: { fontFamily, color: colors.secondary, fontSize: 13, lineHeight: 19, textAlign: 'center' } });

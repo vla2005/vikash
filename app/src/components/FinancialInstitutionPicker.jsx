@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal, Pla
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { searchFinancialInstitutions } from '../constants/financialInstitutions';
 import useFinancialInstitutions from '../hooks/useFinancialInstitutions';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
 
@@ -87,8 +87,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   optionName: { flex: 1, fontFamily, color: colors.text, fontSize: 16 },
   empty: { paddingVertical: 24, gap: 5 },
-  emptyTitle: { fontFamily, fontSize: 16, color: colors.text, fontWeight: '500' },
+  emptyTitle: { fontFamily: fontFamilyMedium, fontSize: 16, color: colors.text, fontWeight: '500' },
   retry: { alignSelf: 'flex-start', paddingVertical: 14, minHeight: 44 },
   skip: { marginTop: 12, minHeight: 48, justifyContent: 'center', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border },
-  skipText: { fontFamily, fontSize: 14, color: colors.primary, fontWeight: '500' },
+  skipText: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.primary, fontWeight: '500' },
 });

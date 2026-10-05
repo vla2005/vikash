@@ -7,7 +7,7 @@ import Icon from '../components/Icon';
 import AccountRow from '../components/AccountRow';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { formatCurrency } from '../utils/money';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, fontFamilyBold, colors, fontFamily, typography } from '../theme';
 
 export default function AccountsSummaryScreen({ navigation }) {
   const { accounts, completed, completeSetup, profile, reset } = useOnboarding();
@@ -34,10 +34,10 @@ const styles = StyleSheet.create({
   list: { backgroundColor: colors.surface, borderRadius: 16, paddingHorizontal: 16, marginTop: 28 },
   add: { marginTop: 18 },
   total: { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 26, paddingTop: 22, gap: 8 },
-  amount: { color: colors.text, fontFamily, fontSize: 36, lineHeight: 44, letterSpacing: -1.2, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  amount: { color: colors.text, fontFamily: fontFamilyBold, fontSize: 36, lineHeight: 44, letterSpacing: -1.2, fontWeight: '700', fontVariant: ['tabular-nums'] },
   bottom: { marginTop: 48 },
   empty: { marginTop: 26, paddingVertical: 20, gap: 12 },
-  emptyTitle: { color: colors.text, fontFamily, fontSize: 18, fontWeight: '600' },
+  emptyTitle: { color: colors.text, fontFamily: fontFamilyMedium, fontSize: 18, fontWeight: '600' },
   exit: { alignSelf: 'center', padding: 14 },
   exitText: { color: colors.primary, fontFamily, fontSize: 15 },
 });

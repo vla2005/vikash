@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
 import BrandLogo from '../components/BrandLogo';
 import Icon from '../components/Icon';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 
 export default function AddFinancialItemScreen({ navigation, route, onChoose, onCancel }) {
   const choose = kind => onChoose ? onChoose(kind) : navigation.navigate(kind === 'account' ? 'CreateAccount' : 'CreateCreditCard', { ...route?.params, fromChoice: true });
@@ -22,6 +22,6 @@ export default function AddFinancialItemScreen({ navigation, route, onChoose, on
 const styles = StyleSheet.create({
   content: { justifyContent: 'flex-start' }, top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, topTitle: { fontFamily, fontSize: 16, color: colors.text }, spacer: { width: 24 },
   brand: { alignItems: 'center', marginTop: 42, marginBottom: 36 }, heading: { gap: 12 }, title: { ...typography.title, fontSize: 34, lineHeight: 40 },
-  options: { gap: 16, marginTop: 30 }, option: { minHeight: 118, flexDirection: 'row', alignItems: 'center', gap: 17, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 20 }, account: { borderColor: colors.primary }, optionCopy: { flex: 1, gap: 7 }, optionTitle: { fontFamily, fontSize: 20, fontWeight: '600', color: colors.text }, description: { ...typography.body, fontSize: 14, lineHeight: 21 }, pressed: { opacity: 0.75 },
+  options: { gap: 16, marginTop: 30 }, option: { minHeight: 118, flexDirection: 'row', alignItems: 'center', gap: 17, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 20 }, account: { borderColor: colors.primary }, optionCopy: { flex: 1, gap: 7 }, optionTitle: { fontFamily: fontFamilyMedium, fontSize: 20, fontWeight: '600', color: colors.text }, description: { ...typography.body, fontSize: 14, lineHeight: 21 }, pressed: { opacity: 0.75 },
   bottom: { marginTop: 'auto', paddingTop: 40, gap: 18 }, notice: { backgroundColor: colors.primarySoft, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }, noticeText: { fontFamily, color: colors.primary, fontSize: 14, lineHeight: 20, flex: 1 }, hint: { ...typography.body, textAlign: 'center', fontSize: 13 },
 });

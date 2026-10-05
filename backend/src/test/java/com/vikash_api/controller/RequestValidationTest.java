@@ -25,6 +25,8 @@ class RequestValidationTest {
     private final CategoryService categories = mock(CategoryService.class);
     private final TransactionService transactions = mock(TransactionService.class);
     private final CreditCardInvoiceService invoices = mock(CreditCardInvoiceService.class);
+    private final CreditCardService cards = mock(CreditCardService.class);
+    private final CreditCardPurchaseService purchases = mock(CreditCardPurchaseService.class);
     private LocalValidatorFactoryBean validator;
     private MockMvc mvc;
     private static final String UUID = "b4fbe04a-29d0-49e6-a52a-15ca00cb7bc5";
@@ -34,12 +36,44 @@ class RequestValidationTest {
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mvc = MockMvcBuilders.standaloneSetup(new AuthController(auth), new AccountController(accounts),
-                        new CategoryController(categories), new TransactionController(transactions), new CreditCardInvoiceController(invoices))
+                        new CategoryController(categories), new TransactionController(transactions),
+                        new CreditCardInvoiceController(invoices), new CreditCardController(cards), new CreditCardPurchaseController(purchases))
                 .setValidator(validator).setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 
     @AfterEach
     void closeValidator() { validator.close(); }
+
+    @Test
+    void detailsUseUuidQueryParameterAndRejectInvalidOrMissingUuid() throws Exception {
+        mvc.perform(get("/api/transaction/details").param("uuid", UUID)).andExpect(status().isOk());
+        verify(transactions).getByUuid(java.util.UUID.fromString(UUID));
+        mvc.perform(get("/api/credit-card-purchase").param("uuid", UUID)).andExpect(status().isOk());
+        verify(purchases).getByUuid(java.util.UUID.fromString(UUID));
+        mvc.perform(get("/api/transaction/details").param("uuid", "invalid"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.uuid").isString());
+        mvc.perform(get("/api/credit-card-purchase"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.uuid").isString());
+    }
+
+    static Stream<Arguments> emptyResponses() {
+        String category = "{\"name\":\"Pets\",\"icon\":\"paw\",\"color\":\"sage\"}";
+        String card = "{\"financialInstitutionId\":1,\"description\":\"Meu cartão\",\"creditLimit\":5000,\"closingDay\":3,\"dueDay\":10}";
+        String payment = "{\"accountUuid\":\"" + UUID + "\",\"paymentMethod\":\"PIX\",\"occurredAt\":\"2026-01-01T12:00:00\"}";
+        return Stream.of(
+                Arguments.of("POST", "/api/category/create", category, 201),
+                Arguments.of("PUT", "/api/category/update/" + UUID, category, 204),
+                Arguments.of("POST", "/api/credit-card", card, 201),
+                Arguments.of("PUT", "/api/credit-card/update/" + UUID, card, 204),
+                Arguments.of("POST", "/api/credit-card-invoice/" + UUID + "/pay", payment, 204));
+    }
+
+    @ParameterizedTest
+    @MethodSource("emptyResponses")
+    void successfulWritesReturnNoBody(String method, String path, String body, int expectedStatus) throws Exception {
+        mvc.perform(request(HttpMethod.valueOf(method), path).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().is(expectedStatus)).andExpect(content().string(""));
+    }
 
     static Stream<Arguments> invalidRequests() {
         return Stream.of(
@@ -113,7 +147,7 @@ class RequestValidationTest {
                 .andExpect(status().isCreated());
         mvc.perform(post("/api/transaction/create").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"transcription\":\"" + "a".repeat(5000) + "\"}"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated()).andExpect(content().string(""));
     }
 
     @Test

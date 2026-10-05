@@ -19,5 +19,6 @@ public record TransactionSummaryResponse(
         String categoryIcon,
         String institutionName,
         Integer installmentNumber,
-        Integer installmentCount
+        Integer installmentCount,
+        UUID purchaseUuid
     ) {}

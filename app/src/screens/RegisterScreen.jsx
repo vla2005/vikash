@@ -9,7 +9,7 @@ import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
 import { validateRegistration } from '../utils/validation';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 
 export default function RegisterScreen({ navigation }) {
   const [values, setValues] = useState({ name: '', email: '', password: '', confirmPassword: '' });
@@ -62,13 +62,13 @@ const styles = StyleSheet.create({
   back: { width: 34, height: 44, justifyContent: 'center' },
   headerBalance: { width: 34 },
   heading: { marginTop: 28, gap: 9 },
-  title: { ...typography.title, fontSize: 36, lineHeight: 42 },
-  form: { marginTop: 28, gap: 18 },
-  nextStep: { marginTop: 23, padding: 13, borderRadius: 12, backgroundColor: '#EEEDE7', flexDirection: 'row', alignItems: 'center', gap: 12 },
+  title: { ...typography.title, fontSize: 32, lineHeight: 41 },
+  form: { marginTop: 24, gap: 16, padding: 18, backgroundColor: colors.surface, borderRadius: 24 },
+  nextStep: { marginTop: 23, padding: 13, borderRadius: 12, backgroundColor: colors.primarySoft, flexDirection: 'row', alignItems: 'center', gap: 12 },
   nextIcon: { height: 38, width: 38, borderRadius: 19, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
   nextText: { flex: 1, color: '#555E73', fontFamily, fontSize: 14, lineHeight: 20 },
   submit: { marginTop: 18 },
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 24, marginBottom: 4 },
   footerText: { color: colors.secondary, fontFamily, fontSize: 14 },
-  link: { color: colors.primary, fontFamily, fontSize: 14, fontWeight: '500' },
+  link: { color: colors.primary, fontFamily: fontFamilyMedium, fontSize: 14, fontWeight: '500' },
 });

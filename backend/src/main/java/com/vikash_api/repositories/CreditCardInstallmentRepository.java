@@ -2,6 +2,8 @@ package com.vikash_api.repositories;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.List;
+import com.vikash_api.dtos.responses.CreditCardInstallmentResponse;
 import com.vikash_api.entities.CreditCardInstallmentEntity;
 import com.vikash_api.dtos.responses.TransactionSummaryResponse;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +22,7 @@ public interface CreditCardInstallmentRepository extends JpaRepository<CreditCar
             purchase.occurredAt, COALESCE(customCategory.name, defaultCategory.name),
             COALESCE(customCategory.color, defaultCategory.color),
             COALESCE(customCategory.icon, defaultCategory.icon), institution.name,
-            installment.installmentNumber, purchase.installmentCount
+            installment.installmentNumber, purchase.installmentCount, purchase.uuid
         )
         FROM CreditCardInstallmentEntity installment
         JOIN installment.purchase purchase
@@ -38,4 +40,17 @@ public interface CreditCardInstallmentRepository extends JpaRepository<CreditCar
 
     @Query("SELECT COALESCE(SUM(i.amount), 0) FROM CreditCardInstallmentEntity i WHERE i.creditCardInvoice.id = :invoiceId")
     BigDecimal sumByInvoiceId(@Param("invoiceId") Long invoiceId);
+
+    @Query("""
+        SELECT new com.vikash_api.dtos.responses.CreditCardInstallmentResponse(
+            installment.uuid, installment.installmentNumber, installment.amount,
+            invoice.uuid, invoice.referenceMonth, invoice.closingDate, invoice.dueDate, invoice.status
+        )
+        FROM CreditCardInstallmentEntity installment
+        JOIN installment.creditCardInvoice invoice
+        WHERE installment.purchase.uuid = :purchaseUuid AND installment.purchase.creditCard.user.id = :userId
+        ORDER BY installment.installmentNumber ASC
+    """)
+    List<CreditCardInstallmentResponse> findDetailsByPurchase(@Param("purchaseUuid") UUID purchaseUuid,
+            @Param("userId") Long userId);
 }

@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   track: { width: 65, height: 4, backgroundColor: colors.border, borderRadius: 2 },
   progressBar: { width: '50%', height: 4, backgroundColor: colors.primary, borderRadius: 2 },
   heading: { marginTop: 32, gap: 10 },
-  form: { marginTop: 30, gap: 25 },
+  form: { marginTop: 24, gap: 22, padding: 18, backgroundColor: colors.surface, borderRadius: 24 },
   bottom: { marginTop: 30, gap: 22 },
   hint: { textAlign: 'center', fontFamily, color: colors.secondary, fontSize: 13, lineHeight: 18 },
 });

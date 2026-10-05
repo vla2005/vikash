@@ -31,10 +31,10 @@ export default FormField;
 
 const styles = StyleSheet.create({
   field: { gap: 7 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.surface },
-  focused: { borderColor: colors.primary },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', minHeight: 54, borderWidth: 1.5, borderColor: 'transparent', borderRadius: 14, backgroundColor: colors.surfaceMuted },
+  focused: { borderColor: colors.primary, backgroundColor: colors.surface },
   invalid: { borderColor: colors.error },
-  input: { flex: 1, minWidth: 0, paddingHorizontal: 16, paddingVertical: 15, color: colors.text, fontFamily, fontSize: 17 },
+  input: { flex: 1, minWidth: 0, paddingHorizontal: 15, paddingVertical: 15, color: colors.text, fontFamily, fontSize: 15 },
   large: { fontSize: 27, fontWeight: '600', paddingVertical: 16, fontVariant: ['tabular-nums'] },
   eye: { padding: 14 },
   error: { color: colors.error, fontFamily, fontSize: 13, lineHeight: 18 },

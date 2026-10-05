@@ -16,6 +16,7 @@ import com.vikash_api.services.CategoryService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -39,20 +40,15 @@ class CategoryServiceTest {
     }
 
     @Test
-    void createsCategoryForCurrentUserAndReturnsPersistedUuid() {
+    void createsCategoryForCurrentUser() {
         UserEntity user = currentUser();
-        UUID uuid = UUID.randomUUID();
-        when(customCategoryRepository.save(any())).thenAnswer(invocation -> {
-            CustomCategoryEntity category = invocation.getArgument(0);
-            assertThat(category.getUser()).isSameAs(user);
-            category.setUuid(uuid);
-            return category;
-        });
-        var response = service.create(new CategoryRequest("Pets", "paw", "sage"));
-        assertThat(response.uuid()).isEqualTo(uuid);
-        assertThat(response.name()).isEqualTo("Pets");
-        assertThat(response.icon()).isEqualTo("paw");
-        assertThat(response.color()).isEqualTo("sage");
+        service.create(new CategoryRequest("Pets", "paw", "sage"));
+        var saved = ArgumentCaptor.forClass(CustomCategoryEntity.class);
+        verify(customCategoryRepository).save(saved.capture());
+        assertThat(saved.getValue().getUser()).isSameAs(user);
+        assertThat(saved.getValue().getName()).isEqualTo("Pets");
+        assertThat(saved.getValue().getIcon()).isEqualTo("paw");
+        assertThat(saved.getValue().getColor()).isEqualTo("sage");
     }
 
     @Test
@@ -83,12 +79,12 @@ class CategoryServiceTest {
         CustomCategoryEntity category = new CustomCategoryEntity();
         category.setUuid(uuid);
         when(customCategoryRepository.findByUuidAndUserId(uuid, 42L)).thenReturn(Optional.of(category));
-        when(customCategoryRepository.save(category)).thenReturn(category);
-        var response = service.update(uuid, new CategoryRequest("Estudos", "book", "blue"));
-        assertThat(response.uuid()).isEqualTo(uuid);
-        assertThat(response.name()).isEqualTo("Estudos");
-        assertThat(response.icon()).isEqualTo("book");
-        assertThat(response.color()).isEqualTo("blue");
+        service.update(uuid, new CategoryRequest("Estudos", "book", "blue"));
+        verify(customCategoryRepository).save(category);
+        assertThat(category.getUuid()).isEqualTo(uuid);
+        assertThat(category.getName()).isEqualTo("Estudos");
+        assertThat(category.getIcon()).isEqualTo("book");
+        assertThat(category.getColor()).isEqualTo("blue");
     }
 
     @Test
@@ -122,8 +118,8 @@ class CategoryServiceTest {
         assertThatThrownBy(() -> service.create(new CategoryRequest("pets", "paw", "blue")))
                 .isInstanceOf(com.vikash_api.exceptions.CategoryAlreadyExistsException.class);
         when(customCategoryRepository.findByUuidAndUserId(category.getUuid(), 42L)).thenReturn(Optional.of(category));
-        when(customCategoryRepository.save(category)).thenReturn(category);
-        assertThat(service.update(category.getUuid(), new CategoryRequest("Pets", "paw", "rose")).color())
-                .isEqualTo("rose");
+        service.update(category.getUuid(), new CategoryRequest("Pets", "paw", "rose"));
+        verify(customCategoryRepository).save(category);
+        assertThat(category.getColor()).isEqualTo("rose");
     }
 }

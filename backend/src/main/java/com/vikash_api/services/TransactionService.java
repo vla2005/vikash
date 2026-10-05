@@ -18,8 +18,12 @@ import com.vikash_api.dtos.responses.AccountAnalysisContext;
 import com.vikash_api.dtos.responses.AiAnalysisResponse;
 import com.vikash_api.dtos.responses.AllAccountsResponse;
 import com.vikash_api.dtos.responses.AllCategoriesResponse;
-import com.vikash_api.dtos.responses.TransactionResponse;
 import com.vikash_api.dtos.responses.TransactionSummaryResponse;
+import com.vikash_api.dtos.responses.TransactionResponse;
+import com.vikash_api.dtos.responses.AccountSummaryResponse;
+import com.vikash_api.dtos.responses.CategoryResponse;
+import com.vikash_api.dtos.responses.CreditCardReferenceResponse;
+import com.vikash_api.exceptions.TransactionNotFoundException;
 import com.vikash_api.dtos.responses.CreditCardAnalysisContext;
 import com.vikash_api.dtos.responses.FinancialInstitutionResponse;
 import com.vikash_api.entities.AccountEntity;
@@ -56,8 +60,44 @@ public class TransactionService {
     private final CreditCardInvoiceRepository creditCardInvoiceRepository;
     private final CreditCardInvoiceService creditCardInvoiceService;
 
+    @Transactional(readOnly = true)
+    public TransactionResponse getByUuid(UUID uuid) {
+        UserEntity user = authenticatedUserService.getCurrentUser();
+        TransactionEntity transaction = transactionRepository.findByUuidAndUserId(uuid, user.getId())
+                .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada."));
+        CategoryResponse category = null;
+        if (transaction.getCustomCategory() != null) {
+            var custom = transaction.getCustomCategory();
+            category = new CategoryResponse(custom.getUuid(), custom.getName(), custom.getIcon(), custom.getColor());
+        } else if (transaction.getDefaultCategory() != null) {
+            var defaults = transaction.getDefaultCategory();
+            category = new CategoryResponse(null, defaults.getName(), defaults.getIcon(), defaults.getColor());
+        }
+        var invoice = transaction.getCreditCardInvoice();
+        CreditCardReferenceResponse creditCard = null;
+        if (invoice != null) {
+            var card = invoice.getCreditCard();
+            var institution = card.getFinancialInstitution();
+            creditCard = new CreditCardReferenceResponse(card.getUuid(), card.getDescription(),
+                    new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()));
+        }
+        return new TransactionResponse(transaction.getUuid(), transaction.getDescription(), transaction.getAmount(),
+                transaction.getType(), transaction.getPaymentMethod(), transaction.getOccurredAt(),
+                accountSummary(transaction.getAccount()), accountSummary(transaction.getDestinationAccount()), category,
+                creditCard, invoice == null ? null : invoice.getUuid(), transaction.getTranscription(),
+                transaction.getCreatedAt(), transaction.getUpdatedAt());
+    }
+
+    private AccountSummaryResponse accountSummary(AccountEntity account) {
+        if (account == null) { return null; }
+        var institution = account.getFinancialInstitution();
+        return new AccountSummaryResponse(account.getUuid(), account.getDescription(), account.getType(),
+                institution == null ? null : new FinancialInstitutionResponse(institution.getId(),
+                        institution.getName(), institution.getLogoUrl()));
+    }
+
     @Transactional
-    public TransactionResponse create(TransactionRequest request) {
+    public void create(TransactionRequest request) {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         AllAccountsResponse accounts = accountService.get();
 
@@ -93,8 +133,9 @@ public class TransactionService {
         if (analysis.type() == TransactionType.INVOICE_PAYMENT) {
             var paymentRequest = new CreditCardInvoicePaymentRequest(
                     analysis.accountUuid(), analysis.paymentMethod(), analysis.occurredAt());
-            return toResponse(creditCardInvoiceService.payFromVoice(analysis.creditCardInvoiceUuid(),
-                    analysis.creditCardUuid(), paymentRequest, analysis.amount(), request.transcription()));
+            creditCardInvoiceService.payFromVoice(analysis.creditCardInvoiceUuid(),
+                    analysis.creditCardUuid(), paymentRequest, analysis.amount(), request.transcription());
+            return;
         }
         boolean creditPurchase = analysis.paymentMethod() == PaymentMethod.CREDIT_CARD;
         AccountEntity account = creditPurchase ? null : accountRepository.findByUuidAndUserId(analysis.accountUuid(), currentUser.getId())
@@ -120,7 +161,8 @@ public class TransactionService {
         }
 
         if (creditPurchase) {
-            return creditCardPurchaseService.create(analysis, defaultCategory, customCategory, request.transcription());
+            creditCardPurchaseService.create(analysis, defaultCategory, customCategory, request.transcription());
+            return;
         }
 
         TransactionEntity transaction = new TransactionEntity();
@@ -136,9 +178,7 @@ public class TransactionService {
         transaction.setOccurredAt(analysis.occurredAt());
         transaction.setTranscription(request.transcription());
 
-        TransactionEntity savedTransaction = transactionRepository.save(transaction);
-
-        return toResponse(savedTransaction);
+        transactionRepository.save(transaction);
     }
 
     @Transactional (readOnly = true)
@@ -146,26 +186,6 @@ public class TransactionService {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         Pageable pageable = Pageable.ofSize(size).withPage(page);
         return transactionRepository.findSummariesByUserId(currentUser.getId(), pageable);
-    }
-
-    private TransactionResponse toResponse(TransactionEntity transaction) {
-        return new TransactionResponse(
-                transaction.getUuid(),
-                transaction.getDescription(),
-                transaction.getAmount(),
-                transaction.getType(),
-                transaction.getPaymentMethod(),
-                transaction.getOccurredAt(),
-                transaction.getAccount() == null ? null : transaction.getAccount().getUuid(),
-                transaction.getCreditCardInvoice() == null ? null : transaction.getCreditCardInvoice().getCreditCard().getUuid(),
-                transaction.getCreditCardInvoice() == null ? null : transaction.getCreditCardInvoice().getUuid(),
-                transaction.getDestinationAccount() == null ? null : transaction.getDestinationAccount().getUuid(),
-                transaction.getDefaultCategory() == null ? null : transaction.getDefaultCategory().getName(),
-                transaction.getCustomCategory() == null ? null : transaction.getCustomCategory().getUuid(),
-                transaction.getTranscription(),
-                transaction.getCreatedAt(),
-                transaction.getUpdatedAt(),
-                null, transaction.getAmount(), 1, 1);
     }
 
     private void validateInvoicePayment(AiAnalysisResponse analysis) {

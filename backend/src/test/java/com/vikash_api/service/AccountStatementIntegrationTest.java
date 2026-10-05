@@ -35,6 +35,7 @@ class AccountStatementIntegrationTest {
     @Autowired AccountRepository accountRepository;
     @Autowired UserRepository userRepository;
     @Autowired TransactionRepository transactionRepository;
+    @Autowired com.vikash_api.services.TransactionService transactionService;
     @MockitoBean AuthenticatedUserService authenticatedUserService;
     @MockitoBean AiAnalysisService aiAnalysisService;
     UserEntity user;
@@ -94,6 +95,28 @@ class AccountStatementIntegrationTest {
         assertThat(first.getContent()).doesNotContainAnyElementsOf(last.getContent());
         assertThat(service.getTransactions(otherAccount.getUuid(), 0, 20).getContent()).hasSize(2);
         assertThat(service.getTransactions(account("Vazia").getUuid(), 0, 20)).isEmpty();
+    }
+
+    @Test
+    void transactionDetailsIncludeBothAccountsAndTranscriptionWithoutBalances() {
+        transaction(wallet, otherAccount, 10);
+        transactionRepository.flush();
+        var saved = transactionRepository.findAll().getFirst();
+        var response = transactionService.getByUuid(saved.getUuid());
+        assertThat(response.uuid()).isEqualTo(saved.getUuid());
+        assertThat(response.account().description()).isEqualTo("Dinheiro");
+        assertThat(response.destinationAccount().uuid()).isEqualTo(otherAccount.getUuid());
+        assertThat(response.transcription()).isEqualTo("Texto de teste");
+        assertThat(response.category()).isNull();
+        assertThat(response.creditCard()).isNull();
+        assertThat(tools.jackson.databind.json.JsonMapper.builder().build().valueToTree(response).toString())
+                .doesNotContain("balance");
+        var other = userRepository.save(UserEntity.builder().name("Outro").email("transaction-foreign@test.local").password("test-only").build());
+        when(authenticatedUserService.getCurrentUser()).thenReturn(other);
+        assertThatThrownBy(() -> transactionService.getByUuid(saved.getUuid()))
+                .isInstanceOf(com.vikash_api.exceptions.TransactionNotFoundException.class);
+        assertThatThrownBy(() -> transactionService.getByUuid(UUID.randomUUID()))
+                .isInstanceOf(com.vikash_api.exceptions.TransactionNotFoundException.class);
     }
 
     @Test

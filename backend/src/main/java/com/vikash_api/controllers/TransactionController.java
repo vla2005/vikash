@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vikash_api.dtos.requests.TransactionRequest;
-import com.vikash_api.dtos.responses.TransactionResponse;
 import com.vikash_api.dtos.responses.TransactionSummaryResponse;
+import com.vikash_api.dtos.responses.TransactionResponse;
+import java.util.UUID;
 import com.vikash_api.services.TransactionService;
 
 import jakarta.validation.Valid;
@@ -27,9 +28,15 @@ public class TransactionController {
 
     private final TransactionService transactionService;
 
+    @GetMapping("/details")
+    public ResponseEntity<TransactionResponse> getTransaction(@RequestParam UUID uuid) {
+        return ResponseEntity.ok(transactionService.getByUuid(uuid));
+    }
+
     @PostMapping("/create")
-    public ResponseEntity<TransactionResponse> createTransaction(@Valid @RequestBody TransactionRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(transactionService.create(request));
+    public ResponseEntity<Void> createTransaction(@Valid @RequestBody TransactionRequest request) {
+        transactionService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @GetMapping

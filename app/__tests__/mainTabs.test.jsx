@@ -5,12 +5,14 @@ import MainTabs from '../src/navigation/MainTabs';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 import BottomNavigator from '../src/components/BottomNavigator';
 import VoiceDrawer from '../src/components/VoiceDrawer';
+import TransactionDetailsScreen from '../src/screens/TransactionDetailsScreen';
+import CreditCardPurchaseDetailsScreen from '../src/screens/CreditCardPurchaseDetailsScreen';
 import { createCreditCard, updateCreditCard, fetchCreditCards, fetchCreditCardDetails } from '../src/services/creditCards';
 import { fetchFinancialInstitutions } from '../src/services/financialInstitutions';
 jest.mock('../src/services/creditCards', () => ({ createCreditCard: jest.fn(), updateCreditCard: jest.fn(), fetchCreditCards: jest.fn(), fetchCreditCardDetails: jest.fn() }));
 jest.mock('../src/services/financialInstitutions', () => ({ fetchFinancialInstitutions: jest.fn() }));
-import { createTransaction } from '../src/services/transactions';
-jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn(), fetchTransactions: jest.fn(async () => ({ rows: [], page: 0, hasNext: false })) }));
+import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCreditCardPurchaseDetails } from '../src/services/transactions';
+jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn(), fetchTransactions: jest.fn(async () => ({ rows: [], page: 0, hasNext: false })), fetchTransactionDetails: jest.fn(), fetchCreditCardPurchaseDetails: jest.fn() }));
 import { fetchAccounts, fetchAccountDetails } from '../src/services/accounts';
 jest.mock('../src/services/accounts', () => ({ fetchAccounts: jest.fn(), fetchAccountDetails: jest.fn(), createAccount: jest.fn() }));
 import useToast from '../src/hooks/useToast';
@@ -31,6 +33,10 @@ jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition:
 
 let renderer;
 beforeEach(() => {
+  fetchTransactions.mockReset();
+  fetchTransactions.mockResolvedValue({ rows: [], page: 0, hasNext: false });
+  fetchTransactionDetails.mockReset();
+  fetchCreditCardPurchaseDetails.mockReset();
   createCreditCard.mockReset();
   updateCreditCard.mockReset();
   fetchCreditCards.mockReset();
@@ -71,14 +77,44 @@ function labels() { return renderer.root.findAllByType(Text).map(node => node.pr
 
 test('as quatro abas mudam o conteudo e mantem a barra com estado selecionado', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
-  expect(labels()).toContain('HOME');
-  for (const [tab, heading] of [['Extrato', 'Extrato'], ['Contas', 'Contas'], ['Categorias', 'Categorias'], ['Início', 'HOME']]) {
+  expect(labels()).toContain('O que você movimentou hoje?');
+  for (const [tab, heading] of [['Extrato', 'Extrato'], ['Contas', 'Contas'], ['Categorias', 'Categorias'], ['Início', 'O que você movimentou hoje?']]) {
     await act(async () => button(tab).props.onPress());
     expect(labels()).toContain(heading);
     expect(button(tab).props.accessibilityState.selected).toBe(true);
     expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(1);
     expect(button('Registrar por voz')).toBeDefined();
   }
+});
+
+test('atalhos do inicio abrem extrato e contas e o botao principal abre o microfone', async () => {
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Ver extrato').props.onPress());
+  expect(button('Extrato').props.accessibilityState.selected).toBe(true);
+  await act(async () => button('Início').props.onPress());
+  await act(async () => button('Contas e cartões').props.onPress());
+  expect(button('Contas').props.accessibilityState.selected).toBe(true);
+  await act(async () => button('Início').props.onPress());
+  await act(async () => button('Começar registro por voz').props.onPress());
+  expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(true);
+  expect(createTransaction).not.toHaveBeenCalled();
+});
+
+test('alternar para cartoes esconde contas sem repetir consultas e permite voltar', async () => {
+  fetchAccounts.mockResolvedValue([{ uuid: 'cash', description: 'Dinheiro', type: 'CARTEIRA', balance: 50 }]);
+  fetchCreditCards.mockResolvedValue([{ uuid: 'card', description: 'Meu cartão Inter', creditLimit: 5000, availableLimit: 4400 }]);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  expect(labels()).toContain('Dinheiro');
+  await act(async () => button('Mostrar cartões').props.onPress());
+  expect(labels()).not.toContain('Dinheiro');
+  expect(labels()).toContain('Meu cartão Inter');
+  expect(button('Mostrar cartões').props['aria-selected']).toBe(true);
+  expect(button('Contas').props.accessibilityState.selected).toBe(true);
+  expect(fetchAccounts).toHaveBeenCalledTimes(1);
+  expect(fetchCreditCards).toHaveBeenCalledTimes(1);
+  await act(async () => button('Mostrar contas').props.onPress());
+  expect(labels()).toContain('Dinheiro');
 });
 
 test('microfone abre e fecha drawer sem mudar a aba e informa captura indisponivel', async () => {
@@ -302,4 +338,43 @@ test('falha da consulta mostra erro sem categorias padrao locais', async () => {
   expect(labels()).toContain('Consulta indisponível');
   expect(labels()).not.toContain('Saúde');
   expect(labels()).not.toContain('Mercado');
+});
+
+test('clique no extrato consulta detalhes por UUID e voltar preserva a lista sem novo GET', async () => {
+  const today = new Date();
+  const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  fetchTransactions.mockResolvedValue({ rows: [{ id: 'transaction', description: 'Pix no mercado', amount: 350, date, type: 'EXPENSE', payment: 'Pix' }], page: 0, hasNext: false });
+  fetchTransactionDetails.mockResolvedValue({ uuid: 'transaction', description: 'Pix no mercado', amount: 350, occurredAt: `${date}T15:07:00`, type: 'EXPENSE', paymentMethod: 'PIX', account: { description: 'Mercado Pago' } });
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Extrato').props.onPress());
+  expect(fetchTransactionDetails).not.toHaveBeenCalled();
+  await act(async () => button('Abrir lançamento Pix no mercado').props.onPress());
+  expect(renderer.root.findByType(TransactionDetailsScreen).props.uuid).toBe('transaction');
+  expect(fetchTransactionDetails).toHaveBeenCalledWith('transaction', 'test-access', expect.anything());
+  await act(async () => button('Voltar à lista').props.onPress());
+  expect(renderer.root.findAllByType(TransactionDetailsScreen)).toHaveLength(0);
+  expect(fetchTransactions).toHaveBeenCalledTimes(1);
+});
+
+test('clique na parcela usa UUID da compra e abre a fatura escolhida nos detalhes', async () => {
+  fetchCreditCards.mockResolvedValue([{ uuid: 'card', description: 'Meu cartão', creditLimit: 5000, availableLimit: 4000 }]);
+  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', description: 'Meu cartão', creditLimit: 5000, availableLimit: 4000, closingDay: 3, dueDay: 10, currentInvoiceUuid: 'october', invoices: [
+    { uuid: 'october', referenceMonth: '2026-10', total: 500, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' },
+    { uuid: 'november', referenceMonth: '2026-11', total: 500, status: 'OPEN', closingDate: '2026-11-03', dueDate: '2026-11-10' },
+  ] });
+  fetchTransactions.mockResolvedValue({ rows: [{ id: 'installment', purchaseUuid: 'purchase', description: 'Televisão', amount: 500, date: '2026-10-04', type: 'EXPENSE', payment: 'Crédito', installmentCount: 2, installmentNumber: 1 }], page: 0, hasNext: false });
+  fetchCreditCardPurchaseDetails.mockResolvedValue({ uuid: 'purchase', description: 'Televisão', amount: 1000, occurredAt: '2026-10-04T19:30:00', creditCard: { uuid: 'card', description: 'Meu cartão' }, installmentCount: 2, installments: [
+    { uuid: 'first', installmentNumber: 1, amount: 500, creditCardInvoiceUuid: 'october', referenceMonth: '2026-10', status: 'OPEN' },
+    { uuid: 'second', installmentNumber: 2, amount: 500, creditCardInvoiceUuid: 'november', referenceMonth: '2026-11', status: 'OPEN' },
+  ] });
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  await act(async () => button('Abrir cartão Meu cartão').props.onPress());
+  expect(fetchCreditCardPurchaseDetails).not.toHaveBeenCalled();
+  await act(async () => button('Abrir lançamento Televisão').props.onPress());
+  expect(renderer.root.findByType(CreditCardPurchaseDetailsScreen).props.uuid).toBe('purchase');
+  expect(fetchCreditCardPurchaseDetails).toHaveBeenCalledWith('purchase', 'test-access', expect.anything());
+  await act(async () => button('Abrir fatura Novembro 2026').props.onPress());
+  expect(renderer.root.findAllByType(CreditCardPurchaseDetailsScreen)).toHaveLength(0);
+  expect(button('Fatura Nov 2026').props.accessibilityState.selected).toBe(true);
 });

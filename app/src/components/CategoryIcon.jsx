@@ -1,7 +1,8 @@
+import { colors } from '../theme';
 import React from 'react';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
-export default function CategoryIcon({ name, size = 28, color = '#252824' }) {
+export default function CategoryIcon({ name, size = 28, color = colors.text }) {
   const stroke = { stroke: color, strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shapes = {
     health: <Path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill={color} />,

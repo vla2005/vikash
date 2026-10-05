@@ -4,7 +4,7 @@ import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
 import { getAccountType } from '../constants/accountTypes';
 import { formatCurrency } from '../utils/money';
-import { colors, fontFamily } from '../theme';
+import { fontFamilyMedium, colors, fontFamily } from '../theme';
 
 export default function AccountRow({ account, onPress, last }) {
   const type = getAccountType(account.type);
@@ -19,8 +19,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 20 },
   separator: { borderBottomWidth: 1, borderBottomColor: colors.border },
   info: { flex: 1, minWidth: 0, gap: 4 },
-  name: { fontFamily, fontSize: 16, fontWeight: '600', color: colors.text },
+  name: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.text },
   type: { fontFamily, fontSize: 12, color: colors.secondary },
-  balance: { fontFamily, fontSize: 15, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'], maxWidth: '42%' },
+  balance: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'], maxWidth: '42%' },
   pressed: { opacity: 0.65 },
 });

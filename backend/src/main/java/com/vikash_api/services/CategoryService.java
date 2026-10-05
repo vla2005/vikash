@@ -29,12 +29,12 @@ public class CategoryService {
     private final DefaultCategoryRepository defaultCategoryRepository;
 
     @Transactional
-    public CategoryResponse create(CategoryRequest request) {
+    public void create(CategoryRequest request) {
         CustomCategoryEntity category = new CustomCategoryEntity();
         category.setUser(authenticatedUserService.getCurrentUser());
         validateName(request.name(), category.getUser().getId(), null);
         applyRequest(category, request);
-        return toResponse(customCategoryRepository.save(category));
+        customCategoryRepository.save(category);
     }
 
     @Transactional(readOnly = true)
@@ -50,13 +50,13 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponse update(UUID uuid, CategoryRequest request) {
+    public void update(UUID uuid, CategoryRequest request) {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         CustomCategoryEntity category = customCategoryRepository.findByUuidAndUserId(uuid, currentUser.getId())
                 .orElseThrow(() -> new CategoryNotFoundException("Categoria não encontrada."));
         validateName(request.name(), currentUser.getId(), uuid);
         applyRequest(category, request);
-        return toResponse(customCategoryRepository.save(category));
+        customCategoryRepository.save(category);
     }
 
     private void applyRequest(CustomCategoryEntity category, CategoryRequest request) {

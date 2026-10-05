@@ -50,7 +50,7 @@ test('sessao salva so abre HOME depois da validacao na API', async () => {
   await render();
   expect(labels()).toEqual([]);
   await act(async () => { finish({ ok: true, json: async () => user }); });
-  expect(labels()).toContain('HOME');
+  expect(labels()).toContain('O que você movimentou hoje?');
   expect(global.fetch).toHaveBeenCalledTimes(1);
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer saved-token' }) }));
 });
@@ -77,7 +77,7 @@ test('indisponibilidade da API preserva a sessao e oferece tentar novamente sem 
   global.fetch.mockRejectedValue(new TypeError('Network error'));
   await render();
   expect(labels()).toContain('Tentar novamente');
-  expect(labels()).not.toContain('HOME');
+  expect(labels()).not.toContain('O que você movimentou hoje?');
   expect(clearSession).not.toHaveBeenCalled();
 });
 
@@ -85,7 +85,7 @@ test('guarda bloqueia acesso direto e remove HOME quando sessao e encerrada', as
   loadSession.mockResolvedValue({ accessToken: 'saved', expiresAt: Date.now() + 60000 });
   const navigation = { reset: jest.fn() };
   await render(<ProtectedScreen component={HomeScreen} navigation={navigation} />);
-  expect(labels()).toEqual(['HOME']);
+  expect(labels()).toContain('O que você movimentou hoje?');
   await act(() => state.reset());
   expect(labels()).toEqual([]);
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Login' }] });
@@ -102,7 +102,7 @@ test('telas protegidas nao repetem me com o tempo ou ao recuperar o foco', async
     await act(async () => jest.advanceTimersByTime(180000));
     await act(async () => renderer.update(content(false)));
     await act(async () => renderer.update(content(true)));
-    expect(labels()).toEqual(['HOME']);
+    expect(labels()).toContain('O que você movimentou hoje?');
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(navigation.reset).not.toHaveBeenCalled();
   } finally { jest.useRealTimers(); }

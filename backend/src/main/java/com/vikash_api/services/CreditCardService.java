@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.vikash_api.dtos.requests.CreditCardRequest;
 import com.vikash_api.dtos.responses.CreditCardDetailsResponse;
 import com.vikash_api.dtos.responses.TransactionSummaryResponse;
-import com.vikash_api.dtos.responses.CreditCardResponse;
 import com.vikash_api.dtos.responses.FinancialInstitutionResponse;
 import com.vikash_api.dtos.responses.AllCreditCardsResponse;
 import com.vikash_api.dtos.responses.CreditCardSummaryResponse;
@@ -101,7 +100,7 @@ public class CreditCardService {
     }
 
     @Transactional
-    public CreditCardResponse update(UUID uuid, CreditCardRequest request) {
+    public void update(UUID uuid, CreditCardRequest request) {
         var user = authenticatedUserService.getCurrentUser();
         var card = creditCardRepository.findOwnedForUpdate(uuid, user.getId())
                 .orElseThrow(() -> new CreditCardInvoiceNotFoundException("Cartão não encontrado."));
@@ -112,14 +111,11 @@ public class CreditCardService {
         card.setClosingDay(request.closingDay());
         card.setDueDay(request.dueDay());
         card.setFinancialInstitution(institution);
-        var saved = creditCardRepository.save(card);
-        return new CreditCardResponse(saved.getUuid(), saved.getDescription(), saved.getCreditLimit(),
-                saved.getClosingDay(), saved.getDueDay(),
-                new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()));
+        creditCardRepository.save(card);
     }
 
     @Transactional
-    public CreditCardResponse create(CreditCardRequest request) {
+    public void create(CreditCardRequest request) {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
 
         FinancialInstitutionEntity institution = institutionRepository.findById(request.financialInstitutionId())
@@ -133,15 +129,6 @@ public class CreditCardService {
         creditCard.setClosingDay(request.closingDay());
         creditCard.setDueDay(request.dueDay());
         creditCard.setActive(true);
-        CreditCardEntity savedCard = creditCardRepository.save(creditCard);
-
-        return new CreditCardResponse(
-            savedCard.getUuid(),
-            savedCard.getDescription(),
-            savedCard.getCreditLimit(),
-            savedCard.getClosingDay(),
-            savedCard.getDueDay(),
-            new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl())
-        );
+        creditCardRepository.save(creditCard);
     }
 }

@@ -61,7 +61,7 @@ class TransactionServiceTest {
     @InjectMocks TransactionService service;
 
     @Test
-    void passesContextWithoutBalanceAndReturnsSavedTransactionWithDefaultCategory() {
+    void passesContextWithoutBalanceAndSavesTransactionWithDefaultCategory() {
         UUID accountUuid = UUID.randomUUID();
         var account = new AccountResponse(accountUuid, "Carteira", AccountType.CARTEIRA, new BigDecimal("999.00"), null);
         var defaults = List.of(new CategoryResponse(null, "Alimentação", "food", "blue"));
@@ -80,32 +80,18 @@ class TransactionServiceTest {
                 PaymentMethod.CASH, occurredAt, accountUuid, null, null, "Alimentação", null, 1, List.of());
         var context = ArgumentCaptor.forClass(AiAnalysisContext.class);
         when(aiAnalysisService.analyze(eq("Almoço de 45 reais"), context.capture())).thenReturn(analysis);
-        UUID transactionUuid = UUID.randomUUID();
-        var createdAt = occurredAt.plusMinutes(5);
-        when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(invocation -> {
-            TransactionEntity saved = invocation.getArgument(0);
-            saved.setUuid(transactionUuid);
-            saved.setCreatedAt(createdAt);
-            saved.setUpdatedAt(createdAt);
-            return saved;
-        });
-
-        var response = service.create(new TransactionRequest("Almoço de 45 reais"));
-        assertThat(response.uuid()).isEqualTo(transactionUuid);
-        assertThat(response.description()).isEqualTo("Almoço");
-        assertThat(response.amount()).isEqualTo(new BigDecimal("45.10"));
-        assertThat(response.type()).isEqualTo(TransactionType.EXPENSE);
-        assertThat(response.paymentMethod()).isEqualTo(PaymentMethod.CASH);
-        assertThat(response.occurredAt()).isEqualTo(occurredAt);
-        assertThat(response.accountUuid()).isEqualTo(accountUuid);
-        assertThat(response.defaultCategoryName()).isEqualTo("Alimentação");
-        assertThat(response.customCategoryUuid()).isNull();
-        assertThat(response.destinationAccountUuid()).isNull();
-        assertThat(response.transcription()).isEqualTo("Almoço de 45 reais");
-        assertThat(response.createdAt()).isEqualTo(createdAt);
-        assertThat(response.updatedAt()).isEqualTo(createdAt);
+        service.create(new TransactionRequest("Almoço de 45 reais"));
         var transaction = ArgumentCaptor.forClass(TransactionEntity.class);
         verify(transactionRepository).save(transaction.capture());
+        assertThat(transaction.getValue().getDescription()).isEqualTo("Almoço");
+        assertThat(transaction.getValue().getAmount()).isEqualByComparingTo("45.10");
+        assertThat(transaction.getValue().getType()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(transaction.getValue().getPaymentMethod()).isEqualTo(PaymentMethod.CASH);
+        assertThat(transaction.getValue().getOccurredAt()).isEqualTo(occurredAt);
+        assertThat(transaction.getValue().getAccount()).isSameAs(accountEntity);
+        assertThat(transaction.getValue().getCustomCategory()).isNull();
+        assertThat(transaction.getValue().getDestinationAccount()).isNull();
+        assertThat(transaction.getValue().getTranscription()).isEqualTo("Almoço de 45 reais");
         assertThat(transaction.getValue().getUser()).isSameAs(user);
         assertThat(transaction.getValue().getDefaultCategory()).isSameAs(category);
         verify(accountRepository).findByUuidAndUserId(accountUuid, user.getId());
@@ -117,7 +103,7 @@ class TransactionServiceTest {
     }
 
     @Test
-    void returnsDestinationAndCustomCategoryFromSavedTransaction() {
+    void savesDestinationAndCustomCategory() {
         var account = new AccountEntity();
         account.setUuid(UUID.randomUUID());
         var destination = new AccountEntity();
@@ -134,14 +120,13 @@ class TransactionServiceTest {
                 PaymentMethod.PIX, LocalDateTime.now(), account.getUuid(), null, destination.getUuid(), null,
                 category.getUuid(), 1, List.of());
         when(aiAnalysisService.analyze(eq("Transferi 100 reais"), any(AiAnalysisContext.class))).thenReturn(analysis);
-        when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        var response = service.create(new TransactionRequest("Transferi 100 reais"));
-
-        assertThat(response.accountUuid()).isEqualTo(account.getUuid());
-        assertThat(response.destinationAccountUuid()).isEqualTo(destination.getUuid());
-        assertThat(response.customCategoryUuid()).isEqualTo(category.getUuid());
-        assertThat(response.defaultCategoryName()).isNull();
+        service.create(new TransactionRequest("Transferi 100 reais"));
+        var transaction = ArgumentCaptor.forClass(TransactionEntity.class);
+        verify(transactionRepository).save(transaction.capture());
+        assertThat(transaction.getValue().getAccount()).isSameAs(account);
+        assertThat(transaction.getValue().getDestinationAccount()).isSameAs(destination);
+        assertThat(transaction.getValue().getCustomCategory()).isSameAs(category);
+        assertThat(transaction.getValue().getDefaultCategory()).isNull();
         verify(accountRepository).findByUuidAndUserId(account.getUuid(), null);
         verify(accountRepository).findByUuidAndUserId(destination.getUuid(), null);
         verify(customCategoryRepository).findByUuidAndUserId(category.getUuid(), null);

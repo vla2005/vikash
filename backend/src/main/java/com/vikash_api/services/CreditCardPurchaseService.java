@@ -2,15 +2,18 @@ package com.vikash_api.services;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.UUID;
+import com.vikash_api.dtos.responses.CreditCardPurchaseResponse;
+import com.vikash_api.dtos.responses.CreditCardReferenceResponse;
+import com.vikash_api.dtos.responses.FinancialInstitutionResponse;
+import com.vikash_api.dtos.responses.CategoryResponse;
+import com.vikash_api.exceptions.TransactionNotFoundException;
 import com.vikash_api.dtos.responses.AiAnalysisResponse;
-import com.vikash_api.dtos.responses.TransactionResponse;
 import com.vikash_api.entities.CreditCardInvoiceEntity;
 import com.vikash_api.entities.CreditCardPurchaseEntity;
 import com.vikash_api.entities.CreditCardInstallmentEntity;
 import com.vikash_api.entities.DefaultCategoriesEntity;
 import com.vikash_api.entities.CustomCategoryEntity;
-import com.vikash_api.enums.PaymentMethod;
-import com.vikash_api.enums.TransactionType;
 import com.vikash_api.repositories.CreditCardPurchaseRepository;
 import com.vikash_api.repositories.CreditCardInstallmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +26,33 @@ public class CreditCardPurchaseService {
     private final CreditCardPurchaseRepository creditCardPurchaseRepository;
     private final CreditCardInstallmentRepository creditCardInstallmentRepository;
     private final CreditCardInvoiceService creditCardInvoiceService;
+    private final AuthenticatedUserService authenticatedUserService;
+
+    @Transactional(readOnly = true)
+    public CreditCardPurchaseResponse getByUuid(UUID uuid) {
+        var user = authenticatedUserService.getCurrentUser();
+        var purchase = creditCardPurchaseRepository.findByUuidAndCreditCardUserId(uuid, user.getId())
+                .orElseThrow(() -> new TransactionNotFoundException("Compra no crédito não encontrada."));
+        var card = purchase.getCreditCard();
+        var institution = card.getFinancialInstitution();
+        var cardResponse = new CreditCardReferenceResponse(card.getUuid(), card.getDescription(),
+                new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()));
+        CategoryResponse category = null;
+        if (purchase.getCustomCategory() != null) {
+            var custom = purchase.getCustomCategory();
+            category = new CategoryResponse(custom.getUuid(), custom.getName(), custom.getIcon(), custom.getColor());
+        } else if (purchase.getDefaultCategory() != null) {
+            var defaults = purchase.getDefaultCategory();
+            category = new CategoryResponse(null, defaults.getName(), defaults.getIcon(), defaults.getColor());
+        }
+        return new CreditCardPurchaseResponse(purchase.getUuid(), purchase.getDescription(), purchase.getAmount(),
+                purchase.getOccurredAt(), cardResponse, category, purchase.getTranscription(), purchase.getInstallmentCount(),
+                creditCardInstallmentRepository.findDetailsByPurchase(uuid, user.getId()),
+                purchase.getCreatedAt(), purchase.getUpdatedAt());
+    }
 
     @Transactional
-    public TransactionResponse create(AiAnalysisResponse analysis, DefaultCategoriesEntity defaultCategory,
+    public void create(AiAnalysisResponse analysis, DefaultCategoriesEntity defaultCategory,
             CustomCategoryEntity customCategory, String transcription) {
         CreditCardInvoiceEntity firstInvoice = creditCardInvoiceService.getOrCreateForPurchase(
                 analysis.creditCardUuid(), analysis.occurredAt().toLocalDate());
@@ -40,14 +67,6 @@ public class CreditCardPurchaseService {
         purchase.setTranscription(transcription);
         CreditCardPurchaseEntity saved = creditCardPurchaseRepository.save(purchase);
         createInstallments(saved, firstInvoice);
-        // Mantém o contrato do comando de voz; UUID e amount agora representam a compra inteira.
-        return new TransactionResponse(saved.getUuid(), saved.getDescription(), saved.getAmount(),
-                TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD, saved.getOccurredAt(), null,
-                saved.getCreditCard().getUuid(), firstInvoice.getUuid(), null,
-                defaultCategory == null ? null : defaultCategory.getName(),
-                customCategory == null ? null : customCategory.getUuid(), saved.getTranscription(),
-                saved.getCreatedAt(), saved.getUpdatedAt(), saved.getUuid(), saved.getAmount(),
-                null, saved.getInstallmentCount());
     }
 
     private void createInstallments(CreditCardPurchaseEntity purchase, CreditCardInvoiceEntity firstInvoice) {

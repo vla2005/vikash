@@ -1,6 +1,8 @@
 package com.vikash_api.repositories;
 
 import java.util.UUID;
+import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -14,6 +16,10 @@ import com.vikash_api.entities.TransactionEntity;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
+    @EntityGraph(attributePaths = {"account.financialInstitution", "destinationAccount.financialInstitution",
+            "defaultCategory", "customCategory", "creditCardInvoice.creditCard.financialInstitution"})
+    Optional<TransactionEntity> findByUuidAndUserId(UUID uuid, Long userId);
+
     @Query("""
         SELECT new com.vikash_api.dtos.responses.TransactionSummaryResponse(
             t.uuid, t.description, t.amount, t.type, t.paymentMethod, t.occurredAt,
@@ -25,7 +31,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
                     CASE WHEN account.type = com.vikash_api.enums.AccountType.CARTEIRA THEN 'Carteira' ELSE institution.name END
                 ELSE
                     CASE WHEN destination.type = com.vikash_api.enums.AccountType.CARTEIRA THEN 'Carteira' ELSE destinationInstitution.name END
-            END, 1, 1
+            END, 1, 1, null
         )
         FROM TransactionEntity t
         LEFT JOIN t.account account
@@ -57,7 +63,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
                 WHEN account.type = com.vikash_api.enums.AccountType.CARTEIRA
                     THEN 'Carteira'
                 ELSE institution.name
-            END, 1, 1
+            END, 1, 1, null
         )
         FROM TransactionEntity t
         LEFT JOIN t.account account

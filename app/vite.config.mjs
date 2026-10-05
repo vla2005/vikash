@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), ['VITE_', 'EXPO_PUBLIC_']);
   return {
   plugins: [react()],
+  optimizeDeps: { entries: ['index.html'] },
   resolve: {
     alias: [
       { find: /^react-native$/, replacement: 'react-native-web' },

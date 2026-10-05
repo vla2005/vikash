@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from './Icon';
-import { fontFamily } from '../theme';
+import { fontFamilyBold, colors, fontFamily } from '../theme';
 
 export const toastVariants = {
   success: { color: '#248455', soft: '#EAF6EF', border: '#D5EBDD', icon: 'check', title: 'Tudo certo' },
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   accent: { position: 'absolute', top: 16, bottom: 16, left: 0, width: 3, borderRadius: 2 },
   badge: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, gap: 4, paddingBottom: 4 },
-  title: { fontFamily, fontSize: 14, lineHeight: 19, fontWeight: '700', color: '#252824' },
+  title: { fontFamily: fontFamilyBold, fontSize: 14, lineHeight: 19, fontWeight: '700', color: colors.text },
   message: { fontFamily, fontSize: 13, lineHeight: 19, color: '#62666B' },
   close: { width: 28, minHeight: 38, alignItems: 'center', justifyContent: 'center', marginRight: -5 },
   track: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3 },

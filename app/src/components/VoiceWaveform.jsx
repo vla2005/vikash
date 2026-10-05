@@ -1,3 +1,4 @@
+import { colors } from '../theme';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import useReducedMotion from '../hooks/useReducedMotion';
@@ -7,10 +8,11 @@ export default function VoiceWaveform({ active }) {
   const reduced = useReducedMotion();
   const values = useRef(heights.map(() => new Animated.Value(0.45))).current;
   useEffect(() => {
-    if (!active) { values.forEach(value => value.setValue(0.25)); return; }
+    values.forEach((value, index) => value.setValue(!active ? 0.25 : reduced ? 0.65 : 0.3 + (index % 5) * 0.1));
+    if (!active) { return; }
     const animations = values.map((value, index) => Animated.loop(Animated.sequence([
-      Animated.timing(value, { toValue: 1, duration: reduced ? 900 : 180 + (index % 5) * 65, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
-      Animated.timing(value, { toValue: reduced ? 0.65 : 0.3, duration: reduced ? 900 : 250 + (index % 4) * 80, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
+      Animated.timing(value, { toValue: reduced ? 0.85 : 1, duration: reduced ? 900 + (index % 5) * 65 : 180 + (index % 5) * 65, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
+      Animated.timing(value, { toValue: reduced ? 0.65 : 0.3, duration: reduced ? 1100 + (index % 4) * 80 : 250 + (index % 4) * 80, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
     ])));
     animations.forEach(animation => animation.start());
     return () => animations.forEach(animation => animation.stop());
@@ -19,7 +21,7 @@ export default function VoiceWaveform({ active }) {
 }
 const styles = StyleSheet.create({
   wave: { height: 48, width: '100%', maxWidth: 290, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 18 },
-  bar: { width: 3.5, borderRadius: 3, backgroundColor: '#0666FF' },
+  bar: { width: 3.5, borderRadius: 3, backgroundColor: colors.primary },
   faint: { opacity: 0.4 },
   strong: { opacity: 0.9 },
 });

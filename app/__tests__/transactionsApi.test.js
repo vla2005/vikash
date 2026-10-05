@@ -1,7 +1,20 @@
-import { createTransaction, fetchTransactions } from '../src/services/transactions';
+import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCreditCardPurchaseDetails } from '../src/services/transactions';
 import { configureAuth } from '../src/services/apiClient';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
+
+test('detalhes fazem GET com UUID na query e token; compra preserva todas as parcelas em ordem', async () => {
+  const details = { uuid: 'transaction', description: 'Mercado', amount: '350.00', occurredAt: '2026-10-04T15:07:00' };
+  global.fetch = jest.fn(async () => ({ ok: true, json: async () => details }));
+  expect(await fetchTransactionDetails('transaction', 'token')).toMatchObject({ uuid: 'transaction', amount: 350 });
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/transaction/details?uuid=transaction', expect.objectContaining({ method: 'GET', headers: expect.objectContaining({ access_token: 'token', Authorization: 'Bearer token' }) }));
+  global.fetch.mockResolvedValue({ ok: true, json: async () => ({ ...details, uuid: 'purchase', creditCard: { uuid: 'card' }, installments: [2, 1].map(number => ({ uuid: `part-${number}`, installmentNumber: number, amount: '175.00', creditCardInvoiceUuid: `invoice-${number}`, referenceMonth: '2026-11', status: 'OPEN' })) }) });
+  const purchase = await fetchCreditCardPurchaseDetails('purchase', 'token');
+  expect(purchase.installments.map(item => item.installmentNumber)).toEqual([1, 2]);
+  expect(global.fetch).toHaveBeenLastCalledWith('http://api.test/api/credit-card-purchase?uuid=purchase', expect.objectContaining({ method: 'GET' }));
+  global.fetch.mockResolvedValue({ ok: false, status: 404 });
+  await expect(fetchTransactionDetails('transaction', 'token')).rejects.toThrow('não encontrado');
+});
 
 test('extrato aceita pagamento de fatura como movimento da conta, sem parcelas', async () => {
   global.fetch = jest.fn(async () => ({ ok: true, json: async () => ({ number: 0, last: true, content: [
@@ -28,10 +41,9 @@ test('GET rejeita resposta sem metadados de paginacao', async () => {
   await expect(fetchTransactions('test-access')).rejects.toThrow('paginação');
 });
 
-test('envia somente a transcrição revisada por POST com access_token e retorna a transação', async () => {
-  const transaction = { uuid: 'transaction-uuid', description: 'Almoço', amount: 45 };
-  global.fetch = jest.fn(async () => ({ ok: true, status: 201, json: async () => transaction }));
-  expect(await createTransaction('  Gastei 45 no almoço.  ', 'test-access')).toEqual(transaction);
+test('envia a transcrição revisada com access_token e aceita 201 sem body', async () => {
+  global.fetch = jest.fn(async () => ({ ok: true, status: 201, json: async () => { throw new SyntaxError('Resposta vazia'); } }));
+  await expect(createTransaction('  Gastei 45 no almoço.  ', 'test-access')).resolves.toBeUndefined();
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/transaction/create', expect.objectContaining({
     method: 'POST',
     headers: expect.objectContaining({ access_token: 'test-access', Authorization: 'Bearer test-access', 'Content-Type': 'application/json' }),

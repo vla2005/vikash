@@ -34,8 +34,8 @@ test('GET consulta rota sem v1 e preserva as duas listas retornadas pelo servido
 
 test('POST usa rota sem v1, token nos headers e somente os campos solicitados', async () => {
   const category = { name: 'Pets', icon: 'paw', color: 'sage' };
-  global.fetch = jest.fn(async () => ({ ok: true, json: async () => category }));
-  expect(await createCategory({ ...category, name: ' Pets ', id: 'ignored' }, 'test-access')).toEqual(category);
+  global.fetch = jest.fn(async () => ({ ok: true, status: 201, json: async () => { throw new SyntaxError('sem corpo'); } }));
+  await expect(createCategory({ ...category, name: ' Pets ', id: 'ignored' }, 'test-access')).resolves.toBeUndefined();
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/category/create', expect.objectContaining({
     method: 'POST',
     headers: expect.objectContaining({ access_token: 'test-access', Authorization: 'Bearer test-access', 'Content-Type': 'application/json' }),

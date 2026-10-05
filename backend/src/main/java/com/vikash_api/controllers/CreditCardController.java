@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vikash_api.dtos.requests.CreditCardRequest;
-import com.vikash_api.dtos.responses.CreditCardResponse;
 import com.vikash_api.dtos.responses.AllCreditCardsResponse;
 import com.vikash_api.dtos.responses.CreditCardDetailsResponse;
 import com.vikash_api.dtos.responses.TransactionSummaryResponse;
@@ -34,9 +33,10 @@ public class CreditCardController {
     private final CreditCardService creditCardService;
 
     @PutMapping("/update/{uuid}")
-    public ResponseEntity<CreditCardResponse> updateCreditCard(@PathVariable UUID uuid,
+    public ResponseEntity<Void> updateCreditCard(@PathVariable UUID uuid,
             @Valid @RequestBody CreditCardRequest request) {
-        return ResponseEntity.ok(creditCardService.update(uuid, request));
+        creditCardService.update(uuid, request);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{uuid}")
@@ -60,7 +60,8 @@ public class CreditCardController {
     }
 
     @PostMapping
-    public ResponseEntity<CreditCardResponse> createCreditCard(@Valid @RequestBody CreditCardRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(creditCardService.create(request));
+    public ResponseEntity<Void> createCreditCard(@Valid @RequestBody CreditCardRequest request) {
+        creditCardService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

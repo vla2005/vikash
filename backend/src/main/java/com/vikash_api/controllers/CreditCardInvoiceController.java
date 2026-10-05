@@ -30,9 +30,10 @@ public class CreditCardInvoiceController {
     private final CreditCardInvoiceService creditCardInvoiceService;
 
     @PostMapping("/{uuid}/pay")
-    public ResponseEntity<CreditCardInvoiceResponse> payInvoice(@PathVariable UUID uuid,
+    public ResponseEntity<Void> payInvoice(@PathVariable UUID uuid,
             @Valid @RequestBody CreditCardInvoicePaymentRequest request) {
-        return ResponseEntity.ok(creditCardInvoiceService.pay(uuid, request));
+        creditCardInvoiceService.pay(uuid, request);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping

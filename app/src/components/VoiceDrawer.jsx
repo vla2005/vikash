@@ -5,12 +5,14 @@ import AnimatedMicButton from './AnimatedMicButton';
 import VoiceWaveform from './VoiceWaveform';
 import Icon from './Icon';
 import useVoiceTranscription from '../hooks/useVoiceTranscription';
-import { fontFamily } from '../theme';
+import useReducedMotion from '../hooks/useReducedMotion';
+import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
 
 export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const voice = useVoiceTranscription(visible);
+  const reduced = useReducedMotion();
   const [feedback, setFeedback] = useState('');
   const [sending, setSending] = useState(false);
   const submitting = useRef(false);
@@ -21,10 +23,11 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   useEffect(() => {
     if (!visible) { slide.setValue(180); return; }
     setFeedback('');
+    if (reduced) { slide.setValue(0); return; }
     const animation = Animated.spring(slide, { toValue: 0, damping: 24, stiffness: 200, useNativeDriver: Platform.OS !== 'web' });
     animation.start();
     return () => animation.stop();
-  }, [visible, slide]);
+  }, [visible, slide, reduced]);
   function close() { if (submitting.current) { return; } voice.cancel(); onClose(); }
   async function confirm() {
     if (!voice.text.trim() || submitting.current) { return; }
@@ -85,37 +88,37 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
 }
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.48)' },
-  drawer: { width: '100%', maxWidth: 460, backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 12, paddingHorizontal: 20 },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.backdrop },
+  drawer: { width: '100%', maxWidth: 460, backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 12, paddingHorizontal: 20 },
   handle: { width: 40, height: 4, borderRadius: 3, backgroundColor: '#CFCFD2', alignSelf: 'center' },
   close: { position: 'absolute', right: 12, top: 6, width: 36, height: 36, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   scroll: { flexShrink: 1 },
   content: { alignItems: 'center' },
   microphone: { marginTop: 46, marginBottom: 30 },
-  title: { fontFamily, color: '#101114', fontWeight: '700', fontSize: 23, lineHeight: 30, textAlign: 'center' },
+  title: { fontFamily: fontFamilyBold, color: colors.text, fontWeight: '700', fontSize: 23, lineHeight: 30, textAlign: 'center' },
   timer: { fontFamily, fontSize: 14, color: '#77787B', marginTop: 3, fontVariant: ['tabular-nums'] },
   transcription: { width: '100%', marginTop: 3, marginBottom: 20, minHeight: 92 },
   label: { fontFamily, fontSize: 12, color: '#737478', marginBottom: 9 },
-  transcript: { fontFamily, fontSize: 24, lineHeight: 31, color: '#111318', letterSpacing: -0.4 },
+  transcript: { fontFamily, fontSize: 24, lineHeight: 31, color: colors.text, letterSpacing: -0.4 },
   placeholder: { color: '#9A9B9E', fontSize: 21 },
-  cursor: { color: '#0666FF' },
+  cursor: { color: colors.primary },
   error: { fontFamily, fontSize: 13, lineHeight: 19, color: '#A3322C', width: '100%', marginBottom: 18 },
-  reviewTitle: { fontFamily, color: '#10131C', fontWeight: '700', fontSize: 25, lineHeight: 31, letterSpacing: -0.8, textAlign: 'center', marginTop: 30 },
+  reviewTitle: { fontFamily: fontFamilyBold, color: colors.text, fontWeight: '700', fontSize: 25, lineHeight: 31, letterSpacing: -0.8, textAlign: 'center', marginTop: 30 },
   subtitle: { fontFamily, fontSize: 17, lineHeight: 24, color: '#5D6475', marginTop: 5, textAlign: 'center' },
-  reviewMic: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#F6F5F2', alignItems: 'center', justifyContent: 'center', marginTop: 20, marginBottom: 18 },
-  editor: { width: '100%', backgroundColor: '#F6F5F2', borderRadius: 13, marginBottom: 24, minHeight: 116 },
-  input: { fontFamily, fontSize: 19, lineHeight: 26, color: '#111827', padding: 16, paddingRight: 42, minHeight: 116 },
+  reviewMic: { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', marginTop: 20, marginBottom: 18 },
+  editor: { width: '100%', backgroundColor: colors.surfaceMuted, borderRadius: 20, marginBottom: 24, minHeight: 116 },
+  input: { fontFamily, fontSize: 19, lineHeight: 26, color: colors.text, padding: 16, paddingRight: 42, minHeight: 116 },
   edit: { position: 'absolute', right: 8, top: 10, padding: 5 },
   footer: { width: '100%' },
-  primary: { backgroundColor: '#0666FF', borderRadius: 18, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 13 },
-  primaryText: { fontFamily, color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  pressed: { backgroundColor: '#0054DE' },
+  primary: { backgroundColor: colors.primary, borderRadius: 18, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 13 },
+  primaryText: { fontFamily: fontFamilyMedium, color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  pressed: { backgroundColor: colors.primaryPressed },
   disabled: { opacity: 0.5 },
   stopIcon: { width: 15, height: 15, borderRadius: 2, backgroundColor: '#FFFFFF' },
   cancel: { height: 44, borderRadius: 18, borderWidth: 1, borderColor: '#DDDCD9', backgroundColor: '#FAF9F7', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  cancelText: { fontFamily, color: '#101114', fontSize: 15, fontWeight: '500' },
-  outlined: { height: 46, borderRadius: 18, borderWidth: 1, borderColor: '#0666FF', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  outlinedText: { fontFamily, fontSize: 16, fontWeight: '600', color: '#0666FF' },
+  cancelText: { fontFamily: fontFamilyMedium, color: colors.text, fontSize: 15, fontWeight: '500' },
+  outlined: { height: 46, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  outlinedText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.primary },
   caption: { fontFamily, fontSize: 12, color: '#77787B', textAlign: 'center', marginTop: 8 },
   notice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 15 },
   noticeText: { fontFamily, fontSize: 12, color: '#697084' },

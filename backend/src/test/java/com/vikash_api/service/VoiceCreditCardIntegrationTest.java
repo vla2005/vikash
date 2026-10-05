@@ -43,6 +43,7 @@ import static org.mockito.Mockito.*;
 class VoiceCreditCardIntegrationTest {
     @Autowired TransactionService transactionService;
     @Autowired CreditCardService creditCardService;
+    @Autowired com.vikash_api.services.CreditCardPurchaseService purchaseService;
     @Autowired UserRepository userRepository;
     @Autowired InstitutionRepository institutionRepository;
     @Autowired CreditCardRepository creditCardRepository;
@@ -93,7 +94,9 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Notebook", new BigDecimal("1500.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 2, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        return transactionService.create(new TransactionRequest("Notebook de 1500 em 3x")).creditCardInvoiceUuid();
+        transactionService.create(new TransactionRequest("Notebook de 1500 em 3x"));
+        return invoiceRepository.findByCreditCardIdAndReferenceMonth(card.getId(), "2026-10")
+                .orElseThrow().getUuid();
     }
 
     private com.vikash_api.dtos.requests.CreditCardInvoicePaymentRequest paymentRequest(UUID accountUuid) {
@@ -116,13 +119,14 @@ class VoiceCreditCardIntegrationTest {
             return new AiAnalysisResponse(null, null, TransactionType.INVOICE_PAYMENT, PaymentMethod.OTHER,
                     date, account.getUuid(), card.getUuid(), null, null, null, 1, List.of(), invoiceUuid);
         });
-        var response = transactionService.create(new TransactionRequest(transcription));
-        assertThat(response.type()).isEqualTo(TransactionType.INVOICE_PAYMENT);
-        assertThat(response.occurredAt()).isEqualTo(date);
-        assertThat(response.amount()).isEqualByComparingTo("500");
-        assertThat(response.accountUuid()).isEqualTo(account.getUuid());
-        assertThat(response.creditCardInvoiceUuid()).isEqualTo(invoiceUuid);
-        assertThat(response.transcription()).isEqualTo(transcription);
+        transactionService.create(new TransactionRequest(transcription));
+        var payment = transactionRepository.findAll().getFirst();
+        assertThat(payment.getType()).isEqualTo(TransactionType.INVOICE_PAYMENT);
+        assertThat(payment.getOccurredAt()).isEqualTo(date);
+        assertThat(payment.getAmount()).isEqualByComparingTo("500");
+        assertThat(payment.getAccount().getUuid()).isEqualTo(account.getUuid());
+        assertThat(payment.getCreditCardInvoice().getUuid()).isEqualTo(invoiceUuid);
+        assertThat(payment.getTranscription()).isEqualTo(transcription);
         assertThat(account.getBalance()).isEqualByComparingTo("1500");
         assertThat(transactionRepository.count()).isEqualTo(1);
         assertThat(purchaseRepository.count()).isEqualTo(1);
@@ -257,11 +261,12 @@ class VoiceCreditCardIntegrationTest {
             return analysis(card.getUuid(), List.of());
         });
         var request = new TransactionRequest("Comprei 100 reais no crédito Inter");
-        var first = transactionService.create(request);
-        var second = transactionService.create(request);
-        assertThat(first.accountUuid()).isNull();
-        assertThat(first.creditCardUuid()).isEqualTo(card.getUuid());
-        assertThat(first.creditCardInvoiceUuid()).isNotNull().isEqualTo(second.creditCardInvoiceUuid());
+        transactionService.create(request);
+        transactionService.create(request);
+        assertThat(purchaseRepository.findAll()).allSatisfy(purchase ->
+                assertThat(purchase.getCreditCard().getUuid()).isEqualTo(card.getUuid()));
+        assertThat(installmentRepository.findAll()).extracting(installment -> installment.getCreditCardInvoice().getUuid())
+                .containsOnly(invoiceRepository.findAll().getFirst().getUuid());
         assertThat(invoiceRepository.count()).isEqualTo(1);
         var invoice = invoiceRepository.findAll().getFirst();
         assertThat(invoice.getReferenceMonth()).isEqualTo("2026-11");
@@ -276,6 +281,30 @@ class VoiceCreditCardIntegrationTest {
         assertThat(summary.currentInvoice().total()).isEqualByComparingTo("200.00");
         assertThat(summary.availableLimit()).isEqualByComparingTo("4800.00");
         assertThat(summary.currentInvoice().uuid()).isEqualTo(invoice.getUuid());
+    }
+
+    @Test
+    void purchaseDetailsLoadWholePurchaseByUuidAndKeepInstallmentsOrderedAndOwned() {
+        when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
+                "Televisão", new BigDecimal("1500.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
+                LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
+        transactionService.create(new TransactionRequest("Televisão de 1500 em 3x"));
+        var purchase = purchaseRepository.findAll().getFirst();
+        var response = purchaseService.getByUuid(purchase.getUuid());
+        assertThat(response.amount()).isEqualByComparingTo("1500");
+        assertThat(response.creditCard().financialInstitution().name()).isEqualTo("Inter");
+        assertThat(response.transcription()).isEqualTo("Televisão de 1500 em 3x");
+        assertThat(response.installments()).extracting(item -> item.installmentNumber()).containsExactly(1, 2, 3);
+        assertThat(response.installments()).extracting(item -> item.referenceMonth()).containsExactly("2026-11", "2026-12", "2027-01");
+        var invoice = invoiceRepository.findByCreditCardIdAndReferenceMonth(card.getId(), "2026-11").orElseThrow();
+        assertThat(creditCardService.getInvoiceTransactions(card.getUuid(), invoice.getUuid(), 0, 20).getContent().getFirst().purchaseUuid())
+                .isEqualTo(purchase.getUuid());
+        var other = userRepository.save(UserEntity.builder().name("Outro").email("purchase-foreign@test.local").password("test-only").build());
+        when(authenticatedUserService.getCurrentUser()).thenReturn(other);
+        assertThatThrownBy(() -> purchaseService.getByUuid(purchase.getUuid()))
+                .isInstanceOf(com.vikash_api.exceptions.TransactionNotFoundException.class);
+        assertThatThrownBy(() -> purchaseService.getByUuid(UUID.randomUUID()))
+                .isInstanceOf(com.vikash_api.exceptions.TransactionNotFoundException.class);
     }
 
     @Test
@@ -320,14 +349,13 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Notebook", new BigDecimal("1500.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        var response = transactionService.create(new TransactionRequest("Comprei um notebook de 1500 em 3x no crédito Inter"));
+        transactionService.create(new TransactionRequest("Comprei um notebook de 1500 em 3x no crédito Inter"));
         transactionRepository.flush();
-        assertThat(response.amount()).isEqualByComparingTo("1500");
-        assertThat(response.purchaseTotal()).isEqualByComparingTo("1500");
-        assertThat(response.installmentNumber()).isNull();
-        assertThat(response.installmentCount()).isEqualTo(3);
+        var purchase = purchaseRepository.findAll().getFirst();
+        assertThat(purchase.getAmount()).isEqualByComparingTo("1500");
+        assertThat(purchase.getInstallmentCount()).isEqualTo(3);
         assertThat(installmentRepository.findAll()).hasSize(3).allSatisfy(transaction -> {
-            assertThat(transaction.getPurchase().getUuid()).isEqualTo(response.purchaseUuid());
+            assertThat(transaction.getPurchase().getUuid()).isEqualTo(purchase.getUuid());
             assertThat(transaction.getAmount()).isEqualByComparingTo("500");
             assertThat(transaction.getPurchase().getAmount()).isEqualByComparingTo("1500");
         });
@@ -451,7 +479,8 @@ class VoiceCreditCardIntegrationTest {
         var due = invoice.getDueDate();
         var request = new com.vikash_api.dtos.requests.CreditCardRequest(card.getFinancialInstitution().getId(),
                 "Inter principal", new BigDecimal("6000"), 5, 15);
-        var updated = creditCardService.update(card.getUuid(), request);
+        creditCardService.update(card.getUuid(), request);
+        var updated = creditCardService.getByUuid(card.getUuid());
         assertThat(updated.uuid()).isEqualTo(card.getUuid());
         assertThat(updated.description()).isEqualTo("Inter principal");
         assertThat(updated.creditLimit()).isEqualByComparingTo("6000");
@@ -466,8 +495,8 @@ class VoiceCreditCardIntegrationTest {
     @Test
     void cardDetailsIncludePaidInvoicesButLoadOnlySelectedInvoiceTransactionsInPages() {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(analysis(card.getUuid(), List.of()));
-        var created = transactionService.create(new TransactionRequest("Compra de novembro"));
-        var invoice = invoiceRepository.findByUuidAndCreditCardUserId(created.creditCardInvoiceUuid(), card.getUser().getId()).orElseThrow();
+        transactionService.create(new TransactionRequest("Compra de novembro"));
+        var invoice = invoiceRepository.findByCreditCardIdAndReferenceMonth(card.getId(), "2026-11").orElseThrow();
         for (int index = 0; index < 20; index++) {
             when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                     "Compra " + index, new BigDecimal("10.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,

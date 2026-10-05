@@ -49,15 +49,14 @@ public class CreditCardInvoiceService {
     private final TransactionRepository transactionRepository;
 
     @Transactional
-    public CreditCardInvoiceResponse pay(UUID uuid, CreditCardInvoicePaymentRequest request) {
-        TransactionEntity payment = registerPayment(uuid, null, request, null, "Pagamento de fatura confirmado no aplicativo.");
-        return toResponse(payment.getCreditCardInvoice());
+    public void pay(UUID uuid, CreditCardInvoicePaymentRequest request) {
+        registerPayment(uuid, null, request, null, "Pagamento de fatura confirmado no aplicativo.");
     }
 
     @Transactional
-    public TransactionEntity payFromVoice(UUID uuid, UUID creditCardUuid, CreditCardInvoicePaymentRequest request,
+    public void payFromVoice(UUID uuid, UUID creditCardUuid, CreditCardInvoicePaymentRequest request,
             BigDecimal expectedAmount, String transcription) {
-        return registerPayment(uuid, creditCardUuid, request, expectedAmount, transcription);
+        registerPayment(uuid, creditCardUuid, request, expectedAmount, transcription);
     }
 
     private TransactionEntity registerPayment(UUID uuid, UUID expectedCardUuid, CreditCardInvoicePaymentRequest request,

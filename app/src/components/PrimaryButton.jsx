@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import Icon from './Icon';
-import { colors, fontFamily } from '../theme';
+import { fontFamilyMedium, colors, fontFamily } from '../theme';
 
 export default function PrimaryButton({ title, onPress, loading = false, disabled = false, outlined = false, icon = 'arrow', style }) {
   const unavailable = disabled || loading;
@@ -15,9 +15,9 @@ export default function PrimaryButton({ title, onPress, loading = false, disable
 }
 
 const styles = StyleSheet.create({
-  button: { minHeight: 58, borderRadius: 14, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  button: { minHeight: 54, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 15, backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
   outlined: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.primary, justifyContent: 'center' },
-  text: { color: colors.surface, fontFamily, fontSize: 17, fontWeight: '600' },
+  text: { color: colors.surface, fontFamily: fontFamilyMedium, fontSize: 17, fontWeight: '600' },
   outlinedText: { color: colors.primary },
   disabled: { opacity: 0.55 },
   pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },

@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vikash_api.dtos.requests.CategoryRequest;
 import com.vikash_api.dtos.responses.AllCategoriesResponse;
-import com.vikash_api.dtos.responses.CategoryResponse;
 import com.vikash_api.services.CategoryService;
 
 import jakarta.validation.Valid;
@@ -28,8 +27,9 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping("/create")
-    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.create(request));
+    public ResponseEntity<Void> createCategory(@Valid @RequestBody CategoryRequest request) {
+        categoryService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @GetMapping
@@ -38,7 +38,8 @@ public class CategoryController {
     }
 
     @PutMapping("/update/{uuid}")
-    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable UUID uuid, @Valid @RequestBody CategoryRequest request) {
-        return ResponseEntity.status(HttpStatus.OK).body(categoryService.update(uuid, request));
+    public ResponseEntity<Void> updateCategory(@PathVariable UUID uuid, @Valid @RequestBody CategoryRequest request) {
+        categoryService.update(uuid, request);
+        return ResponseEntity.noContent().build();
     }
 }

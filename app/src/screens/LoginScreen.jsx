@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
 import BrandLogo from '../components/BrandLogo';
-import BrandWatermark from '../components/BrandWatermark';
 import FormField from '../components/FormField';
 import PrimaryButton from '../components/PrimaryButton';
 import Icon from '../components/Icon';
@@ -10,7 +9,7 @@ import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
 import { validateLogin } from '../utils/validation';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -42,8 +41,8 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <Screen decoration={<BrandWatermark />}>
-      <BrandLogo />
+    <Screen>
+      <BrandLogo width={156} />
       <View style={styles.heading}>
         <Text accessibilityRole="header" style={typography.title}>Bom ter você de volta.</Text>
         <Text style={typography.body}>Entre para acompanhar suas contas.</Text>
@@ -75,14 +74,14 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  heading: { marginTop: 48, gap: 10 },
-  form: { marginTop: 32, gap: 18 },
-  forgot: { alignSelf: 'flex-end', marginTop: 18, paddingVertical: 4 },
-  link: { color: colors.primary, fontFamily, fontSize: 15, fontWeight: '500' },
+  heading: { marginTop: 32, gap: 10 },
+  form: { marginTop: 28, gap: 18, padding: 20, backgroundColor: colors.surface, borderRadius: 24 },
+  forgot: { alignSelf: 'flex-end', marginTop: 10, paddingVertical: 12 },
+  link: { color: colors.primary, fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '500' },
   submit: { marginTop: 28 },
   footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 7, marginTop: 28 },
   footerText: { color: colors.secondary, fontFamily, fontSize: 14, lineHeight: 20 },
-  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(37,40,36,0.3)', padding: 24 },
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.backdrop, padding: 24 },
   dialog: { maxWidth: 390, width: '100%', backgroundColor: colors.background, borderRadius: 24, padding: 24, gap: 22 },
   dialogHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   dialogTitle: { ...typography.title, fontSize: 23, lineHeight: 28 },

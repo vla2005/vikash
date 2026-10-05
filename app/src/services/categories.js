@@ -15,22 +15,18 @@ export async function fetchCategories(accessToken, signal) {
 
 export async function createCategory(values, accessToken) {
   if (!accessToken) { throw new Error('Entre na sua conta antes de criar uma categoria.'); }
-  const category = await postJson('/api/category/create', {
+  await postJson('/api/category/create', {
     name: values.name.trim(), icon: values.icon, color: values.color,
   }, accessToken, {
     headers: { access_token: accessToken },
     conflictMessage: 'Já existe uma categoria com esse nome.',
   });
-  if (!category || !['name', 'icon', 'color'].every(key => typeof category[key] === 'string' && category[key].trim())) {
-    throw new Error('A API não retornou os dados da categoria criada.');
-  }
-  return category;
 }
 
 export async function updateCategory(uuid, values, accessToken) {
   if (!accessToken) { throw new Error('Entre na sua conta antes de editar uma categoria.'); }
   if (typeof uuid !== 'string' || !uuid.trim()) { throw new Error('A categoria não tem UUID. Atualize a listagem antes de editar.'); }
-  return putJson(`/api/category/update/${encodeURIComponent(uuid)}`, {
+  await putJson(`/api/category/update/${encodeURIComponent(uuid)}`, {
     name: values.name.trim(), icon: values.icon, color: values.color,
   }, accessToken, {
     headers: { access_token: accessToken },

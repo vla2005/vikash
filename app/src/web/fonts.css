@@ -1,0 +1,23 @@
+@font-face {
+  font-family: 'Vikash Sans';
+  src: url('@expo-google-fonts/plus-jakarta-sans/400Regular/PlusJakartaSans_400Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vikash Sans';
+  src: url('@expo-google-fonts/plus-jakarta-sans/500Medium/PlusJakartaSans_500Medium.ttf') format('truetype');
+  font-weight: 500 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vikash Sans';
+  src: url('@expo-google-fonts/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf') format('truetype');
+  font-weight: 700 900;
+  font-display: swap;
+}
+[role='button']:focus-visible, [role='tab']:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid #2348EF;
+  outline-offset: 3px;
+}
+::selection { background: #D5DFFF; }
