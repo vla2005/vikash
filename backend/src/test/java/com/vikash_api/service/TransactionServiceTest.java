@@ -25,6 +25,8 @@ import com.vikash_api.repositories.AccountRepository;
 import com.vikash_api.repositories.CustomCategoryRepository;
 import com.vikash_api.repositories.DefaultCategoryRepository;
 import com.vikash_api.repositories.TransactionRepository;
+import com.vikash_api.repositories.CreditCardRepository;
+import com.vikash_api.services.CreditCardInvoiceService;
 import com.vikash_api.services.AccountService;
 import com.vikash_api.services.AiAnalysisService;
 import com.vikash_api.services.CategoryService;
@@ -53,6 +55,9 @@ class TransactionServiceTest {
     @Mock CustomCategoryRepository customCategoryRepository;
     @Mock DefaultCategoryRepository defaultCategoryRepository;
     @Mock TransactionRepository transactionRepository;
+    @Mock CreditCardRepository creditCardRepository;
+    @Mock CreditCardInvoiceService creditCardInvoiceService;
+    @Mock com.vikash_api.repositories.CreditCardInvoiceRepository creditCardInvoiceRepository;
     @InjectMocks TransactionService service;
 
     @Test
@@ -66,13 +71,13 @@ class TransactionServiceTest {
         when(authenticatedUserService.getCurrentUser()).thenReturn(user);
         var accountEntity = new AccountEntity();
         accountEntity.setUuid(accountUuid);
-        when(accountRepository.findByUuid(accountUuid)).thenReturn(Optional.of(accountEntity));
+        when(accountRepository.findByUuidAndUserId(accountUuid, user.getId())).thenReturn(Optional.of(accountEntity));
         var category = new DefaultCategoriesEntity();
         ReflectionTestUtils.setField(category, "name", "Alimentação");
         when(defaultCategoryRepository.findByName("Alimentação")).thenReturn(Optional.of(category));
         var occurredAt = LocalDateTime.of(2026, 10, 3, 12, 30);
         var analysis = new AiAnalysisResponse("Almoço", new BigDecimal("45.10"), TransactionType.EXPENSE,
-                PaymentMethod.CASH, occurredAt, accountUuid, null, "Alimentação", null, List.of());
+                PaymentMethod.CASH, occurredAt, accountUuid, null, null, "Alimentação", null, 1, List.of());
         var context = ArgumentCaptor.forClass(AiAnalysisContext.class);
         when(aiAnalysisService.analyze(eq("Almoço de 45 reais"), context.capture())).thenReturn(analysis);
         UUID transactionUuid = UUID.randomUUID();
@@ -103,7 +108,7 @@ class TransactionServiceTest {
         verify(transactionRepository).save(transaction.capture());
         assertThat(transaction.getValue().getUser()).isSameAs(user);
         assertThat(transaction.getValue().getDefaultCategory()).isSameAs(category);
-        verify(accountRepository).findByUuid(accountUuid);
+        verify(accountRepository).findByUuidAndUserId(accountUuid, user.getId());
         verify(defaultCategoryRepository).findByName("Alimentação");
         verifyNoInteractions(customCategoryRepository);
         assertThat(context.getValue().accounts().getFirst().uuid()).isEqualTo(accountUuid);
@@ -122,12 +127,12 @@ class TransactionServiceTest {
         when(authenticatedUserService.getCurrentUser()).thenReturn(new UserEntity());
         when(accountService.get()).thenReturn(new AllAccountsResponse(List.of()));
         when(categoryService.get()).thenReturn(new AllCategoriesResponse(List.of(), List.of()));
-        when(accountRepository.findByUuid(account.getUuid())).thenReturn(Optional.of(account));
-        when(accountRepository.findByUuid(destination.getUuid())).thenReturn(Optional.of(destination));
-        when(customCategoryRepository.findByUuid(category.getUuid())).thenReturn(Optional.of(category));
+        when(accountRepository.findByUuidAndUserId(account.getUuid(), null)).thenReturn(Optional.of(account));
+        when(accountRepository.findByUuidAndUserId(destination.getUuid(), null)).thenReturn(Optional.of(destination));
+        when(customCategoryRepository.findByUuidAndUserId(category.getUuid(), null)).thenReturn(Optional.of(category));
         var analysis = new AiAnalysisResponse("Transferência", new BigDecimal("100.00"), TransactionType.TRANSFER,
-                PaymentMethod.PIX, LocalDateTime.now(), account.getUuid(), destination.getUuid(), null,
-                category.getUuid(), List.of());
+                PaymentMethod.PIX, LocalDateTime.now(), account.getUuid(), null, destination.getUuid(), null,
+                category.getUuid(), 1, List.of());
         when(aiAnalysisService.analyze(eq("Transferi 100 reais"), any(AiAnalysisContext.class))).thenReturn(analysis);
         when(transactionRepository.save(any(TransactionEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -137,9 +142,9 @@ class TransactionServiceTest {
         assertThat(response.destinationAccountUuid()).isEqualTo(destination.getUuid());
         assertThat(response.customCategoryUuid()).isEqualTo(category.getUuid());
         assertThat(response.defaultCategoryName()).isNull();
-        verify(accountRepository).findByUuid(account.getUuid());
-        verify(accountRepository).findByUuid(destination.getUuid());
-        verify(customCategoryRepository).findByUuid(category.getUuid());
+        verify(accountRepository).findByUuidAndUserId(account.getUuid(), null);
+        verify(accountRepository).findByUuidAndUserId(destination.getUuid(), null);
+        verify(customCategoryRepository).findByUuidAndUserId(category.getUuid(), null);
         verifyNoInteractions(defaultCategoryRepository);
     }
 

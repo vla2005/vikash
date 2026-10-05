@@ -9,19 +9,20 @@ import InlineNotice from '../components/InlineNotice';
 import PrimaryButton from '../components/PrimaryButton';
 import useToast from '../hooks/useToast';
 import { useOnboarding } from '../contexts/OnboardingContext';
-import { createCreditCard } from '../services/creditCards';
+import { createCreditCard, updateCreditCard } from '../services/creditCards';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
 import { colors, fontFamily, typography } from '../theme';
 
-export default function CreateCreditCardScreen({ navigation, onCancel, onCreated }) {
+export default function CreateCreditCardScreen({ navigation, onCancel, onCreated, card: existingCard }) {
+  const editing = Boolean(existingCard?.uuid);
   const { showToast } = useToast();
   const { session } = useOnboarding();
-  const [institution, setInstitution] = useState(null);
-  const [selectedInstitution, setSelectedInstitution] = useState(null);
-  const [description, setDescription] = useState('');
-  const [limit, setLimit] = useState(formatCurrency(0));
-  const [closingDay, setClosingDay] = useState('');
-  const [dueDay, setDueDay] = useState('');
+  const [institution, setInstitution] = useState(existingCard?.financialInstitution?.id ?? null);
+  const [selectedInstitution, setSelectedInstitution] = useState(existingCard?.financialInstitution ?? null);
+  const [description, setDescription] = useState(existingCard?.description ?? '');
+  const [limit, setLimit] = useState(formatCurrency(existingCard?.creditLimit ?? 0));
+  const [closingDay, setClosingDay] = useState(existingCard ? String(existingCard.closingDay) : '');
+  const [dueDay, setDueDay] = useState(existingCard ? String(existingCard.dueDay) : '');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [requestError, setRequestError] = useState('');
@@ -40,19 +41,20 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
     setLoading(true);
     setRequestError('');
     try {
-      const card = await createCreditCard({ financialInstitutionId: institution, description, creditLimit: parseCurrency(limit), closingDay: Number(closingDay), dueDay: Number(dueDay) }, session?.accessToken);
-      showToast({ type: 'success', title: 'Cartão criado!', message: 'Seu cartão de crédito foi salvo com sucesso.' });
+      const values = { financialInstitutionId: institution, description, creditLimit: parseCurrency(limit), closingDay: Number(closingDay), dueDay: Number(dueDay) };
+      const card = editing ? await updateCreditCard(existingCard.uuid, values, session?.accessToken) : await createCreditCard(values, session?.accessToken);
+      showToast({ type: 'success', title: editing ? 'Cartão atualizado!' : 'Cartão criado!', message: 'Seu cartão de crédito foi salvo com sucesso.' });
       if (onCreated) { onCreated(card); }
       else { navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); }
     } catch (cause) {
       setRequestError(cause.message);
       setErrors({ description: cause.fieldErrors?.description, institution: cause.fieldErrors?.financialInstitutionId, limit: cause.fieldErrors?.creditLimit, closingDay: cause.fieldErrors?.closingDay, dueDay: cause.fieldErrors?.dueDay });
-      showToast({ type: 'error', title: 'Não foi possível criar o cartão', message: cause.message });
+      showToast({ type: 'error', title: editing ? 'Não foi possível atualizar o cartão' : 'Não foi possível criar o cartão', message: cause.message });
     } finally { submitting.current = false; setLoading(false); }
   }
   return <Screen>
     <View style={styles.header}><BrandLogo /><Pressable accessibilityRole="button" accessibilityLabel="Voltar à escolha" hitSlop={12} onPress={onCancel || (() => navigation.goBack())}><Icon name="close" color={colors.secondary} /></Pressable></View>
-    <View style={styles.heading}><Text accessibilityRole="header" style={typography.title}>Seu cartão de crédito.</Text><Text style={typography.body}>Organize suas faturas e compras parceladas.</Text></View>
+    <View style={styles.heading}><Text accessibilityRole="header" style={typography.title}>{editing ? 'Editar seu cartão.' : 'Seu cartão de crédito.'}</Text><Text style={typography.body}>{editing ? 'Atualize os dados do seu cartão.' : 'Organize suas faturas e compras parceladas.'}</Text></View>
     <View style={styles.form}>
       <FinancialInstitutionPicker required value={institution} selectedInstitution={selectedInstitution} onChange={(id, bank) => { setInstitution(id); setSelectedInstitution(bank); setErrors(previous => ({ ...previous, institution: undefined })); }} error={errors.institution} />
       <FormField label="Descrição" placeholder="Ex.: Meu cartão Inter" value={description} onChangeText={setDescription} maxLength={100} error={errors.description} testID="card-description" />
@@ -62,7 +64,7 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
         <FormField style={styles.day} label="Vencimento" value={dueDay} onChangeText={value => { setDueDay(value.replace(/\D/g, '').slice(0, 2)); setErrors(previous => ({ ...previous, dueDay: undefined })); }} placeholder="1 a 31" keyboardType="number-pad" maxLength={2} error={errors.dueDay} testID="card-due-day" />
       </View>
     </View>
-    <View style={styles.bottom}><InlineNotice message={requestError} error /><Text style={styles.hint}>Você pode editar os dados depois.</Text><PrimaryButton title="Criar cartão" onPress={submit} loading={loading} icon={null} /></View>
+    <View style={styles.bottom}><InlineNotice message={requestError} error /><Text style={styles.hint}>{editing ? 'As faturas existentes mantêm suas datas de fechamento e vencimento.' : 'Você pode editar os dados depois.'}</Text><PrimaryButton title={editing ? 'Salvar alterações' : 'Criar cartão'} onPress={submit} loading={loading} icon={null} /></View>
   </Screen>;
 }
 const styles = StyleSheet.create({ header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, heading: { marginTop: 32, gap: 10 }, form: { marginTop: 30, gap: 25 }, days: { flexDirection: 'row', gap: 14 }, day: { flex: 1 }, bottom: { marginTop: 30, gap: 22 }, hint: { fontFamily, color: colors.secondary, fontSize: 13, lineHeight: 19, textAlign: 'center' } });

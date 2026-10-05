@@ -17,5 +17,7 @@ public record TransactionSummaryResponse(
         String categoryName,
         String categoryColor,
         String categoryIcon,
-        String institutionName
+        String institutionName,
+        Integer installmentNumber,
+        Integer installmentCount
     ) {}

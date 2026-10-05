@@ -15,12 +15,18 @@ public record TransactionResponse(
     PaymentMethod paymentMethod,
     LocalDateTime occurredAt,
     UUID accountUuid,
+    UUID creditCardUuid,
+    UUID creditCardInvoiceUuid,
     UUID destinationAccountUuid,
     String defaultCategoryName,
     UUID customCategoryUuid,
     String transcription,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    UUID purchaseUuid,
+    BigDecimal purchaseTotal,
+    Integer installmentNumber,
+    Integer installmentCount
 ) {
 
 }

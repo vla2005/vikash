@@ -17,6 +17,16 @@ export async function fetchAccounts(accessToken, signal) {
   return data.accounts.map(normalizeAccount);
 }
 
+export async function fetchAccountDetails(uuid, accessToken, signal) {
+  const response = await authenticatedFetch(`/api/account/${encodeURIComponent(uuid)}`, {
+    method: 'GET', headers: { Accept: 'application/json', access_token: accessToken }, signal,
+  }, accessToken);
+  if (!response.ok) { throw new ApiError('Não foi possível carregar os detalhes da conta. Tente novamente.', response.status); }
+  const data = await response.json();
+  if (data?.uuid !== uuid) { throw new Error('A API retornou os dados de outra conta.'); }
+  return normalizeAccount(data);
+}
+
 export async function createAccount(values, accessToken) {
   if (!accessToken) { throw new Error('Entre na sua conta antes de adicionar uma conta financeira.'); }
   const account = await postJson('/api/account/create', {

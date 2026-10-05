@@ -44,8 +44,12 @@ public class TransactionEntity {
     private UserEntity user;
 
     @ManyToOne
-    @JoinColumn(nullable = false, name = "account_id")
+    @JoinColumn(name = "account_id", nullable = false)
     private AccountEntity account;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "credit_card_invoice_id")
+    private CreditCardInvoiceEntity creditCardInvoice;
 
     @Column(nullable = false, length = 255)
     private String description;
@@ -76,7 +80,7 @@ public class TransactionEntity {
     @Column (nullable = false)
     private LocalDateTime occurredAt;
 
-    @Column (nullable = false)
+    @Column(nullable = false, length = 5000)
     private String transcription;
 
     @CreationTimestamp

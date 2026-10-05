@@ -24,6 +24,27 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InvalidTransactionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTransaction(InvalidTransactionException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Transaction", ex.getMessage(), request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(CreditCardInvoiceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleInvoiceNotFound(CreditCardInvoiceNotFoundException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Invoice Not Found", ex.getMessage(), request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(InvalidCreditCardInvoiceException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidInvoice(InvalidCreditCardInvoiceException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Invoice", ex.getMessage(), request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(CreditCardInvoiceAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateInvoice(CreditCardInvoiceAlreadyExistsException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.CONFLICT, "Invoice Conflict", ex.getMessage(), request.getRequestURI(),
+                Map.of("referenceMonth", ex.getMessage()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleInvalidBody(HttpMessageNotReadableException ex, HttpServletRequest request) {
         String message = "Corpo da requisição inválido. Confira o JSON, os tipos dos campos e os valores dos enums.";

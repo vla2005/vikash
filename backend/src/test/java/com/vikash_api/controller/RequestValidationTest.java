@@ -24,6 +24,7 @@ class RequestValidationTest {
     private final AccountService accounts = mock(AccountService.class);
     private final CategoryService categories = mock(CategoryService.class);
     private final TransactionService transactions = mock(TransactionService.class);
+    private final CreditCardInvoiceService invoices = mock(CreditCardInvoiceService.class);
     private LocalValidatorFactoryBean validator;
     private MockMvc mvc;
     private static final String UUID = "b4fbe04a-29d0-49e6-a52a-15ca00cb7bc5";
@@ -33,7 +34,7 @@ class RequestValidationTest {
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mvc = MockMvcBuilders.standaloneSetup(new AuthController(auth), new AccountController(accounts),
-                        new CategoryController(categories), new TransactionController(transactions))
+                        new CategoryController(categories), new TransactionController(transactions), new CreditCardInvoiceController(invoices))
                 .setValidator(validator).setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 
@@ -42,6 +43,12 @@ class RequestValidationTest {
 
     static Stream<Arguments> invalidRequests() {
         return Stream.of(
+            Arguments.of("POST", "/api/credit-card-invoice/" + UUID + "/pay", "{}", "accountUuid"),
+            Arguments.of("POST", "/api/credit-card-invoice/" + UUID + "/pay", "{\"accountUuid\":\"" + UUID + "\",\"occurredAt\":\"2026-01-01T12:00:00\"}", "paymentMethod"),
+            Arguments.of("POST", "/api/credit-card-invoice/" + UUID + "/pay", "{\"accountUuid\":\"" + UUID + "\",\"paymentMethod\":\"PIX\",\"occurredAt\":\"2099-01-01T12:00:00\"}", "occurredAt"),
+            Arguments.of("POST", "/api/credit-card-invoice", "{}", "creditCardUuid"),
+            Arguments.of("POST", "/api/credit-card-invoice", "{\"creditCardUuid\":\"" + UUID + "\",\"referenceMonth\":\"2026-13\",\"closingDate\":\"2026-10-03\",\"dueDate\":\"2026-10-10\"}", "referenceMonth"),
+            Arguments.of("PUT", "/api/credit-card-invoice/update/" + UUID, "{\"creditCardUuid\":\"" + UUID + "\",\"referenceMonth\":\"2026-10\"}", "dueDate"),
             Arguments.of("POST", "/api/account/create", "{}", "type"),
             Arguments.of("POST", "/api/account/create", "{\"type\":\"CARTEIRA\",\"description\":\"   \"}", "description"),
             Arguments.of("POST", "/api/account/create", "{\"type\":\"CARTEIRA\",\"description\":\"" + "a".repeat(101) + "\"}", "description"),
@@ -73,7 +80,7 @@ class RequestValidationTest {
     void rejectsInvalidRequestsBeforeCallingServices(String method, String path, String body, String field) throws Exception {
         mvc.perform(request(HttpMethod.valueOf(method), path).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors." + field).isString());
-        verifyNoInteractions(auth, accounts, categories, transactions);
+        verifyNoInteractions(auth, accounts, categories, transactions, invoices);
     }
 
     @Test

@@ -7,11 +7,13 @@ import CategoriesScreen from '../screens/CategoriesScreen';
 import CategoryFormScreen from '../screens/CategoryFormScreen';
 import AccountsScreen from '../screens/AccountsScreen';
 import CreateAccountScreen from '../screens/CreateAccountScreen';
-import AddFinancialItemScreen from '../screens/AddFinancialItemScreen';
 import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
+import CreditCardDetailsScreen from '../screens/CreditCardDetailsScreen';
+import AccountDetailsScreen from '../screens/AccountDetailsScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useCategories from '../hooks/useCategories';
 import useAccounts from '../hooks/useAccounts';
+import useCreditCards from '../hooks/useCreditCards';
 import useToast from '../hooks/useToast';
 import BottomNavigator from '../components/BottomNavigator';
 import VoiceDrawer from '../components/VoiceDrawer';
@@ -22,22 +24,29 @@ export default function MainTabs() {
   const [selected, setSelected] = useState('Home');
   const [voiceVisible, setVoiceVisible] = useState(false);
   const [accountForm, setAccountForm] = useState(null);
+  const [cardUuid, setCardUuid] = useState(null);
+  const [cardRevision, setCardRevision] = useState(0);
+  const [accountUuid, setAccountUuid] = useState(null);
+  const [accountRevision, setAccountRevision] = useState(0);
   const { showToast } = useToast();
   const onboarding = useOnboarding();
   const { categories, defaultCategories, loading, error, retry, saving, saveCategory: persistCategory } = useCategories(onboarding?.session?.accessToken, selected === 'Categories');
   const [categoryForm, setCategoryForm] = useState(null);
-  const accountList = useAccounts(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm);
+  const accountList = useAccounts(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
+  const cardList = useCreditCards(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
   const insets = useSafeAreaInsets();
   useEffect(() => {
     if (Platform.OS !== 'android') { return; }
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (accountForm) { setAccountForm(accountForm.kind === 'choose' || accountForm.account ? null : { kind: 'choose' }); return true; }
+      if (accountForm) { setAccountForm(null); return true; }
+      if (cardUuid) { setCardUuid(null); return true; }
+      if (accountUuid) { setAccountUuid(null); return true; }
       if (categoryForm) { setCategoryForm(null); return true; }
       if (selected === 'Home') { return false; }
       setSelected('Home'); return true;
     });
     return () => subscription.remove();
-  }, [selected, categoryForm, accountForm]);
+  }, [selected, categoryForm, accountForm, cardUuid, accountUuid]);
   async function saveCategory(values) {
     const saved = await persistCategory(values, categoryForm.category);
     if (saved) { setCategoryForm(null); }
@@ -46,7 +55,9 @@ export default function MainTabs() {
     try {
       const transaction = await createTransaction(transcription, onboarding?.session?.accessToken);
       showToast({ type: 'success', title: 'Transação registrada!', message: 'Seu lançamento foi salvo com sucesso.' });
-      if (selected === 'AccountManagement') { accountList.retry(); }
+      if (selected === 'AccountManagement') { accountList.retry(); cardList.retry(); }
+      if (cardUuid) { setCardRevision(value => value + 1); }
+      if (accountUuid) { setAccountRevision(value => value + 1); }
       return transaction;
     } catch (failure) {
       showToast({ type: 'error', title: 'Não foi possível registrar', message: failure.message });
@@ -59,12 +70,12 @@ export default function MainTabs() {
     if (selected === 'AccountManagement') {
       if (accountForm) {
         const close = () => setAccountForm(null);
-        const back = () => accountForm.account ? close() : setAccountForm({ kind: 'choose' });
-        if (accountForm.kind === 'choose') { return <AddFinancialItemScreen onCancel={close} onChoose={kind => setAccountForm({ kind, account: null })} />; }
-        if (accountForm.kind === 'card') { return <CreateCreditCardScreen onCancel={back} onCreated={close} />; }
-        return <CreateAccountScreen key={accountForm.account?.uuid || 'new-account'} route={{ params: { fromManagement: true, account: accountForm.account } }} navigation={{ goBack: back, reset: close }} />;
+        if (accountForm.kind === 'card') { return <CreateCreditCardScreen key={accountForm.card?.uuid || 'new-card'} card={accountForm.card} onCancel={close} onCreated={() => { close(); setCardRevision(value => value + 1); }} />; }
+        return <CreateAccountScreen key={accountForm.account?.uuid || 'new-account'} route={{ params: { fromManagement: true, account: accountForm.account } }} navigation={{ goBack: close, reset: () => { close(); setAccountRevision(value => value + 1); } }} />;
       }
-      return <AccountsScreen {...accountList} profile={onboarding?.profile} onRetry={accountList.retry} onCreate={() => setAccountForm({ kind: 'choose' })} onEdit={account => setAccountForm({ kind: 'account', account })} onArchived={() => showToast({ type: 'info', message: 'As contas arquivadas estarão disponíveis quando o endpoint estiver pronto.' })} />;
+      if (cardUuid) { return <CreditCardDetailsScreen key={cardUuid} uuid={cardUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setCardUuid(null)} onEdit={card => setAccountForm({ kind: 'card', card })} revision={cardRevision} onPayment={() => { accountList.retry(); cardList.retry(); }} />; }
+      if (accountUuid) { return <AccountDetailsScreen key={accountUuid} uuid={accountUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setAccountUuid(null)} onEdit={account => setAccountForm({ kind: 'account', account })} revision={accountRevision} />; }
+      return <AccountsScreen {...accountList} cards={cardList.cards} cardsLoading={cardList.loading} cardsError={cardList.error} onRetryCards={cardList.retry} onOpenCard={setCardUuid} profile={onboarding?.profile} onRetry={accountList.retry} onCreate={() => setAccountForm({ kind: 'account', account: null })} onCreateCard={() => setAccountForm({ kind: 'card' })} onEdit={account => setAccountUuid(account.uuid)} />;
     }
     if (categoryForm) {
       return <CategoryFormScreen key={categoryForm.category?.uuid ?? categoryForm.category?.name ?? 'new-category'} category={categoryForm.category} existingCategories={[...defaultCategories, ...categories]} saving={saving} onSave={saveCategory} onCancel={() => setCategoryForm(null)} />;
@@ -74,7 +85,7 @@ export default function MainTabs() {
   return <View style={styles.background}>
     <View style={[styles.canvas, { paddingTop: insets.top }]}>
       <View style={styles.content}>{renderContent()}</View>
-      {!accountForm && <BottomNavigator selected={selected} onSelect={key => { setCategoryForm(null); setAccountForm(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />}
+      {!accountForm && <BottomNavigator selected={selected} onSelect={key => { setCategoryForm(null); setAccountForm(null); setCardUuid(null); setAccountUuid(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />}
     </View>
     <VoiceDrawer visible={voiceVisible} onClose={() => setVoiceVisible(false)} onConfirm={confirmTranscription} />
   </View>;

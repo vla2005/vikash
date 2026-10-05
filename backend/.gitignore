@@ -40,3 +40,4 @@ build/
 # Backups do banco contêm dados privados.
 backups/
 *.dump
+sql

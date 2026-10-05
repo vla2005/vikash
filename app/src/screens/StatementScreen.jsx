@@ -9,7 +9,7 @@ import useTransactions from '../hooks/useTransactions';
 import { formatCurrency } from '../utils/money';
 import { fontFamily } from '../theme';
 
-const payments = ['Pix', 'Crédito', 'Débito', 'Boleto', 'Dinheiro', 'Transferência', 'Outro'];
+const payments = ['Pix', 'Débito', 'Boleto', 'Dinheiro', 'Transferência', 'Outro'];
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 export default function StatementScreen({ profile, accessToken }) {
   const [today] = useState(() => new Date());
@@ -27,7 +27,7 @@ export default function StatementScreen({ profile, accessToken }) {
   const monthly = rows.filter(row => row.date.startsWith(`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`));
   const filtered = monthly.filter(row => {
     const query = normalizeCategoryName(search);
-    return (type === 'ALL' || row.type === type)
+    return (type === 'ALL' || row.type === type || (type === 'EXPENSE' && row.type === 'INVOICE_PAYMENT'))
       && (!query || normalizeCategoryName([row.description, row.category, row.account, row.destinationAccount, row.payment].filter(Boolean).join(' ')).includes(query))
       && (!filters.accounts.length || filters.accounts.some(account => account === row.account || account === row.destinationAccount))
       && (!filters.categories.length || filters.categories.includes(row.category))
@@ -37,7 +37,7 @@ export default function StatementScreen({ profile, accessToken }) {
       && (filters.transfers || row.type !== 'TRANSFER');
   });
   const groups = [...new Set(filtered.map(row => row.date))].sort().reverse();
-  const total = value => filtered.filter(row => row.type === value).reduce((sum, row) => sum + row.amount, 0);
+  const total = value => filtered.filter(row => (row.type === value || (value === 'EXPENSE' && row.type === 'INVOICE_PAYMENT'))).reduce((sum, row) => sum + row.amount, 0);
   const initials = (profile?.name || 'Você').trim().split(/\s+/).filter(Boolean).filter((_, index, parts) => index === 0 || index === parts.length - 1).map(part => part[0]).join('').toUpperCase();
   function dayLabel(date) {
     const value = new Date(`${date}T12:00:00`);
@@ -60,7 +60,7 @@ export default function StatementScreen({ profile, accessToken }) {
       <View style={s.tabs}>{[['ALL', 'Todos'], ['INCOME', 'Entradas'], ['EXPENSE', 'Saídas'], ['TRANSFER', 'Transf.']].map(([key, label]) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`Mostrar ${label}`} accessibilityState={{ selected: type === key }} onPress={() => setType(key)} style={[s.tab, type === key && s.active]}><Text style={[s.tabText, type === key && s.white]}>{label}</Text></Pressable>)}</View>
       {groups.map(date => <View key={date}><Text style={s.day}>{dayLabel(date)}</Text><View style={s.list}>{filtered.filter(row => row.date === date).map((row, index) => {
         const palette = categoryColors.find(color => color.key === row.color) || categoryColors.find(color => color.key === 'gray');
-        return <View key={row.id} style={[s.row, index > 0 && s.separator]}><View style={[s.tile, { backgroundColor: palette.background }]}><CategoryIcon name={row.icon || 'wallet'} color={palette.foreground} size={23} /></View><View style={s.info}><Text numberOfLines={1} style={s.description}>{row.description}</Text><Text numberOfLines={2} style={s.detail}>{[row.category || 'Sem categoria', row.account].filter(Boolean).join(' · ')}</Text></View><View style={s.amountColumn}><Text style={[s.amount, row.type === 'INCOME' && s.green]}>{row.type === 'INCOME' ? '+ ' : row.type === 'EXPENSE' ? '− ' : ''}{formatCurrency(row.amount)}</Text><Text style={s.detail}>{row.payment}</Text></View></View>;
+        return <View key={row.id} style={[s.row, index > 0 && s.separator]}><View style={[s.tile, { backgroundColor: palette.background }]}><CategoryIcon name={row.icon || 'wallet'} color={palette.foreground} size={23} /></View><View style={s.info}><Text numberOfLines={1} style={s.description}>{row.description}</Text><Text numberOfLines={2} style={s.detail}>{[row.type === 'INVOICE_PAYMENT' ? 'Pagamento de fatura' : row.category || 'Sem categoria', row.account].filter(Boolean).join(' · ')}</Text></View><View style={s.amountColumn}><Text style={[s.amount, row.type === 'INCOME' && s.green]}>{row.type === 'INCOME' ? '+ ' : ['EXPENSE', 'INVOICE_PAYMENT'].includes(row.type) ? '− ' : ''}{formatCurrency(row.amount)}</Text><Text style={s.detail}>{row.payment}{row.installmentCount > 1 ? ' · ' + row.installmentNumber + '/' + row.installmentCount : ''}</Text></View></View>;
       })}</View></View>)}
       {loading && <View style={s.empty}><ActivityIndicator color="#0666FF" /><Text style={s.detail}>{rows.length ? 'Carregando mais lançamentos…' : 'Carregando extrato…'}</Text></View>}
       {!!error && <View style={s.empty}><Text accessibilityRole="alert" style={s.detail}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Tentar carregar extrato novamente" onPress={retry} style={s.arrow}><Text style={s.link}>Tentar novamente</Text></Pressable></View>}

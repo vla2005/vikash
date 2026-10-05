@@ -1,0 +1,16 @@
+package com.vikash_api.dtos.responses;
+
+import java.math.BigDecimal;
+import java.util.UUID;
+
+public record CreditCardSummaryResponse(
+    UUID uuid,
+    String description,
+    BigDecimal creditLimit,
+    BigDecimal availableLimit,
+    Integer closingDay,
+    Integer dueDay,
+    FinancialInstitutionResponse financialInstitution,
+    CreditCardInvoiceSummaryResponse currentInvoice
+) {
+}

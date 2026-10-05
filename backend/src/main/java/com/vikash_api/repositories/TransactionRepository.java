@@ -1,5 +1,7 @@
 package com.vikash_api.repositories;
 
+import java.util.UUID;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +14,34 @@ import com.vikash_api.entities.TransactionEntity;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
+    @Query("""
+        SELECT new com.vikash_api.dtos.responses.TransactionSummaryResponse(
+            t.uuid, t.description, t.amount, t.type, t.paymentMethod, t.occurredAt,
+            COALESCE(customCategory.name, defaultCategory.name),
+            COALESCE(customCategory.color, defaultCategory.color),
+            COALESCE(customCategory.icon, defaultCategory.icon),
+            CASE
+                WHEN account.uuid = :accountUuid THEN
+                    CASE WHEN account.type = com.vikash_api.enums.AccountType.CARTEIRA THEN 'Carteira' ELSE institution.name END
+                ELSE
+                    CASE WHEN destination.type = com.vikash_api.enums.AccountType.CARTEIRA THEN 'Carteira' ELSE destinationInstitution.name END
+            END, 1, 1
+        )
+        FROM TransactionEntity t
+        LEFT JOIN t.account account
+        LEFT JOIN t.destinationAccount destination
+        LEFT JOIN account.financialInstitution institution
+        LEFT JOIN destination.financialInstitution destinationInstitution
+        LEFT JOIN t.defaultCategory defaultCategory
+        LEFT JOIN t.customCategory customCategory
+        WHERE t.user.id = :userId AND t.paymentMethod <> com.vikash_api.enums.PaymentMethod.CREDIT_CARD AND (account.uuid = :accountUuid OR destination.uuid = :accountUuid)
+        ORDER BY t.occurredAt DESC, t.id DESC
+    """)
+    Slice<TransactionSummaryResponse> findSummariesByAccount(@Param("userId") Long userId,
+            @Param("accountUuid") UUID accountUuid, Pageable pageable);
+
+
+
     @Query("""
         SELECT new com.vikash_api.dtos.responses.TransactionSummaryResponse(
             t.uuid,
@@ -27,10 +57,10 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
                 WHEN account.type = com.vikash_api.enums.AccountType.CARTEIRA
                     THEN 'Carteira'
                 ELSE institution.name
-            END    
+            END, 1, 1
         )
         FROM TransactionEntity t
-        JOIN t.account account
+        LEFT JOIN t.account account
         LEFT JOIN account.financialInstitution institution
         LEFT JOIN t.defaultCategory defaultCategory
         LEFT JOIN t.customCategory customCategory

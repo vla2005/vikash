@@ -4,12 +4,15 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vikash_api.dtos.requests.AccountRequest;
 import com.vikash_api.dtos.responses.AccountResponse;
 import com.vikash_api.dtos.responses.AllAccountsResponse;
 import com.vikash_api.dtos.responses.FinancialInstitutionResponse;
+import com.vikash_api.dtos.responses.TransactionSummaryResponse;
 import com.vikash_api.entities.AccountEntity;
 import com.vikash_api.entities.FinancialInstitutionEntity;
 import com.vikash_api.entities.UserEntity;
@@ -18,6 +21,7 @@ import com.vikash_api.exceptions.InvalidAccountException;
 import com.vikash_api.exceptions.FinancialInstitutionNotFoundException;
 import com.vikash_api.repositories.AccountRepository;
 import com.vikash_api.repositories.InstitutionRepository;
+import com.vikash_api.repositories.TransactionRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,6 +32,24 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final AuthenticatedUserService authenticatedUserService;
     private final InstitutionRepository institutionRepository;
+    private final TransactionRepository transactionRepository;
+
+    @Transactional(readOnly = true)
+    public AccountResponse getByUuid(UUID uuid) {
+        var user = authenticatedUserService.getCurrentUser();
+        var account = accountRepository.findByUuidAndUserId(uuid, user.getId())
+                .orElseThrow(() -> new InvalidAccountException("Conta não encontrada."));
+        return toResponse(account);
+    }
+
+    @Transactional(readOnly = true)
+    public Slice<TransactionSummaryResponse> getTransactions(UUID uuid, int page, int size) {
+        if (page < 0 || size < 1 || size > 100) { throw new InvalidAccountException("Paginação inválida."); }
+        var user = authenticatedUserService.getCurrentUser();
+        accountRepository.findByUuidAndUserId(uuid, user.getId())
+                .orElseThrow(() -> new InvalidAccountException("Conta não encontrada."));
+        return transactionRepository.findSummariesByAccount(user.getId(), uuid, PageRequest.of(page, size));
+    }
 
     @Transactional 
     public AccountResponse create(AccountRequest request) {
@@ -68,7 +90,7 @@ public class AccountService {
     @Transactional
     public AccountResponse update(UUID uuid, AccountRequest request) {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
-        AccountEntity accountEntity = accountRepository.findByUuidAndUserId(uuid, currentUser.getId())
+        AccountEntity accountEntity = accountRepository.findOwnedForUpdate(uuid, currentUser.getId())
                 .orElseThrow(() -> new InvalidAccountException("Conta não encontrada."));
 
         if (request.type() == null) {

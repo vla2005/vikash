@@ -1,0 +1,33 @@
+import React from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import { FlatList } from 'react-native';
+import AccountDetailsScreen from '../src/screens/AccountDetailsScreen';
+import { fetchAccountDetails } from '../src/services/accounts';
+import { fetchTransactions } from '../src/services/transactions';
+jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
+jest.mock('../src/services/accounts', () => ({ fetchAccountDetails: jest.fn() }));
+jest.mock('../src/services/transactions', () => ({ fetchTransactions: jest.fn() }));
+jest.mock('react-native-svg', () => {
+  const ReactModule = require('react'); const { View } = require('react-native');
+  const Shape = props => ReactModule.createElement(View, props);
+  return { __esModule: true, default: Shape, Path: Shape, Rect: Shape, Circle: Shape, Line: Shape, Polyline: Shape };
+});
+const account = { uuid: 'wallet', description: 'Dinheiro', type: 'CARTEIRA', balance: 2000, financialInstitution: null };
+const row = id => ({ id, description: 'Compra', amount: 50, date: '2026-10-04', type: 'EXPENSE', color: 'sage', payment: 'Dinheiro' });
+let renderer;
+afterEach(async () => { await act(async () => renderer?.unmount()); });
+test('consulta apenas conta aberta, carrega proxima pagina e abre edicao com dados completos', async () => {
+  fetchAccountDetails.mockResolvedValue(account);
+  fetchTransactions.mockResolvedValueOnce({ rows: [row('a')], page: 0, hasNext: true });
+  const onEdit = jest.fn();
+  await act(async () => { renderer = TestRenderer.create(<AccountDetailsScreen uuid="wallet" accessToken="token" onBack={() => {}} onEdit={onEdit} />); });
+  expect(fetchTransactions).toHaveBeenLastCalledWith('token', 0, expect.anything(), '/api/account/wallet/transactions');
+  const list = () => renderer.root.findByType(FlatList);
+  fetchTransactions.mockResolvedValueOnce({ rows: [row('b')], page: 1, hasNext: false });
+  await act(async () => list().props.onEndReached());
+  expect(list().props.data.map(item => item.id)).toEqual(['a', 'b']);
+  await act(async () => list().props.onEndReached());
+  expect(fetchTransactions).toHaveBeenCalledTimes(2);
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Editar conta' && node.props.onPress)[0].props.onPress());
+  expect(onEdit).toHaveBeenCalledWith(account);
+});

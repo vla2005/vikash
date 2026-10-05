@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchTransactions } from '../services/transactions';
 
-export default function useTransactions(accessToken) {
+export default function useTransactions(accessToken, endpoint = '/api/transaction') {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,7 +17,9 @@ export default function useTransactions(accessToken) {
     request.current = controller;
     const timeout = setTimeout(() => controller.abort(), 45000);
     try {
-      const result = await fetchTransactions(accessToken, current.page + 1, controller.signal);
+      const result = endpoint === '/api/transaction'
+        ? await fetchTransactions(accessToken, current.page + 1, controller.signal)
+        : await fetchTransactions(accessToken, current.page + 1, controller.signal, endpoint);
       if (state.current !== current) { return; }
       current.page = result.page; current.hasNext = result.hasNext;
       setHasNext(result.hasNext);
@@ -34,12 +36,12 @@ export default function useTransactions(accessToken) {
       clearTimeout(timeout);
       if (state.current === current) { current.busy = false; setLoading(false); }
     }
-  }, [accessToken]);
+  }, [accessToken, endpoint]);
   useEffect(() => {
     state.current = { page: -1, hasNext: true, busy: false, error: false };
     setRows([]); setHasNext(false); setError('');
-    if (accessToken) { load(); } else { setLoading(false); }
+    if (accessToken && endpoint) { load(); } else { setLoading(false); }
     return () => { state.current = {}; request.current?.abort(); };
-  }, [accessToken, load]);
+  }, [accessToken, endpoint, load]);
   return { rows, loading, error, hasNext, loadMore: () => load(), retry: () => load(true) };
 }

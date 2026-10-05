@@ -15,9 +15,18 @@ public record AiAnalysisResponse(
     PaymentMethod paymentMethod,
     LocalDateTime occurredAt,
     UUID accountUuid,
+    UUID creditCardUuid,
     UUID destinationAccountUuid,
     String defaultCategoryName,
     UUID customCategoryUuid,
-    List<String> missingFields
+    Integer installmentCount,
+    List<String> missingFields,
+    UUID creditCardInvoiceUuid
 ) {
+    public AiAnalysisResponse(String description, BigDecimal amount, TransactionType type, PaymentMethod paymentMethod,
+            LocalDateTime occurredAt, UUID accountUuid, UUID creditCardUuid, UUID destinationAccountUuid,
+            String defaultCategoryName, UUID customCategoryUuid, Integer installmentCount, List<String> missingFields) {
+        this(description, amount, type, paymentMethod, occurredAt, accountUuid, creditCardUuid,
+                destinationAccountUuid, defaultCategoryName, customCategoryUuid, installmentCount, missingFields, null);
+    }
 }

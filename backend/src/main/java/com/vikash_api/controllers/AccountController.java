@@ -1,6 +1,7 @@
 package com.vikash_api.controllers;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Slice;
 
 import java.util.UUID;
 
@@ -11,14 +12,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vikash_api.dtos.requests.AccountRequest;
 import com.vikash_api.dtos.responses.AccountResponse;
 import com.vikash_api.dtos.responses.AllAccountsResponse;
+import com.vikash_api.dtos.responses.TransactionSummaryResponse;
 import com.vikash_api.services.AccountService;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -27,6 +32,18 @@ import lombok.RequiredArgsConstructor;
 public class AccountController {
 
     private final AccountService accountService;
+
+    @GetMapping("/{uuid}")
+    public ResponseEntity<AccountResponse> getAccount(@PathVariable UUID uuid) {
+        return ResponseEntity.ok(accountService.getByUuid(uuid));
+    }
+
+    @GetMapping("/{uuid}/transactions")
+    public ResponseEntity<Slice<TransactionSummaryResponse>> getTransactions(@PathVariable UUID uuid,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok(accountService.getTransactions(uuid, page, size));
+    }
 
     @PostMapping("/create")
     public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody AccountRequest request) {

@@ -1,10 +1,18 @@
-import { createAccount, fetchAccounts, updateAccount } from '../src/services/accounts';
+import { createAccount, fetchAccounts, fetchAccountDetails, updateAccount } from '../src/services/accounts';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
 const account = { uuid: 'f5699fe5-e5ba-48b2-b608-6e204a769af7', description: 'Dinheiro', type: 'CARTEIRA', balance: '35.50', financialInstitution: null };
 beforeEach(() => { global.fetch = jest.fn(); });
 afterEach(() => { global.fetch = originalFetch; });
 const response = data => ({ ok: true, status: 200, json: async () => data });
+
+test('detalhes consultam UUID com token e recusam dados de outra conta', async () => {
+  global.fetch.mockResolvedValueOnce(response(account));
+  expect(await fetchAccountDetails(account.uuid, 'token')).toMatchObject({ uuid: account.uuid, balance: 35.5 });
+  expect(global.fetch).toHaveBeenCalledWith(`http://api.test/api/account/${account.uuid}`, expect.objectContaining({ headers: expect.objectContaining({ access_token: 'token', Authorization: 'Bearer token' }) }));
+  global.fetch.mockResolvedValueOnce(response({ ...account, uuid: 'other' }));
+  await expect(fetchAccountDetails(account.uuid, 'token')).rejects.toThrow('outra conta');
+});
 
 test('GET autenticado usa /api/account e normaliza saldo e UUID sem instituicao na carteira', async () => {
   global.fetch.mockResolvedValue(response({ accounts: [account] }));
