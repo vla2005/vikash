@@ -2,6 +2,7 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
 import MainTabs from '../src/navigation/MainTabs';
+import { fetchDashboard } from '../src/services/dashboard';
 jest.mock('../src/services/dashboard', () => ({ fetchDashboard: jest.fn(async () => ({ totalBalance: 2000, incomes: 4200, expenses: 2200 })) }));
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 import BottomNavigator from '../src/components/BottomNavigator';
@@ -36,6 +37,8 @@ jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition:
 
 let renderer;
 beforeEach(() => {
+  fetchDashboard.mockReset();
+  fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 4200, expenses: 2200 });
   fetchTransactions.mockReset();
   fetchTransactions.mockResolvedValue({ rows: [], page: 0, hasNext: false });
   fetchTransactionDetails.mockReset();
@@ -234,6 +237,53 @@ test('cartoes consultam dados reais, nao somam limite ao saldo e abrem os detalh
   await act(async () => button('Voltar para contas e cartões').props.onPress());
   await act(async () => renderer.root.findByType(VoiceDrawer).props.onConfirm('Comprei no crédito'));
   expect(fetchCreditCards).toHaveBeenCalledTimes(3);
+});
+
+test('cartao da Home abre a fatura do dashboard na tela de detalhes', async () => {
+  fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 0, expenses: 0, creditCards: [{ uuid: 'card', description: 'Itaú da Home', creditLimit: 5000, availableLimit: 4000, currentInvoice: { uuid: 'november', total: 800, dueDate: '2026-11-10', status: 'OPEN' } }] });
+  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', description: 'Itaú da Home', creditLimit: 5000, availableLimit: 4000, closingDay: 3, dueDay: 10, currentInvoiceUuid: 'october', invoices: [
+    { uuid: 'october', referenceMonth: '2026-10', total: 200, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' },
+    { uuid: 'november', referenceMonth: '2026-11', total: 800, status: 'OPEN', closingDate: '2026-11-03', dueDate: '2026-11-10' },
+  ] });
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  expect(fetchCreditCards).not.toHaveBeenCalled();
+  await act(async () => button('Ver fatura de Itaú da Home').props.onPress());
+  expect(fetchCreditCardDetails).toHaveBeenCalledWith('card', 'test-access', expect.anything());
+  expect(button('Fatura Nov 2026').props.accessibilityState.selected).toBe(true);
+  await act(async () => button('Voltar para contas e cartões').props.onPress());
+  expect(labels()).toContain('Contas e cartões');
+});
+
+test('conta da Home abre seus detalhes por UUID sem consultar novamente a listagem', async () => {
+  const account = { uuid: 'home-account', description: 'Minha conta Inter', type: 'CONTA_CORRENTE', balance: 2000, financialInstitution: { id: 42, name: 'Inter' } };
+  fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 0, expenses: 0, accounts: [account] });
+  fetchAccountDetails.mockResolvedValue(account);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  expect(fetchAccounts).not.toHaveBeenCalled();
+  await act(async () => button('Abrir conta Minha conta Inter').props.onPress());
+  expect(fetchAccountDetails).toHaveBeenCalledWith('home-account', 'test-access', expect.anything());
+  expect(labels()).toContain('Detalhes da conta');
+  expect(labels()).toContain('Transações da conta');
+  expect(fetchAccounts).not.toHaveBeenCalled();
+  await act(async () => button('Voltar para contas e cartões').props.onPress());
+  expect(labels()).toContain('Contas e cartões');
+});
+
+test('movimentacao recente abre detalhes e retorna para Home sem recarregar o dashboard', async () => {
+  fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 0, expenses: 50, recentTransactions: [
+    { id: 'recent', description: 'Farmácia', amount: 50, type: 'EXPENSE', date: '2026-10-06', payment: 'Pix', account: 'Inter' },
+  ] });
+  fetchTransactionDetails.mockResolvedValue({ uuid: 'recent', description: 'Farmácia', amount: 50, occurredAt: '2026-10-06T12:00:00', type: 'EXPENSE', paymentMethod: 'PIX', account: { description: 'Inter' } });
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  expect(fetchTransactions).not.toHaveBeenCalled();
+  await act(async () => button('Abrir lançamento Farmácia').props.onPress());
+  expect(fetchTransactionDetails).toHaveBeenCalledWith('recent', 'test-access', expect.anything());
+  await act(async () => button('Voltar à lista').props.onPress());
+  expect(labels()).toContain('Movimentações recentes');
+  expect(fetchDashboard).toHaveBeenCalledTimes(1);
+  await act(async () => button('Ver extrato').props.onPress());
+  expect(labels()).toContain('Extrato');
+  expect(fetchTransactions).toHaveBeenCalledTimes(1);
 });
 
 test('lapis abre cartao preenchido e atualiza sem criar outro cartao', async () => {

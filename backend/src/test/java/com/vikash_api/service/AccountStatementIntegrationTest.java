@@ -9,9 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vikash_api.entities.AccountEntity;
+import com.vikash_api.entities.CustomCategoryEntity;
+import com.vikash_api.entities.DefaultCategoriesEntity;
 import com.vikash_api.entities.TransactionEntity;
 import com.vikash_api.entities.UserEntity;
 import com.vikash_api.enums.AccountType;
@@ -211,5 +214,61 @@ class AccountStatementIntegrationTest {
         assertThat(totals.get(0).incomes()).isEqualByComparingTo("0");
         assertThat(totals.get(1).date()).isEqualTo(java.time.LocalDate.of(2026, 10, 5));
         assertThat(totals.get(1).incomes()).isEqualByComparingTo("100");
+    }
+
+    @Test
+    void categoryExpensesKeepDistinctCategoriesAndFilterUserPeriodAndTransactionType() {
+        var standard = new DefaultCategoriesEntity();
+        ReflectionTestUtils.setField(standard, "name", "Mercado");
+        ReflectionTestUtils.setField(standard, "color", "ochre");
+        ReflectionTestUtils.setField(standard, "icon", "basket");
+        entityManager.persist(standard);
+        var custom = new CustomCategoryEntity();
+        custom.setUser(user); custom.setName("Mercado"); custom.setColor("blue"); custom.setIcon("wallet");
+        entityManager.persist(custom);
+        var start = LocalDateTime.of(2026, 10, 1, 0, 0);
+        var end = start.plusMonths(1);
+        categoryTransaction(wallet, TransactionType.EXPENSE, "10", start, standard, null);
+        categoryTransaction(wallet, TransactionType.EXPENSE, "15", start.plusDays(2), standard, null);
+        categoryTransaction(wallet, TransactionType.EXPENSE, "40", start, null, custom);
+        categoryTransaction(wallet, TransactionType.EXPENSE, "5", start, null, null);
+        categoryTransaction(wallet, TransactionType.INCOME, "999", start, standard, null);
+        categoryTransaction(wallet, TransactionType.TRANSFER, "999", start, standard, null);
+        categoryTransaction(wallet, TransactionType.INVOICE_PAYMENT, "999", start, standard, null);
+        categoryTransaction(wallet, TransactionType.EXPENSE, "999", start.minusSeconds(1), standard, null);
+        categoryTransaction(wallet, TransactionType.EXPENSE, "999", end, standard, null);
+        var otherUser = userRepository.save(UserEntity.builder().name("Outro")
+                .email("category-expenses@test.local").password("test-only").build());
+        otherAccount.setUser(otherUser);
+        categoryTransaction(otherAccount, TransactionType.EXPENSE, "999", start, standard, null);
+        entityManager.flush();
+
+        var result = transactionRepository.sumExpensesByCategory(user.getId(), start, end);
+        assertThat(result).hasSize(3);
+        assertThat(result.get(0).customCategoryUuid()).isEqualTo(custom.getUuid());
+        assertThat(result.get(0).total()).isEqualByComparingTo("40");
+        assertThat(result.get(1).defaultCategoryId()).isEqualTo(standard.getId());
+        assertThat(result.get(1).total()).isEqualByComparingTo("25");
+        assertThat(result.get(1).name()).isEqualTo("Mercado");
+        assertThat(result.get(1).color()).isEqualTo("ochre");
+        assertThat(result.get(1).icon()).isEqualTo("basket");
+        assertThat(result.get(2).name()).isEqualTo("Sem categoria");
+        assertThat(result.get(2).color()).isEqualTo("gray");
+        assertThat(result.get(2).icon()).isEqualTo("ellipsis");
+        assertThat(result.get(2).total()).isEqualByComparingTo("5");
+        assertThat(transactionRepository.sumExpensesByCategory(user.getId(), end, end.plusDays(1)))
+                .singleElement().satisfies(row -> assertThat(row.total()).isEqualByComparingTo("999"));
+    }
+
+    private void categoryTransaction(AccountEntity account, TransactionType type, String amount,
+            LocalDateTime date, DefaultCategoriesEntity standard, CustomCategoryEntity custom) {
+        var transaction = new TransactionEntity();
+        transaction.setUser(account.getUser()); transaction.setAccount(account);
+        transaction.setDescription("Gasto por categoria de teste"); transaction.setTranscription("Teste");
+        transaction.setType(type); transaction.setPaymentMethod(PaymentMethod.PIX);
+        transaction.setAmount(new BigDecimal(amount)); transaction.setOccurredAt(date);
+        transaction.setDefaultCategory(standard); transaction.setCustomCategory(custom);
+        if (type == TransactionType.TRANSFER) { transaction.setDestinationAccount(otherAccount); }
+        transactionRepository.save(transaction);
     }
 }

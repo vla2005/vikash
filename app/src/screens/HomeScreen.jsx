@@ -4,12 +4,15 @@ import BrandLogo from '../components/BrandLogo';
 import Icon from '../components/Icon';
 import useDashboard from '../hooks/useDashboard';
 import BalanceEvolutionChart from '../components/BalanceEvolutionChart';
+import HomeAccountsAndCards from '../components/HomeAccountsAndCards';
+import CategoryExpensesChart from '../components/CategoryExpensesChart';
+import RecentTransactions from '../components/RecentTransactions';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, colors, fontFamily, fontFamilyBold } from '../theme';
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-export default function HomeScreen({ profile, accessToken, revision }) {
+export default function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard, onViewCards, onOpenTransaction, onViewStatement }) {
   const [period, setPeriod] = useState(() => {
     const today = new Date();
     return { year: today.getFullYear(), month: today.getMonth() + 1 };
@@ -64,7 +67,13 @@ export default function HomeScreen({ profile, accessToken, revision }) {
         {data.incomesPercentageChange != null && <ComparisonCard label="entradas" percentage={data.incomesPercentageChange} period={period} />}
         {data.expensesPercentageChange != null && <ComparisonCard label="saídas" percentage={data.expensesPercentageChange} period={period} />}
       </View>}
-      {!!data && !loading && !error && <BalanceEvolutionChart points={data.balanceEvolution} />}
+      {!!data && !loading && !error && <>
+        <BalanceEvolutionChart points={data.balanceEvolution} />
+        <CategoryExpensesChart categories={data.expensesPerCategory} periodLabel={`${months[period.month - 1]} de ${period.year}`} />
+        <HomeAccountsAndCards accounts={data.accounts ?? []} cards={data.creditCards ?? []} profile={profile}
+          onOpenAccount={onOpenAccount} onOpenCard={onOpenCard} onViewAll={onViewCards} />
+        <RecentTransactions rows={data.recentTransactions} onOpenTransaction={onOpenTransaction} onViewStatement={onViewStatement} />
+      </>}
       {loading && <View style={s.feedback}><ActivityIndicator color={colors.primary} size="small" /><Text style={s.caption}>Carregando resumo…</Text></View>}
       {!!error && <View style={s.errorBox}><Text accessibilityRole="alert" style={s.error}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Tentar carregar resumo novamente" onPress={retry} style={s.retry}><Text style={s.link}>Tentar novamente</Text></Pressable></View>}
     </ScrollView>
@@ -85,7 +94,7 @@ export default function HomeScreen({ profile, accessToken, revision }) {
               <Text style={[s.optionText, selected && s.selectedText]}>{month.slice(0, 3)}</Text>
             </Pressable>;
           })}</View>
-          <Text style={s.pickerNote}>Entradas e saídas do mês selecionado.</Text>
+          <Text style={s.pickerNote}>Entradas, saídas e gastos por categoria do mês selecionado.</Text>
         </View>
       </View>
     </Modal>

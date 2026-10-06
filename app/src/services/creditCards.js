@@ -29,10 +29,14 @@ export async function fetchCreditCards(accessToken, signal) {
   const response = await authenticatedFetch('/api/credit-card', { method: 'GET', headers: { Accept: 'application/json', access_token: accessToken }, signal }, accessToken);
   if (!response.ok) { throw new ApiError('Não foi possível carregar seus cartões. Tente novamente.', response.status); }
   const data = await response.json();
-  if (!Array.isArray(data?.creditCards)) { throw new Error('A API retornou a lista de cartões em formato inesperado.'); }
-  return data.creditCards.map(card => {
-    const invoice = card.currentInvoice;
-    if (typeof card.uuid !== 'string' || !card.uuid.trim() || typeof card.description !== 'string'
+  return normalizeCreditCards(data?.creditCards);
+}
+
+export function normalizeCreditCards(cards) {
+  if (!Array.isArray(cards)) { throw new Error('A API retornou a lista de cartões em formato inesperado.'); }
+  return cards.map(card => {
+    const invoice = card?.currentInvoice;
+    if (!card || typeof card.uuid !== 'string' || !card.uuid.trim() || typeof card.description !== 'string'
         || card.creditLimit == null || !Number.isFinite(Number(card.creditLimit))
         || card.availableLimit == null || !Number.isFinite(Number(card.availableLimit))
         || (invoice != null && (typeof invoice.uuid !== 'string' || invoice.total == null || !Number.isFinite(Number(invoice.total))

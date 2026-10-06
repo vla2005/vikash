@@ -1,16 +1,14 @@
 package com.vikash_api.services;
 
-import com.vikash_api.dtos.responses.TransactionTotalsResponse;
-import com.vikash_api.dtos.responses.BalanceEvolutionResponse;
-import com.vikash_api.dtos.responses.DailyTransactionTotalsResponse;
+import com.vikash_api.dtos.responses.*;
 import com.vikash_api.entities.UserEntity;
 import com.vikash_api.repositories.AccountRepository;
+import com.vikash_api.repositories.CreditCardInstallmentRepository;
 import com.vikash_api.repositories.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.vikash_api.dtos.responses.DashboardResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -18,9 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +26,9 @@ public class DashboardService {
     private final AuthenticatedUserService authenticatedUserService;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final CreditCardService creditCardService;
+    private final AccountService accountService;
+    private final CreditCardInstallmentRepository creditCardInstallmentRepository;
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard(int month, int year){
@@ -37,13 +36,23 @@ public class DashboardService {
 
         BigDecimal totalBalance = getTotalBalance(currentUser);
         TransactionTotalsResponse totals = getTotalIncomesAndExpenses(currentUser, month, year);
+        List<CategoryExpenseResponse> expensesPerCategory = getExpensesByCategory(currentUser, month, year);
+        AllAccountsResponse accounts = accountService.get();
+        AllCreditCardsResponse creditCards = creditCardService.get();
+        List<TransactionSummaryResponse> recentTransactions = getRecentTransactions(currentUser);
         return new DashboardResponse(
                 totalBalance,
                 totals.incomes(),
                 totals.expenses(),
                 totals.incomesPercentageChange(),
                 totals.expensesPercentageChange(),
-                getLast7DaysEvolutionBalance(currentUser, totalBalance));
+                expensesPerCategory,
+                getLast7DaysEvolutionBalance(currentUser, totalBalance),
+                accounts,
+                creditCards,
+                recentTransactions
+        );
+
     }
 
     private BigDecimal getTotalBalance(UserEntity currentUser){
@@ -85,6 +94,59 @@ public class DashboardService {
                 .divide(previous, 1, RoundingMode.HALF_UP);
     }
 
+    private List<CategoryExpenseResponse> getExpensesByCategory(UserEntity currentUser, int month, int year){
+        YearMonth period = YearMonth.of(year, month);
+
+        LocalDateTime start = period.atDay(1).atStartOfDay();
+        LocalDateTime end = period.plusMonths(1).atDay(1).atStartOfDay();
+
+        List<CategoryExpenseResponse> accountExpenses =
+                transactionRepository.sumExpensesByCategory(
+                        currentUser.getId(), start, end
+                );
+
+        List<CategoryExpenseResponse> creditExpenses =
+                creditCardInstallmentRepository.sumExpensesByCategory(
+                        currentUser.getId(), period.toString()
+                );
+
+        List<CategoryExpenseResponse> allExpenses = new ArrayList<>(accountExpenses);
+        allExpenses.addAll(creditExpenses);
+
+        Map<String, CategoryExpenseResponse> groupedExpenses = new HashMap<>();
+
+        for (CategoryExpenseResponse expense : allExpenses) {
+            String key;
+
+            if (expense.customCategoryUuid() != null) {
+                key = "custom:" + expense.customCategoryUuid();
+            } else if (expense.defaultCategoryId() != null) {
+                key = "default:" + expense.defaultCategoryId();
+            } else {
+                key = "uncategorized";
+            }
+
+            CategoryExpenseResponse existing = groupedExpenses.get(key);
+
+            if (existing == null) {
+                groupedExpenses.put(key, expense);
+            } else {
+                groupedExpenses.put(key, new CategoryExpenseResponse(
+                        expense.defaultCategoryId(),
+                        expense.customCategoryUuid(),
+                        expense.name(),
+                        expense.color(),
+                        expense.icon(),
+                        existing.total().add(expense.total())
+                ));
+            }
+        }
+
+        return groupedExpenses.values().stream()
+                .sorted(Comparator.comparing(CategoryExpenseResponse::total).reversed())
+                .toList();
+    }
+
     private List<BalanceEvolutionResponse> getLast7DaysEvolutionBalance(UserEntity currentUser, BigDecimal totalBalance) {
         LocalDate today = LocalDate.now(ZoneId.of("America/Sao_Paulo"));
         LocalDate firstDay = today.minusDays(6);
@@ -104,5 +166,12 @@ public class DashboardService {
             }
         }
         return evolution;
+    }
+
+    private List<TransactionSummaryResponse> getRecentTransactions(UserEntity currentUser){
+        return transactionRepository.findSummariesByUserId(
+                currentUser.getId(),
+                PageRequest.of(0,5)
+        ).getContent();
     }
 }

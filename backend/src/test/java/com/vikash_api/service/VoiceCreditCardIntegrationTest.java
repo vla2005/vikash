@@ -53,6 +53,7 @@ class VoiceCreditCardIntegrationTest {
     @Autowired com.vikash_api.services.CreditCardInvoiceService invoiceService;
     @Autowired com.vikash_api.repositories.CreditCardPurchaseRepository purchaseRepository;
     @Autowired com.vikash_api.repositories.CreditCardInstallmentRepository installmentRepository;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @MockitoBean AuthenticatedUserService authenticatedUserService;
     @MockitoBean AiAnalysisService aiAnalysisService;
     CreditCardEntity card;
@@ -557,5 +558,37 @@ class VoiceCreditCardIntegrationTest {
         var afterPayment = creditCardService.get().creditCards().getFirst();
         assertThat(afterPayment.currentInvoice().referenceMonth()).isEqualTo("2026-11");
         assertThat(afterPayment.availableLimit()).isEqualByComparingTo("4900");
+    }
+
+    @Test
+    void categoryCreditExpensesUseInvoiceMonthAndKeepPaidInstallmentsWithoutCountingPaymentTwice() {
+        var invoiceUuid = payableInvoice();
+        var standard = new com.vikash_api.entities.DefaultCategoriesEntity();
+        ReflectionTestUtils.setField(standard, "name", "Casa");
+        ReflectionTestUtils.setField(standard, "color", "terracotta");
+        ReflectionTestUtils.setField(standard, "icon", "house");
+        entityManager.persist(standard);
+        var purchase = purchaseRepository.findAll().getFirst();
+        purchase.setDefaultCategory(standard);
+        purchaseRepository.saveAndFlush(purchase);
+        var account = paymentAccount("2000");
+        invoiceService.pay(invoiceUuid, paymentRequest(account.getUuid()));
+
+        var october = installmentRepository.sumExpensesByCategory(card.getUser().getId(), "2026-10");
+        var november = installmentRepository.sumExpensesByCategory(card.getUser().getId(), "2026-11");
+        assertThat(october).singleElement().satisfies(row -> {
+            assertThat(row.total()).isEqualByComparingTo("500");
+            assertThat(row.defaultCategoryId()).isEqualTo(standard.getId());
+            assertThat(row.name()).isEqualTo("Casa");
+            assertThat(row.color()).isEqualTo("terracotta");
+            assertThat(row.icon()).isEqualTo("house");
+        });
+        assertThat(november).singleElement().satisfies(row -> assertThat(row.total()).isEqualByComparingTo("500"));
+        assertThat(installmentRepository.sumExpensesByCategory(card.getUser().getId(), "2027-01")).isEmpty();
+        var otherUser = userRepository.save(UserEntity.builder().name("Outro")
+                .email("category-credit@test.local").password("test-only").build());
+        assertThat(installmentRepository.sumExpensesByCategory(otherUser.getId(), "2026-10")).isEmpty();
+        assertThat(transactionRepository.sumExpensesByCategory(card.getUser().getId(),
+                LocalDateTime.of(2026, 10, 1, 0, 0), LocalDateTime.of(2026, 11, 1, 0, 0))).isEmpty();
     }
 }

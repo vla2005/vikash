@@ -1,4 +1,7 @@
 import { ApiError, authenticatedFetch } from './apiClient';
+import { normalizeCreditCards } from './creditCards';
+import { normalizeAccounts } from './accounts';
+import { normalizeTransactionSummaries } from './transactions';
 
 export async function fetchDashboard(year, month, accessToken, signal) {
   const response = await authenticatedFetch(`/api/dashboard?year=${year}&month=${month}`, {
@@ -32,6 +35,20 @@ export async function fetchDashboard(year, month, accessToken, signal) {
       throw new Error('A API retornou a evolução do saldo em formato inesperado.');
     }
     return { date: point.date, balance: Number(point.balance) };
+  });
+  result.creditCards = normalizeCreditCards(data.creditCards == null ? []
+    : Array.isArray(data.creditCards) ? data.creditCards : data.creditCards.creditCards);
+  result.accounts = normalizeAccounts(data.accounts == null ? []
+    : Array.isArray(data.accounts) ? data.accounts : data.accounts.accounts);
+  result.recentTransactions = normalizeTransactionSummaries(data.recentTransactions ?? []);
+  const categories = data.expensesPerCategory ?? [];
+  if (!Array.isArray(categories)) { throw new Error('A API retornou os gastos por categoria em formato inesperado.'); }
+  result.expensesPerCategory = categories.map(category => {
+    if (!category || category.total == null || !['number', 'string'].includes(typeof category.total)
+        || String(category.total).trim() === '' || !Number.isFinite(Number(category.total)) || Number(category.total) < 0) {
+      throw new Error('A API retornou os gastos por categoria em formato inesperado.');
+    }
+    return { ...category, name: typeof category.name === 'string' && category.name.trim() ? category.name : 'Sem categoria', total: Number(category.total) };
   });
   return result;
 }

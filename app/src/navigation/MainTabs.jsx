@@ -61,6 +61,10 @@ export default function MainTabs() {
     setItemDetails(null); setAccountUuid(null); setSelected('AccountManagement');
     setCardUuid(card); setInvoiceToOpen(invoice);
   }
+  function openAccount(uuid) {
+    setItemDetails(null); setCardUuid(null); setInvoiceToOpen(null); setAccountForm(null);
+    setAccountUuid(uuid); setSelected('AccountManagement');
+  }
   async function saveCategory(values) {
     const saved = await persistCategory(values, categoryForm.category);
     if (saved) { setCategoryForm(null); }
@@ -83,7 +87,7 @@ export default function MainTabs() {
     }
   }
   function renderContent() {
-    if (selected === 'Home') { return <HomeScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} revision={dashboardRevision} />; }
+    if (selected === 'Home') { return <HomeScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} revision={dashboardRevision} onOpenAccount={openAccount} onOpenCard={openInvoice} onViewCards={() => setSelected('AccountManagement')} onOpenTransaction={openDetails} onViewStatement={() => setSelected('Statement')} />; }
     if (selected === 'Statement') { return <StatementScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} onOpenTransaction={openDetails} />; }
     if (selected === 'AccountManagement') {
       if (accountForm) {

@@ -9,12 +9,16 @@ function normalizeAccount(account) {
     financialInstitutionId: account.financialInstitution?.id ?? null, financialInstitution: account.financialInstitution ?? null };
 }
 
+export function normalizeAccounts(accounts) {
+  if (!Array.isArray(accounts)) { throw new Error('A API retornou a lista de contas em formato inesperado.'); }
+  return accounts.map(normalizeAccount);
+}
+
 export async function fetchAccounts(accessToken, signal) {
   const response = await authenticatedFetch('/api/account', { method: 'GET', headers: { Accept: 'application/json' }, signal }, accessToken);
   if (!response.ok) { throw new ApiError('Não foi possível carregar suas contas. Tente novamente.', response.status); }
   const data = await response.json();
-  if (!Array.isArray(data?.accounts)) { throw new Error('A API retornou a lista de contas em formato inesperado.'); }
-  return data.accounts.map(normalizeAccount);
+  return normalizeAccounts(data?.accounts);
 }
 
 export async function fetchAccountDetails(uuid, accessToken, signal) {

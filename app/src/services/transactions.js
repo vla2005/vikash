@@ -1,18 +1,11 @@
 import { ApiError, authenticatedFetch, postJson } from './apiClient';
 
 const paymentLabels = { PIX: 'Pix', CREDIT_CARD: 'Crédito', DEBIT_CARD: 'Débito', BANK_SLIP: 'Boleto', CASH: 'Dinheiro', BANK_TRANSFER: 'Transferência', OTHER: 'Outro' };
-export async function fetchTransactions(accessToken, page = 0, signal, endpoint = '/api/transaction') {
-  if (!accessToken) { throw new Error('Entre na sua conta para consultar o extrato.'); }
-  const response = await authenticatedFetch(`${endpoint}?page=${page}&size=20`, {
-    method: 'GET', headers: { Accept: 'application/json', access_token: accessToken }, signal,
-  }, accessToken);
-  if (!response.ok) { throw new ApiError('Não foi possível carregar o extrato. Tente novamente.', response.status); }
-  const data = await response.json();
-  if (!Array.isArray(data?.content) || typeof data.last !== 'boolean' || data.number !== page) {
-    throw new Error('A API retornou a paginação do extrato em formato inesperado.');
-  }
-  const rows = data.content.map(item => {
-    if (typeof item.uuid !== 'string' || typeof item.description !== 'string' || item.amount == null
+export function normalizeTransactionSummaries(items) {
+  if (!Array.isArray(items)) { throw new Error('A API retornou a lista de transações em formato inesperado.'); }
+  return items.map(item => {
+    if (typeof item?.uuid !== 'string' || !item.uuid.trim() || typeof item.description !== 'string' || item.amount == null
+        || !['number', 'string'].includes(typeof item.amount) || String(item.amount).trim() === ''
         || !Number.isFinite(Number(item.amount)) || typeof item.occurredAt !== 'string'
         || !/^\d{4}-\d{2}-\d{2}T/.test(item.occurredAt) || !['INCOME', 'EXPENSE', 'TRANSFER', 'INVOICE_PAYMENT'].includes(item.type)) {
       throw new Error('A API retornou uma transação em formato inesperado.');
@@ -24,6 +17,18 @@ export async function fetchTransactions(accessToken, page = 0, signal, endpoint 
       installmentNumber: item.installmentNumber ?? 1, installmentCount: item.installmentCount ?? 1,
       payment: paymentLabels[item.paymentMethod] || 'Outro' };
   });
+}
+export async function fetchTransactions(accessToken, page = 0, signal, endpoint = '/api/transaction') {
+  if (!accessToken) { throw new Error('Entre na sua conta para consultar o extrato.'); }
+  const response = await authenticatedFetch(`${endpoint}?page=${page}&size=20`, {
+    method: 'GET', headers: { Accept: 'application/json', access_token: accessToken }, signal,
+  }, accessToken);
+  if (!response.ok) { throw new ApiError('Não foi possível carregar o extrato. Tente novamente.', response.status); }
+  const data = await response.json();
+  if (!Array.isArray(data?.content) || typeof data.last !== 'boolean' || data.number !== page) {
+    throw new Error('A API retornou a paginação do extrato em formato inesperado.');
+  }
+  const rows = normalizeTransactionSummaries(data.content);
   return { rows, page: data.number, hasNext: !data.last };
 }
 

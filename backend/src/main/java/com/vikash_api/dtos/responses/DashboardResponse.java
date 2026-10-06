@@ -9,7 +9,11 @@ public record DashboardResponse(
         BigDecimal expenses,
         BigDecimal incomesPercentageChange,
         BigDecimal expensesPercentageChange,
-        List<BalanceEvolutionResponse> balanceEvolution
+        List<CategoryExpenseResponse> expensesPerCategory,
+        List<BalanceEvolutionResponse> balanceEvolution,
+        AllAccountsResponse accounts,
+        AllCreditCardsResponse creditCards,
+        List<TransactionSummaryResponse> recentTransactions
 ) {
 
 }

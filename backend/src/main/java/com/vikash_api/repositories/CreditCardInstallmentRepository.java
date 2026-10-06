@@ -3,6 +3,8 @@ package com.vikash_api.repositories;
 import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.List;
+
+import com.vikash_api.dtos.responses.CategoryExpenseResponse;
 import com.vikash_api.dtos.responses.CreditCardInstallmentResponse;
 import com.vikash_api.entities.CreditCardInstallmentEntity;
 import com.vikash_api.dtos.responses.TransactionSummaryResponse;
@@ -53,4 +55,39 @@ public interface CreditCardInstallmentRepository extends JpaRepository<CreditCar
     """)
     List<CreditCardInstallmentResponse> findDetailsByPurchase(@Param("purchaseUuid") UUID purchaseUuid,
             @Param("userId") Long userId);
+
+
+
+
+    @Query("""
+    SELECT new com.vikash_api.dtos.responses.CategoryExpenseResponse(
+        defaultCategory.id,
+        customCategory.uuid,
+        COALESCE(customCategory.name, defaultCategory.name, 'Sem categoria'),
+        COALESCE(customCategory.color, defaultCategory.color, 'gray'),
+        COALESCE(customCategory.icon, defaultCategory.icon, 'ellipsis'),
+        SUM(installment.amount)
+    )
+    FROM CreditCardInstallmentEntity installment
+    JOIN installment.purchase purchase
+    JOIN installment.creditCardInvoice invoice
+    LEFT JOIN purchase.defaultCategory defaultCategory
+    LEFT JOIN purchase.customCategory customCategory
+    WHERE purchase.creditCard.user.id = :userId
+      AND invoice.referenceMonth = :referenceMonth
+    GROUP BY
+        defaultCategory.id,
+        customCategory.uuid,
+        defaultCategory.name,
+        customCategory.name,
+        defaultCategory.color,
+        customCategory.color,
+        defaultCategory.icon,
+        customCategory.icon
+    ORDER BY SUM(installment.amount) DESC
+    """)
+    List<CategoryExpenseResponse> sumExpensesByCategory(
+            @Param("userId") Long userId,
+            @Param("referenceMonth") String referenceMonth
+    );
 }

@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.List;
+
+import com.vikash_api.dtos.responses.CategoryExpenseResponse;
 import com.vikash_api.dtos.responses.DailyTransactionTotalsResponse;
 
 import com.vikash_api.dtos.responses.TransactionTotalsResponse;
@@ -128,4 +130,40 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
             @Param("userId") Long userId,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+
+
+
+    @Query("""
+    SELECT new com.vikash_api.dtos.responses.CategoryExpenseResponse(
+        defaultCategory.id,
+        customCategory.uuid,
+        COALESCE(customCategory.name, defaultCategory.name, 'Sem categoria'),
+        COALESCE(customCategory.color, defaultCategory.color, 'gray'),
+        COALESCE(customCategory.icon, defaultCategory.icon, 'ellipsis'),
+        SUM(t.amount)
+    )
+    FROM TransactionEntity t
+    LEFT JOIN t.defaultCategory defaultCategory
+    LEFT JOIN t.customCategory customCategory
+    WHERE t.user.id = :userId
+      AND t.type = com.vikash_api.enums.TransactionType.EXPENSE
+      AND t.occurredAt >= :start
+      AND t.occurredAt < :end
+    GROUP BY
+        defaultCategory.id,
+        customCategory.uuid,
+        defaultCategory.name,
+        customCategory.name,
+        defaultCategory.color,
+        customCategory.color,
+        defaultCategory.icon,
+        customCategory.icon
+    ORDER BY SUM(t.amount) DESC
+    """)
+    List<CategoryExpenseResponse> sumExpensesByCategory(
+            @Param("userId") Long userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
 }
