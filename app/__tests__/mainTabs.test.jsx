@@ -2,9 +2,12 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
 import MainTabs from '../src/navigation/MainTabs';
+jest.mock('../src/services/dashboard', () => ({ fetchDashboard: jest.fn(async () => ({ totalBalance: 2000, incomes: 4200, expenses: 2200 })) }));
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 import BottomNavigator from '../src/components/BottomNavigator';
 import VoiceDrawer from '../src/components/VoiceDrawer';
+import SwipeableRow from '../src/components/SwipeableRow';
+import ConfirmationDialog from '../src/components/ConfirmationDialog';
 import TransactionDetailsScreen from '../src/screens/TransactionDetailsScreen';
 import CreditCardPurchaseDetailsScreen from '../src/screens/CreditCardPurchaseDetailsScreen';
 import { createCreditCard, updateCreditCard, fetchCreditCards, fetchCreditCardDetails } from '../src/services/creditCards';
@@ -56,7 +59,7 @@ beforeEach(() => {
 test('confirmacao envia transcricao com token e mostra sucesso somente depois de salvar', async () => {
   createTransaction.mockResolvedValue({ uuid: 'saved' });
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
-  await act(async () => button('Registrar por voz').props.onPress());
+  await act(async () => renderer.root.findByType(BottomNavigator).props.onMicrophone());
   expect(createTransaction).not.toHaveBeenCalled();
   await act(async () => renderer.root.findByType(VoiceDrawer).props.onConfirm('Texto revisado'));
   expect(createTransaction).toHaveBeenCalledWith('Texto revisado', 'test-access');
@@ -75,10 +78,25 @@ afterEach(async () => { if (renderer) { await act(async () => renderer.unmount()
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
 function labels() { return renderer.root.findAllByType(Text).map(node => node.props.children); }
 
+test('exclusao preparada confirma sem chamar endpoint nem remover categoria', async () => {
+  fetchCategories.mockResolvedValue({ defaultCategories: [], customCategories: [{ uuid: 'pet-uuid', name: 'Pets', icon: 'paw', color: 'blue' }] });
+  const requests = jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Não deveria consultar API'));
+  try {
+    await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+    await act(async () => button('Categorias').props.onPress());
+    await act(async () => renderer.root.findByType(SwipeableRow).props.onAction());
+    await act(async () => renderer.root.findByType(ConfirmationDialog).props.onConfirm());
+    expect(requests).not.toHaveBeenCalled();
+    expect(button('Editar categoria Pets')).toBeDefined();
+    expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'info', title: 'Exclusão ainda indisponível' }));
+    expect(renderer.root.findByType(ConfirmationDialog).props.visible).toBe(false);
+  } finally { requests.mockRestore(); }
+});
+
 test('as quatro abas mudam o conteudo e mantem a barra com estado selecionado', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
-  expect(labels()).toContain('O que você movimentou hoje?');
-  for (const [tab, heading] of [['Extrato', 'Extrato'], ['Contas', 'Contas'], ['Categorias', 'Categorias'], ['Início', 'O que você movimentou hoje?']]) {
+  expect(labels()).toContain('Saldo total');
+  for (const [tab, heading] of [['Extrato', 'Extrato'], ['Contas', 'Contas'], ['Categorias', 'Categorias'], ['Início', 'Saldo total']]) {
     await act(async () => button(tab).props.onPress());
     expect(labels()).toContain(heading);
     expect(button(tab).props.accessibilityState.selected).toBe(true);
@@ -87,15 +105,15 @@ test('as quatro abas mudam o conteudo e mantem a barra com estado selecionado', 
   }
 });
 
-test('atalhos do inicio abrem extrato e contas e o botao principal abre o microfone', async () => {
+test('a home mantém navegação para extrato, contas e registro por voz na barra', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
-  await act(async () => button('Ver extrato').props.onPress());
+  await act(async () => button('Extrato').props.onPress());
   expect(button('Extrato').props.accessibilityState.selected).toBe(true);
   await act(async () => button('Início').props.onPress());
-  await act(async () => button('Contas e cartões').props.onPress());
+  await act(async () => button('Contas').props.onPress());
   expect(button('Contas').props.accessibilityState.selected).toBe(true);
   await act(async () => button('Início').props.onPress());
-  await act(async () => button('Começar registro por voz').props.onPress());
+  await act(async () => renderer.root.findByType(BottomNavigator).props.onMicrophone());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(true);
   expect(createTransaction).not.toHaveBeenCalled();
 });

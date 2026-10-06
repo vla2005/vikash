@@ -13,6 +13,7 @@ export const colors = {
   positive: '#13765A',
   negative: '#B43C4A',
   backdrop: 'rgba(16, 29, 62, 0.64)',
+  dialogBackdrop: 'rgba(7, 14, 30, 0.78)',
   error: '#A3322C',
   errorSoft: '#F9EDEA',
   olive: '#487024',

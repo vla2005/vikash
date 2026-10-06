@@ -42,6 +42,8 @@ import com.vikash_api.repositories.DefaultCategoryRepository;
 import com.vikash_api.repositories.TransactionRepository;
 
 import lombok.RequiredArgsConstructor;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +61,7 @@ public class TransactionService {
     private final CreditCardPurchaseService creditCardPurchaseService;
     private final CreditCardInvoiceRepository creditCardInvoiceRepository;
     private final CreditCardInvoiceService creditCardInvoiceService;
+    private final EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public TransactionResponse getByUuid(UUID uuid) {
@@ -138,16 +141,23 @@ public class TransactionService {
             return;
         }
         boolean creditPurchase = analysis.paymentMethod() == PaymentMethod.CREDIT_CARD;
-        AccountEntity account = creditPurchase ? null : accountRepository.findByUuidAndUserId(analysis.accountUuid(), currentUser.getId())
-                .orElseThrow(() -> new InvalidTransactionException("Conta não encontrada."));
-
+        AccountEntity account = null;
         AccountEntity destinationAccount = null;
         DefaultCategoriesEntity defaultCategory = null;
         CustomCategoryEntity customCategory = null;
 
-        if (analysis.destinationAccountUuid() != null) {
-            destinationAccount = accountRepository.findByUuidAndUserId(analysis.destinationAccountUuid(), currentUser.getId())
-                    .orElseThrow(() -> new InvalidTransactionException("Conta de destino não encontrada."));
+        if (!creditPurchase) {
+            // Sempre bloqueia as duas contas na mesma ordem para evitar conflitos entre transferências.
+            if (analysis.destinationAccountUuid() != null
+                    && analysis.destinationAccountUuid().compareTo(analysis.accountUuid()) < 0) {
+                destinationAccount = getAccountForUpdate(analysis.destinationAccountUuid(), currentUser.getId());
+                account = getAccountForUpdate(analysis.accountUuid(), currentUser.getId());
+            } else {
+                account = getAccountForUpdate(analysis.accountUuid(), currentUser.getId());
+                if (analysis.destinationAccountUuid() != null) {
+                    destinationAccount = getAccountForUpdate(analysis.destinationAccountUuid(), currentUser.getId());
+                }
+            }
         }
 
         if (analysis.defaultCategoryName() != null) {
@@ -179,6 +189,27 @@ public class TransactionService {
         transaction.setTranscription(request.transcription());
 
         transactionRepository.save(transaction);
+        updateBalances(account, destinationAccount, analysis.type(), analysis.amount());
+    }
+
+    private AccountEntity getAccountForUpdate(UUID uuid, Long userId) {
+        AccountEntity account = accountRepository.findOwnedForUpdate(uuid, userId)
+                .orElseThrow(() -> new InvalidTransactionException("Conta não encontrada."));
+        // As contas já foram lidas para o contexto da IA; recarrega o saldo atual após o bloqueio.
+        entityManager.refresh(account, LockModeType.PESSIMISTIC_WRITE);
+        return account;
+    }
+
+    private void updateBalances(AccountEntity account, AccountEntity destinationAccount,
+            TransactionType type, BigDecimal amount) {
+        if (type == TransactionType.INCOME) {
+            account.setBalance(account.getBalance().add(amount));
+        } else if (type == TransactionType.EXPENSE) {
+            account.setBalance(account.getBalance().subtract(amount));
+        } else if (type == TransactionType.TRANSFER) {
+            account.setBalance(account.getBalance().subtract(amount));
+            destinationAccount.setBalance(destinationAccount.getBalance().add(amount));
+        }
     }
 
     @Transactional (readOnly = true)

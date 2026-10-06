@@ -36,6 +36,7 @@ class AccountStatementIntegrationTest {
     @Autowired UserRepository userRepository;
     @Autowired TransactionRepository transactionRepository;
     @Autowired com.vikash_api.services.TransactionService transactionService;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @MockitoBean AuthenticatedUserService authenticatedUserService;
     @MockitoBean AiAnalysisService aiAnalysisService;
     UserEntity user;
@@ -127,5 +128,88 @@ class AccountStatementIntegrationTest {
         assertThatThrownBy(() -> service.getByUuid(wallet.getUuid())).isInstanceOf(InvalidAccountException.class);
         assertThatThrownBy(() -> service.getTransactions(wallet.getUuid(), 0, 20)).isInstanceOf(InvalidAccountException.class);
         assertThatThrownBy(() -> service.getByUuid(UUID.randomUUID())).isInstanceOf(InvalidAccountException.class);
+    }
+
+    @Test
+    void cashIncomeAndExpensePersistBalancesAndLeaveOtherAccountsUntouched() {
+        createFromVoice(TransactionType.INCOME, "150.25", wallet.getUuid(), null);
+        createFromVoice(TransactionType.EXPENSE, "45.10", wallet.getUuid(), null);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(accountRepository.findByUuid(wallet.getUuid()).orElseThrow().getBalance())
+                .isEqualByComparingTo("2105.15");
+        assertThat(accountRepository.findByUuid(otherAccount.getUuid()).orElseThrow().getBalance())
+                .isEqualByComparingTo("2000.00");
+        assertThat(transactionRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void transferMovesBalanceBetweenAccountsWithoutChangingTotal() {
+        createFromVoice(TransactionType.TRANSFER, "300.50", wallet.getUuid(), otherAccount.getUuid());
+        entityManager.flush();
+        entityManager.clear();
+
+        BigDecimal origin = accountRepository.findByUuid(wallet.getUuid()).orElseThrow().getBalance();
+        BigDecimal destination = accountRepository.findByUuid(otherAccount.getUuid()).orElseThrow().getBalance();
+        assertThat(origin).isEqualByComparingTo("1699.50");
+        assertThat(destination).isEqualByComparingTo("2300.50");
+        assertThat(origin.add(destination)).isEqualByComparingTo("4000.00");
+        assertThat(transactionRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void foreignDestinationDoesNotChangeBalancesOrCreateTransaction() {
+        var otherUser = userRepository.save(UserEntity.builder().name("Outro")
+                .email("balance-foreign@test.local").password("test-only").build());
+        otherAccount.setUser(otherUser);
+        accountRepository.saveAndFlush(otherAccount);
+
+        assertThatThrownBy(() -> createFromVoice(TransactionType.TRANSFER, "300.50",
+                wallet.getUuid(), otherAccount.getUuid()))
+                .isInstanceOf(com.vikash_api.exceptions.InvalidTransactionException.class);
+        assertThat(wallet.getBalance()).isEqualByComparingTo("2000.00");
+        assertThat(otherAccount.getBalance()).isEqualByComparingTo("2000.00");
+        assertThat(transactionRepository.count()).isZero();
+    }
+
+    private void createFromVoice(TransactionType type, String amount, UUID accountUuid, UUID destinationUuid) {
+        when(aiAnalysisService.analyze(any(), any())).thenReturn(new com.vikash_api.dtos.responses.AiAnalysisResponse(
+                "Lançamento de teste", new BigDecimal(amount), type, PaymentMethod.PIX,
+                LocalDateTime.of(2026, 10, 4, 12, 0), accountUuid, null, destinationUuid,
+                null, null, 1, java.util.List.of()));
+        transactionService.create(new com.vikash_api.dtos.requests.TransactionRequest("Lançamento de teste"));
+    }
+
+    @Test
+    void dailyTotalsGroupByDateAndExcludeTransfersInactiveAccountsAndOtherUsers() {
+        transaction(wallet, null, 1);
+        transaction(wallet, null, 2);
+        transaction(wallet, otherAccount, 3);
+        otherAccount.setActive(false);
+        accountRepository.saveAndFlush(otherAccount);
+        transaction(otherAccount, null, 4);
+        var anotherUser = userRepository.save(UserEntity.builder().name("Outro")
+                .email("evolution-foreign@test.local").password("test-only").build());
+        var income = new TransactionEntity();
+        income.setUser(user); income.setAccount(wallet); income.setDescription("Entrada");
+        income.setAmount(new BigDecimal("100")); income.setType(TransactionType.INCOME);
+        income.setPaymentMethod(PaymentMethod.PIX); income.setTranscription("Entrada de teste");
+        income.setOccurredAt(LocalDateTime.of(2026, 10, 5, 0, 0));
+        transactionRepository.save(income);
+        var foreign = new TransactionEntity();
+        foreign.setUser(anotherUser); foreign.setAccount(wallet); foreign.setDescription("Outro usuário");
+        foreign.setAmount(new BigDecimal("999")); foreign.setType(TransactionType.EXPENSE);
+        foreign.setPaymentMethod(PaymentMethod.PIX); foreign.setTranscription("Teste");
+        foreign.setOccurredAt(LocalDateTime.of(2026, 10, 4, 14, 0));
+        transactionRepository.saveAndFlush(foreign);
+
+        var totals = transactionRepository.sumDailyTotalsByUserAndPeriod(user.getId(),
+                LocalDateTime.of(2026, 10, 4, 0, 0), LocalDateTime.of(2026, 10, 6, 0, 0));
+        assertThat(totals).hasSize(2);
+        assertThat(totals.get(0).expenses()).isEqualByComparingTo("20");
+        assertThat(totals.get(0).incomes()).isEqualByComparingTo("0");
+        assertThat(totals.get(1).date()).isEqualTo(java.time.LocalDate.of(2026, 10, 5));
+        assertThat(totals.get(1).incomes()).isEqualByComparingTo("100");
     }
 }

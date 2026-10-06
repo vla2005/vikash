@@ -30,6 +30,7 @@ export default function MainTabs() {
   const [cardRevision, setCardRevision] = useState(0);
   const [accountUuid, setAccountUuid] = useState(null);
   const [accountRevision, setAccountRevision] = useState(0);
+  const [dashboardRevision, setDashboardRevision] = useState(0);
   const [itemDetails, setItemDetails] = useState(null);
   const [invoiceToOpen, setInvoiceToOpen] = useState(null);
   const { showToast } = useToast();
@@ -64,9 +65,14 @@ export default function MainTabs() {
     const saved = await persistCategory(values, categoryForm.category);
     if (saved) { setCategoryForm(null); }
   }
+  function deleteCategory() {
+    // Replace this feedback with the deletion request when the endpoint is available.
+    showToast({ type: 'info', title: 'Exclusão ainda indisponível', message: 'Sua categoria foi mantida. Essa função será conectada em breve.' });
+  }
   async function confirmTranscription(transcription) {
     try {
       await createTransaction(transcription, onboarding?.session?.accessToken);
+      setDashboardRevision(value => value + 1);
       showToast({ type: 'success', title: 'Transação registrada!', message: 'Seu lançamento foi salvo com sucesso.' });
       if (selected === 'AccountManagement') { accountList.retry(); cardList.retry(); }
       if (cardUuid) { setCardRevision(value => value + 1); }
@@ -77,7 +83,7 @@ export default function MainTabs() {
     }
   }
   function renderContent() {
-    if (selected === 'Home') { return <HomeScreen profile={onboarding?.profile} onMicrophone={() => setVoiceVisible(true)} onNavigate={setSelected} />; }
+    if (selected === 'Home') { return <HomeScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} revision={dashboardRevision} />; }
     if (selected === 'Statement') { return <StatementScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} onOpenTransaction={openDetails} />; }
     if (selected === 'AccountManagement') {
       if (accountForm) {
@@ -92,7 +98,7 @@ export default function MainTabs() {
     if (categoryForm) {
       return <CategoryFormScreen key={categoryForm.category?.uuid ?? categoryForm.category?.name ?? 'new-category'} category={categoryForm.category} existingCategories={[...defaultCategories, ...categories]} saving={saving} onSave={saveCategory} onCancel={() => setCategoryForm(null)} />;
     }
-    return <CategoriesScreen categories={categories} defaultCategories={defaultCategories} loading={loading} error={error} onRetry={retry} onCreate={() => setCategoryForm({ category: null })} onEdit={category => setCategoryForm({ category })} />;
+    return <CategoriesScreen profile={onboarding?.profile} categories={categories} defaultCategories={defaultCategories} loading={loading} error={error} onRetry={retry} onCreate={() => setCategoryForm({ category: null })} onEdit={category => setCategoryForm({ category })} onDelete={deleteCategory} />;
   }
   return <View style={styles.background}>
     <View style={[styles.canvas, { paddingTop: insets.top }]}>

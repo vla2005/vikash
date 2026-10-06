@@ -58,6 +58,7 @@ class TransactionServiceTest {
     @Mock CreditCardRepository creditCardRepository;
     @Mock CreditCardInvoiceService creditCardInvoiceService;
     @Mock com.vikash_api.repositories.CreditCardInvoiceRepository creditCardInvoiceRepository;
+    @Mock jakarta.persistence.EntityManager entityManager;
     @InjectMocks TransactionService service;
 
     @Test
@@ -71,7 +72,8 @@ class TransactionServiceTest {
         when(authenticatedUserService.getCurrentUser()).thenReturn(user);
         var accountEntity = new AccountEntity();
         accountEntity.setUuid(accountUuid);
-        when(accountRepository.findByUuidAndUserId(accountUuid, user.getId())).thenReturn(Optional.of(accountEntity));
+        accountEntity.setBalance(new BigDecimal("999.00"));
+        when(accountRepository.findOwnedForUpdate(accountUuid, user.getId())).thenReturn(Optional.of(accountEntity));
         var category = new DefaultCategoriesEntity();
         ReflectionTestUtils.setField(category, "name", "Alimentação");
         when(defaultCategoryRepository.findByName("Alimentação")).thenReturn(Optional.of(category));
@@ -94,7 +96,8 @@ class TransactionServiceTest {
         assertThat(transaction.getValue().getTranscription()).isEqualTo("Almoço de 45 reais");
         assertThat(transaction.getValue().getUser()).isSameAs(user);
         assertThat(transaction.getValue().getDefaultCategory()).isSameAs(category);
-        verify(accountRepository).findByUuidAndUserId(accountUuid, user.getId());
+        assertThat(accountEntity.getBalance()).isEqualByComparingTo("953.90");
+        verify(accountRepository).findOwnedForUpdate(accountUuid, user.getId());
         verify(defaultCategoryRepository).findByName("Alimentação");
         verifyNoInteractions(customCategoryRepository);
         assertThat(context.getValue().accounts().getFirst().uuid()).isEqualTo(accountUuid);
@@ -108,13 +111,15 @@ class TransactionServiceTest {
         account.setUuid(UUID.randomUUID());
         var destination = new AccountEntity();
         destination.setUuid(UUID.randomUUID());
+        account.setBalance(new BigDecimal("250.00"));
+        destination.setBalance(new BigDecimal("50.00"));
         var category = new CustomCategoryEntity();
         category.setUuid(UUID.randomUUID());
         when(authenticatedUserService.getCurrentUser()).thenReturn(new UserEntity());
         when(accountService.get()).thenReturn(new AllAccountsResponse(List.of()));
         when(categoryService.get()).thenReturn(new AllCategoriesResponse(List.of(), List.of()));
-        when(accountRepository.findByUuidAndUserId(account.getUuid(), null)).thenReturn(Optional.of(account));
-        when(accountRepository.findByUuidAndUserId(destination.getUuid(), null)).thenReturn(Optional.of(destination));
+        when(accountRepository.findOwnedForUpdate(account.getUuid(), null)).thenReturn(Optional.of(account));
+        when(accountRepository.findOwnedForUpdate(destination.getUuid(), null)).thenReturn(Optional.of(destination));
         when(customCategoryRepository.findByUuidAndUserId(category.getUuid(), null)).thenReturn(Optional.of(category));
         var analysis = new AiAnalysisResponse("Transferência", new BigDecimal("100.00"), TransactionType.TRANSFER,
                 PaymentMethod.PIX, LocalDateTime.now(), account.getUuid(), null, destination.getUuid(), null,
@@ -127,8 +132,10 @@ class TransactionServiceTest {
         assertThat(transaction.getValue().getDestinationAccount()).isSameAs(destination);
         assertThat(transaction.getValue().getCustomCategory()).isSameAs(category);
         assertThat(transaction.getValue().getDefaultCategory()).isNull();
-        verify(accountRepository).findByUuidAndUserId(account.getUuid(), null);
-        verify(accountRepository).findByUuidAndUserId(destination.getUuid(), null);
+        assertThat(account.getBalance()).isEqualByComparingTo("150.00");
+        assertThat(destination.getBalance()).isEqualByComparingTo("150.00");
+        verify(accountRepository).findOwnedForUpdate(account.getUuid(), null);
+        verify(accountRepository).findOwnedForUpdate(destination.getUuid(), null);
         verify(customCategoryRepository).findByUuidAndUserId(category.getUuid(), null);
         verifyNoInteractions(defaultCategoryRepository);
     }

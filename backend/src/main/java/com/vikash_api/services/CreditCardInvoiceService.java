@@ -83,6 +83,7 @@ public class CreditCardInvoiceService {
         }
         var account = accountRepository.findOwnedForUpdate(request.accountUuid(), user.getId())
                 .orElseThrow(() -> new InvalidCreditCardInvoiceException("Conta não encontrada."));
+        entityManager.refresh(account, LockModeType.PESSIMISTIC_WRITE);
         if (!Boolean.TRUE.equals(account.getActive())) {
             throw new InvalidCreditCardInvoiceException("Escolha uma conta ativa para pagar a fatura.");
         }

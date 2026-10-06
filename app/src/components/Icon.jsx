@@ -5,6 +5,8 @@ import { colors } from '../theme';
 export default function Icon({ name, size = 24, color = colors.text }) {
   const props = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shapes = {
+    trendUp: <><Polyline points="3,17 9,11 13,15 21,7" {...props} /><Polyline points="15,7 21,7 21,13" {...props} /></>,
+    trendDown: <><Polyline points="3,7 9,13 13,9 21,17" {...props} /><Polyline points="15,17 21,17 21,11" {...props} /></>,
     creditCard: <><Rect x="2" y="4" width="20" height="16" rx="3" {...props} /><Path d="M2 9h20M6 15h4" {...props} /></>,
     archive: <><Path d="M3 8l2-5h14l2 5v12a1 1 0 01-1 1H4a1 1 0 01-1-1V8zM3 8h5l2 3h4l2-3h5" {...props} /></>,
     warning: <><Path d="M12 3L2 21h20zM12 9v5" {...props} /><Circle cx="12" cy="17.5" r="1" fill={color} /></>,
@@ -20,6 +22,7 @@ export default function Icon({ name, size = 24, color = colors.text }) {
     plus: <Path d="M12 4v16M4 12h16" {...props} />,
     check: <Path d="M5 12l4 4L19 6" {...props} />,
     edit: <><Path d="M14 4l6 6M3 21l2-7L16 3a2 2 0 013 0l2 2a2 2 0 010 3L10 19z" {...props} /></>,
+    trash: <><Path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" {...props} /></>,
     bank: <><Path d="M3 9l9-6 9 6H3zM3 21h18M5 18V11M10 18V11M14 18V11M19 18V11" {...props} /></>,
     wallet: <><Rect x="3" y="6" width="18" height="15" rx="3" {...props} /><Path d="M3 8V5a2 2 0 012-2h12v3M21 12h-6v5h6" {...props} /><Circle cx="17" cy="14.5" r="0.6" fill={color} /></>,
     savings: <><Path d="M7 7l-2-3v6l-2 2v5h3l1 4h3l1-3h5l1 3h3l1-5v-5l-3-3c-3-3-7-3-11-1zM12 5V2" {...props} /><Circle cx="17" cy="11" r="1" fill={color} /></>,

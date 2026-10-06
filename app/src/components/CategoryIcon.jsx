@@ -2,7 +2,7 @@ import { colors } from '../theme';
 import React from 'react';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
-export default function CategoryIcon({ name, size = 28, color = colors.text }) {
+export default function CategoryIcon({ name, size = 28, color = colors.text, solid = false }) {
   const stroke = { stroke: color, strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shapes = {
     health: <Path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill={color} />,
@@ -42,5 +42,15 @@ export default function CategoryIcon({ name, size = 28, color = colors.text }) {
     baby: <><Circle cx="12" cy="13" r="9" {...stroke} /><Path d="M12 4c-4-5 4-4 2 0M8 16c2 3 6 3 8 0" {...stroke} /><Circle cx="8" cy="11" r="1" fill={color} /><Circle cx="16" cy="11" r="1" fill={color} /></>,
     beauty: <><Rect x="7" y="13" width="10" height="9" rx="1" {...stroke} /><Path d="M9 13V5l6-3v11M7 17h10" {...stroke} /></>,
   };
-  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>{shapes[name] || shapes.paw}</Svg>;
+  const solidShapes = {
+    book: <Path d="M11 5C8 2 4 2 2 4v16c4-2 7-1 9 1V5zM13 5c3-3 7-3 9-1v16c-4-2-7-1-9 1V5z" fill={color} />,
+    bus: <><Rect x="5" y="1" width="14" height="19" rx="3" fill={color} /><Rect x="7" y="4" width="10" height="7" rx="1" fill="#FFFFFF" /><Circle cx="8" cy="16" r="1.5" fill="#FFFFFF" /><Circle cx="16" cy="16" r="1.5" fill="#FFFFFF" /><Path d="M7 20v2M17 20v2" {...stroke} /></>,
+    ticket: <Path d="M3 6h18v4a2 2 0 000 4v4H3v-4a2 2 0 000-4z" fill={color} transform="rotate(-35 12 12)" />,
+    briefcase: <><Rect x="2" y="7" width="20" height="14" rx="2" fill={color} /><Path d="M8 7V3h8v4" {...stroke} /><Path d="M2 12h20M12 10v5" stroke="#FFFFFF" strokeWidth="1.5" /></>,
+    dumbbell: <Path d="M2 9h3v6H2zM5 5h4v14H5zM9 10h6v4H9zM15 5h4v14h-4zM19 9h3v6h-3z" fill={color} />,
+    plane: <Path d="M21 2c-1-1-2 0-3 1l-5 5-9-2-2 2 7 4-4 5-3-1-1 1 4 2 2 4 1-1-1-3 5-4 4 7 2-2-2-9 5-5c1-1 2-2 1-3z" fill={color} />,
+  };
+  const ellipsis = <><Circle cx="4" cy="12" r="2" fill={color} /><Circle cx="12" cy="12" r="2" fill={color} /><Circle cx="20" cy="12" r="2" fill={color} /></>;
+  const shape = name === 'ellipsis' ? ellipsis : (solid && solidShapes[name]) || shapes[name] || shapes.paw;
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>{shape}</Svg>;
 }

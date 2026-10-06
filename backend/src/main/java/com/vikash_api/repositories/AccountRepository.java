@@ -7,6 +7,8 @@ import jakarta.persistence.LockModeType;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,8 +24,17 @@ public interface AccountRepository extends JpaRepository<AccountEntity, Long>{
     Optional<AccountEntity> findOwnedForUpdate(@Param("uuid") UUID uuid,
             @Param("userId") Long userId);
     @EntityGraph(attributePaths = "financialInstitution")
+
     List<AccountEntity> findByUserIdOrderByBalanceDesc(Long userId);
     Optional<AccountEntity> findByUuidAndUserId(UUID uuid, Long userId);
+
+    @Query("""
+    SELECT COALESCE(SUM(a.balance), 0)
+    FROM AccountEntity a        
+    WHERE a.user.id = :userId
+        AND a.active = true
+    """)
+    BigDecimal sumBalance(@Param("userId") Long userId);
 
     Optional<AccountEntity> findByUuid(UUID uuid);
 }
