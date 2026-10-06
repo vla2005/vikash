@@ -16,6 +16,12 @@ import com.vikash_api.entities.RefreshTokenEntity;
 import com.vikash_api.entities.UserEntity;
 import com.vikash_api.repositories.RefreshTokenRepository;
 import com.vikash_api.repositories.UserRepository;
+import com.vikash_api.services.JwtService;
+import java.time.Instant;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,7 +61,161 @@ class AuthIntegrationTest {
     @Autowired
     private InstitutionRepository institutionRepository;
 
+    @Autowired
+    private JwtService jwtService;
+
     private RestClient restClient;
+
+    @Test
+    void logoutRevokesAccessAndRefreshTokensFromTheSession() {
+        AuthResponse auth = restClient.post().uri("/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new RegisterRequest("Logout", "logout@example.com", "Password123!"))
+                .retrieve().body(AuthResponse.class);
+
+        assertThat(meStatus(auth.getAccessToken())).isEqualTo(200);
+        var logout = restClient.post().uri("/logout")
+                .header("Authorization", "Bearer " + auth.getAccessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new RefreshTokenRequest(auth.getRefreshToken()))
+                .retrieve().toBodilessEntity();
+
+        assertThat(logout.getStatusCode().value()).isEqualTo(204);
+        assertThat(meStatus(auth.getAccessToken())).isEqualTo(401);
+        assertThat(refreshStatus(auth.getRefreshToken())).isIn(401, 403);
+    }
+
+    private int meStatus(String accessToken) {
+        return restClient.get().uri("/me").header("Authorization", "Bearer " + accessToken)
+                .exchange((request, response) -> response.getStatusCode().value());
+    }
+
+    private int refreshStatus(String refreshToken) {
+        return restClient.post().uri("/refresh").contentType(MediaType.APPLICATION_JSON)
+                .body(new RefreshTokenRequest(refreshToken))
+                .exchange((request, response) -> response.getStatusCode().value());
+    }
+
+    @Test
+    void logoutWithoutBodyRevokesRotatedTokensButKeepsOtherLogins() {
+        AuthResponse original = register("rotation@example.com");
+        AuthResponse otherLogin = restClient.post().uri("/login").contentType(MediaType.APPLICATION_JSON)
+                .body(new LoginRequest("rotation@example.com", "Password123!"))
+                .retrieve().body(AuthResponse.class);
+        AuthResponse rotated = refresh(original.getRefreshToken());
+
+        assertThat(meStatus(original.getAccessToken())).isEqualTo(200);
+        assertThat(meStatus(rotated.getAccessToken())).isEqualTo(200);
+        restClient.post().uri("/logout").header("Authorization", "Bearer " + original.getAccessToken())
+                .retrieve().toBodilessEntity();
+
+        assertThat(meStatus(original.getAccessToken())).isEqualTo(401);
+        assertThat(meStatus(rotated.getAccessToken())).isEqualTo(401);
+        assertThat(refreshStatus(rotated.getRefreshToken())).isIn(401, 403);
+        assertThat(refreshStatus(original.getRefreshToken())).isIn(401, 403);
+        assertThat(meStatus(otherLogin.getAccessToken())).isEqualTo(200);
+        assertThat(refreshStatus(otherLogin.getRefreshToken())).isEqualTo(200);
+    }
+
+    @Test
+    void logoutCannotRevokeAnotherUsersSessionThroughTheBody() {
+        AuthResponse first = register("first@example.com");
+        AuthResponse second = register("second@example.com");
+        restClient.post().uri("/logout").header("Authorization", "Bearer " + first.getAccessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new RefreshTokenRequest(second.getRefreshToken()))
+                .retrieve().toBodilessEntity();
+
+        assertThat(meStatus(first.getAccessToken())).isEqualTo(401);
+        assertThat(refreshStatus(first.getRefreshToken())).isIn(401, 403);
+        assertThat(meStatus(second.getAccessToken())).isEqualTo(200);
+        assertThat(refreshStatus(second.getRefreshToken())).isEqualTo(200);
+    }
+
+    @Test
+    void reusingRotatedRefreshTokenPermanentlyRevokesTheSession() {
+        AuthResponse original = register("reuse@example.com");
+        AuthResponse rotated = refresh(original.getRefreshToken());
+        assertThat(refreshStatus(original.getRefreshToken())).isEqualTo(403);
+        assertThat(meStatus(original.getAccessToken())).isEqualTo(401);
+        assertThat(meStatus(rotated.getAccessToken())).isEqualTo(401);
+        assertThat(refreshStatus(rotated.getRefreshToken())).isIn(401, 403);
+    }
+
+    @Test
+    void rejectsAccessTokensWithoutAnActiveSessionOwnedByTheUser() {
+        AuthResponse first = register("claims-first@example.com");
+        AuthResponse second = register("claims-second@example.com");
+        UserEntity firstUser = userRepository.findByEmail("claims-first@example.com").orElseThrow();
+        String secondFamily = jwtService.extractAccessTokenClaims(second.getAccessToken())
+                .get("familyId", String.class);
+
+        assertThat(meStatus(jwtService.generateAccessToken(firstUser, null))).isEqualTo(401);
+        assertThat(meStatus(jwtService.generateAccessToken(firstUser, UUID.randomUUID().toString())))
+                .isEqualTo(401);
+        assertThat(meStatus(jwtService.generateAccessToken(firstUser, secondFamily))).isEqualTo(401);
+        assertThat(meStatus(first.getRefreshToken())).isEqualTo(401);
+        assertThat(meStatus(first.getAccessToken() + "tampered")).isEqualTo(401);
+
+        RefreshTokenEntity stored = refreshTokenRepository.findByTokenHash(
+                jwtService.hashToken(first.getRefreshToken())).orElseThrow();
+        stored.setExpiresAt(Instant.now().minusSeconds(60));
+        refreshTokenRepository.save(stored);
+        assertThat(meStatus(first.getAccessToken())).isEqualTo(401);
+        assertThat(meStatus(second.getAccessToken())).isEqualTo(200);
+    }
+
+    @Test
+    void concurrentRefreshCannotReopenALoggedOutSession() throws Exception {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            AuthResponse auth = register("concurrent-" + attempt + "@example.com");
+            CountDownLatch ready = new CountDownLatch(2);
+            CountDownLatch start = new CountDownLatch(1);
+            try (var executor = Executors.newFixedThreadPool(2)) {
+                var refreshResult = executor.submit(() -> {
+                    ready.countDown();
+                    assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                    try {
+                        return refresh(auth.getRefreshToken());
+                    } catch (HttpClientErrorException e) {
+                        assertThat(e.getStatusCode().value()).isIn(401, 403);
+                        return null;
+                    }
+                });
+                var logoutResult = executor.submit(() -> {
+                    ready.countDown();
+                    assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                    return restClient.post().uri("/logout")
+                            .header("Authorization", "Bearer " + auth.getAccessToken())
+                            .retrieve().toBodilessEntity();
+                });
+                try {
+                    assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+                } finally {
+                    start.countDown();
+                }
+                assertThat(logoutResult.get(10, TimeUnit.SECONDS).getStatusCode().value()).isEqualTo(204);
+                AuthResponse rotated = refreshResult.get(10, TimeUnit.SECONDS);
+                assertThat(meStatus(auth.getAccessToken())).isEqualTo(401);
+                if (rotated != null) {
+                    assertThat(meStatus(rotated.getAccessToken())).isEqualTo(401);
+                    assertThat(refreshStatus(rotated.getRefreshToken())).isIn(401, 403);
+                }
+                assertThat(refreshStatus(auth.getRefreshToken())).isIn(401, 403);
+            }
+        }
+    }
+
+    private AuthResponse register(String email) {
+        return restClient.post().uri("/register").contentType(MediaType.APPLICATION_JSON)
+                .body(new RegisterRequest("Sessão de teste", email, "Password123!"))
+                .retrieve().body(AuthResponse.class);
+    }
+
+    private AuthResponse refresh(String refreshToken) {
+        return restClient.post().uri("/refresh").contentType(MediaType.APPLICATION_JSON)
+                .body(new RefreshTokenRequest(refreshToken)).retrieve().body(AuthResponse.class);
+    }
 
     @Test
     void allowsTransactionPreflightWithAccessTokenHeaderWithoutAuthentication() {

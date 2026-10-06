@@ -16,8 +16,13 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.vikash_api.services.JwtService;
+import com.vikash_api.repositories.RefreshTokenRepository;
+import com.vikash_api.entities.UserEntity;
+import io.jsonwebtoken.Claims;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -26,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     protected void doFilterInternal(
@@ -44,10 +50,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             if (jwtService.isAccessTokenValid(jwt)) {
-                String username = jwtService.extractUsernameFromAccessToken(jwt);
+                Claims claims = jwtService.extractAccessTokenClaims(jwt);
+                String username = claims.getSubject();
+                String familyId = claims.get("familyId", String.class);
+                UUID userUuid = UUID.fromString(claims.get("userId", String.class));
 
-                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                if (username != null && StringUtils.hasText(familyId)
+                        && refreshTokenRepository.existsByFamilyIdAndUser_UuidAndRevokedFalseAndExpiresAtAfter(
+                                familyId, userUuid, Instant.now())
+                        && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+
+                    if (!(userDetails instanceof UserEntity user) || !userUuid.equals(user.getUuid())
+                            || !user.isEnabled()) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,

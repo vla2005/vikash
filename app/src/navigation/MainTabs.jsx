@@ -12,6 +12,9 @@ import CreditCardDetailsScreen from '../screens/CreditCardDetailsScreen';
 import AccountDetailsScreen from '../screens/AccountDetailsScreen';
 import TransactionDetailsScreen from '../screens/TransactionDetailsScreen';
 import CreditCardPurchaseDetailsScreen from '../screens/CreditCardPurchaseDetailsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useCategories from '../hooks/useCategories';
 import useAccounts from '../hooks/useAccounts';
@@ -26,6 +29,8 @@ import { colors } from '../theme';
 export default function MainTabs() {
   const [selected, setSelected] = useState('Home');
   const [voiceVisible, setVoiceVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
+  const [profileForm, setProfileForm] = useState(null);
   const [accountForm, setAccountForm] = useState(null);
   const [cardUuid, setCardUuid] = useState(null);
   const [cardRevision, setCardRevision] = useState(0);
@@ -41,12 +46,14 @@ export default function MainTabs() {
   const accountList = useAccounts(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
   const cardList = useCreditCards(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
   const insets = useSafeAreaInsets();
-  const showAppHeader = !itemDetails
+  const showAppHeader = !profileVisible && !itemDetails
     && !(selected === 'AccountManagement' && (accountForm || cardUuid || accountUuid))
     && !(selected === 'Categories' && categoryForm);
   useEffect(() => {
     if (Platform.OS !== 'android') { return; }
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (profileVisible && profileForm) { setProfileForm(null); return true; }
+      if (profileVisible) { setProfileVisible(false); return true; }
       if (itemDetails) { setItemDetails(null); return true; }
       if (accountForm) { setAccountForm(null); return true; }
       if (cardUuid) { setCardUuid(null); return true; }
@@ -56,7 +63,7 @@ export default function MainTabs() {
       setSelected('Home'); return true;
     });
     return () => subscription.remove();
-  }, [selected, categoryForm, accountForm, cardUuid, accountUuid, itemDetails]);
+  }, [selected, categoryForm, accountForm, cardUuid, accountUuid, itemDetails, profileVisible, profileForm]);
   function openDetails(row, invoiceUuid) {
     setInvoiceToOpen(null);
     setItemDetails({ uuid: row.purchaseUuid || row.id, purchase: !!row.purchaseUuid, invoiceUuid });
@@ -108,15 +115,26 @@ export default function MainTabs() {
     }
     return <CategoriesScreen categories={categories} defaultCategories={defaultCategories} loading={loading} error={error} onRetry={retry} onCreate={() => setCategoryForm({ category: null })} onEdit={category => setCategoryForm({ category })} onDelete={deleteCategory} />;
   }
+  function renderProfile() {
+    const backToProfile = () => setProfileForm(null);
+    // Conecte onSave aos services quando os endpoints de perfil e senha existirem.
+    if (profileForm === 'edit') { return <EditProfileScreen profile={onboarding?.profile} onBack={backToProfile} />; }
+    if (profileForm === 'password') { return <ChangePasswordScreen onBack={backToProfile} />; }
+    return <ProfileScreen profile={onboarding?.profile} onBack={() => setProfileVisible(false)} onLogout={onboarding.logout}
+      onEdit={() => setProfileForm('edit')} onPassword={() => setProfileForm('password')}
+      onSupport={() => showToast({ type: 'info', message: 'O suporte estará disponível em breve.' })} />;
+  }
   return <View style={styles.background}>
     <View style={[styles.canvas, { paddingTop: insets.top }]}>
       <View testID="app-header" accessibilityElementsHidden={!showAppHeader} importantForAccessibility={showAppHeader ? 'auto' : 'no-hide-descendants'}
-        style={[styles.header, !showAppHeader && styles.hidden]}><AppHeader profile={onboarding?.profile} /></View>
-      <View style={[styles.content, itemDetails && styles.hidden]}>{renderContent()}</View>
+        style={[styles.header, !showAppHeader && styles.hidden]}><AppHeader profile={onboarding?.profile} onOpenProfile={() => { setProfileForm(null); setProfileVisible(true); }} /></View>
+      <View accessibilityElementsHidden={profileVisible} importantForAccessibility={profileVisible ? 'no-hide-descendants' : 'auto'}
+        style={[styles.content, (itemDetails || profileVisible) && styles.hidden]}>{renderContent()}</View>
+      {profileVisible && <View style={styles.profile}>{renderProfile()}</View>}
       {itemDetails && <View style={styles.content}>{itemDetails.purchase
         ? <CreditCardPurchaseDetailsScreen key={itemDetails.uuid} uuid={itemDetails.uuid} selectedInvoiceUuid={itemDetails.invoiceUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setItemDetails(null)} onOpenInvoice={openInvoice} />
         : <TransactionDetailsScreen key={itemDetails.uuid} uuid={itemDetails.uuid} accessToken={onboarding?.session?.accessToken} onBack={() => setItemDetails(null)} />}</View>}
-      {!accountForm && <BottomNavigator selected={selected} onSelect={key => { setItemDetails(null); setInvoiceToOpen(null); setCategoryForm(null); setAccountForm(null); setCardUuid(null); setAccountUuid(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />}
+      {!accountForm && !profileVisible && <BottomNavigator selected={selected} onSelect={key => { setItemDetails(null); setInvoiceToOpen(null); setCategoryForm(null); setAccountForm(null); setCardUuid(null); setAccountUuid(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />}
     </View>
     <VoiceDrawer visible={voiceVisible} onClose={() => setVoiceVisible(false)} onConfirm={confirmTranscription} />
   </View>;
@@ -125,6 +143,7 @@ const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: colors.background },
   canvas: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
   content: { flex: 1, paddingBottom: 18 },
+  profile: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 20 },
   hidden: { display: 'none' },
 });

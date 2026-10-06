@@ -51,13 +51,14 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(UserEntity user) {
+    public String generateAccessToken(UserEntity user, String familyId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenExpirationMs);
 
         return Jwts.builder()
                 .subject(user.getEmail())
                 .claim("userId", user.getUuid().toString())
+                .claim("familyId", familyId)
                 .claim("name", user.getName())
                 .claim("role", user.getRole().name())
                 .id(UUID.randomUUID().toString()) // unique JTI

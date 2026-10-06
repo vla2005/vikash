@@ -14,6 +14,7 @@ import com.vikash_api.repositories.RefreshTokenRepository;
 import com.vikash_api.repositories.UserRepository;
 import com.vikash_api.services.AuthService;
 import com.vikash_api.services.JwtService;
+import io.jsonwebtoken.Jwts;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -86,7 +87,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmail("vikash@example.com")).thenReturn(false);
         when(passwordEncoder.encode("secret123")).thenReturn("encoded_pass");
         when(userRepository.save(any(UserEntity.class))).thenReturn(testUser);
-        when(jwtService.generateAccessToken(any(UserEntity.class))).thenReturn("access_token_123");
+        when(jwtService.generateAccessToken(any(UserEntity.class), anyString())).thenReturn("access_token_123");
         when(jwtService.generateRefreshToken(any(UserEntity.class), anyString())).thenReturn("refresh_token_123");
         when(jwtService.hashToken("refresh_token_123")).thenReturn("hashed_token_123");
         when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
@@ -131,7 +132,7 @@ class AuthServiceTest {
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(testUser);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
-        when(jwtService.generateAccessToken(testUser)).thenReturn("access_token_123");
+        when(jwtService.generateAccessToken(eq(testUser), anyString())).thenReturn("access_token_123");
         when(jwtService.generateRefreshToken(eq(testUser), anyString())).thenReturn("refresh_token_123");
         when(jwtService.hashToken("refresh_token_123")).thenReturn("hashed_token_123");
         when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
@@ -176,9 +177,10 @@ class AuthServiceTest {
                 .build();
 
         when(jwtService.isRefreshTokenValid(rawToken)).thenReturn(true);
+        mockRefreshClaims(rawToken, familyId);
         when(jwtService.hashToken(rawToken)).thenReturn(tokenHash);
         when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(storedToken));
-        when(jwtService.generateAccessToken(testUser)).thenReturn("new_access_token");
+        when(jwtService.generateAccessToken(testUser, familyId)).thenReturn("new_access_token");
         when(jwtService.generateRefreshToken(testUser, familyId)).thenReturn("new_refresh_token");
         when(jwtService.hashToken("new_refresh_token")).thenReturn("new_hashed_token");
         when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
@@ -210,6 +212,7 @@ class AuthServiceTest {
                 .build();
 
         when(jwtService.isRefreshTokenValid(rawToken)).thenReturn(true);
+        mockRefreshClaims(rawToken, familyId);
         when(jwtService.hashToken(rawToken)).thenReturn(tokenHash);
         when(refreshTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(compromisedToken));
 
@@ -221,5 +224,12 @@ class AuthServiceTest {
 
         // Verify that all tokens for that family were revoked
         verify(refreshTokenRepository).revokeAllByFamilyId(familyId);
+    }
+
+    private void mockRefreshClaims(String rawToken, String familyId) {
+        var claims = Jwts.claims().add("userId", testUser.getUuid().toString())
+                .add("familyId", familyId).build();
+        when(jwtService.extractRefreshTokenClaims(rawToken)).thenReturn(claims);
+        when(userRepository.findByUuidForUpdate(testUser.getUuid())).thenReturn(Optional.of(testUser));
     }
 }

@@ -33,6 +33,32 @@ test('ao reabrir com access expirado renova, salva os dois tokens e valida o usu
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer new-access' }) }));
 });
 
+test('logout renova antes de revogar, envia o refresh atual e limpa a sessão salva', async () => {
+  await render();
+  global.fetch.mockClear();
+  loadSession.mockClear();
+  global.fetch.mockImplementation(async (url, options) => {
+    if (url.endsWith('/refresh')) return response(rotated);
+    if (url.endsWith('/logout')) return response(null, options.headers.Authorization === 'Bearer old-access' ? 401 : 204);
+    return response(user);
+  });
+  await act(async () => state.logout());
+  const logoutCalls = global.fetch.mock.calls.filter(([url]) => url.endsWith('/logout'));
+  expect(logoutCalls).toHaveLength(2);
+  expect(logoutCalls[1][1]).toMatchObject({ body: JSON.stringify({ refreshToken: 'new-refresh' }), headers: { Authorization: 'Bearer new-access' } });
+  expect(clearSession).toHaveBeenCalledTimes(1);
+  expect(state.session).toBeNull();
+  expect(state.profile).toEqual({ name: '' });
+});
+
+test('falha de rede ao sair preserva a sessão para tentar novamente', async () => {
+  await render();
+  global.fetch.mockRejectedValue(new TypeError('Network error'));
+  await act(async () => { await expect(state.logout()).rejects.toThrow('Não foi possível conectar'); });
+  expect(state.session.refreshToken).toBe('old-refresh');
+  expect(clearSession).not.toHaveBeenCalled();
+});
+
 test('401 repete o POST uma vez com token novo e atualiza ambos os headers', async () => {
   await render();
   global.fetch.mockClear();

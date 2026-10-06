@@ -5,6 +5,7 @@ import { OnboardingProvider, useOnboarding } from '../src/contexts/OnboardingCon
 import AppNavigator from '../src/navigation/AppNavigator.web';
 import HomeScreen from '../src/screens/HomeScreen';
 import ProtectedScreen from '../src/navigation/ProtectedScreen';
+import ConfirmationDialog from '../src/components/ConfirmationDialog';
 jest.mock('../src/hooks/useToast', () => ({ __esModule: true, default: () => ({ showToast: jest.fn() }) }));
 import { loadSession, clearSession } from '../src/services/sessionStorage';
 
@@ -19,7 +20,7 @@ jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({
 jest.mock('react-native-svg', () => {
   const ReactModule = require('react'); const { View } = require('react-native');
   const Shape = props => ReactModule.createElement(View, props);
-  return { __esModule: true, default: Shape, Svg: Shape, Path: Shape, Rect: Shape, Circle: Shape, Line: Shape, Polyline: Shape };
+  return { __esModule: true, default: Shape, Svg: Shape, G: Shape, Path: Shape, Rect: Shape, Circle: Shape, Line: Shape, Polyline: Shape };
 });
 
 let renderer;
@@ -42,6 +43,34 @@ test('sem sessao, tenta HOME mas mostra somente LOGIN', async () => {
   await render();
   expect(labels()).toEqual(['LOGIN']);
   expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('perfil usa os dados da sessão e logout confirmado revoga token e retorna ao login', async () => {
+  loadSession.mockResolvedValue({ accessToken: 'saved-token', refreshToken: 'saved-refresh', expiresAt: Date.now() + 600000 });
+  global.fetch.mockImplementation(async url => url.endsWith('/logout')
+    ? { ok: true, status: 204, json: async () => { throw new Error('No body'); } }
+    : { ok: true, status: 200, json: async () => user });
+  await render();
+  const button = label => renderer.root.findAll(node => node.props.accessibilityLabel === label && node.props.onPress)[0];
+  await act(async () => button('Abrir meu perfil').props.onPress());
+  expect(labels()).toContain(user.email);
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  await act(async () => button('Sair da conta').props.onPress());
+  const dialog = () => renderer.root.findAllByType(ConfirmationDialog).find(node => node.props.title === 'Sair da conta?');
+  expect(dialog().props.visible).toBe(true);
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  await act(async () => dialog().props.onCancel());
+  expect(dialog().props.visible).toBe(false);
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  await act(async () => button('Sair da conta').props.onPress());
+  await act(async () => dialog().props.onConfirm());
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/logout', expect.objectContaining({
+    method: 'POST', body: JSON.stringify({ refreshToken: 'saved-refresh' }),
+    headers: expect.objectContaining({ Authorization: 'Bearer saved-token' }),
+  }));
+  expect(clearSession).toHaveBeenCalledTimes(1);
+  expect(state.session).toBeNull();
+  expect(labels()).toEqual(['LOGIN']);
 });
 
 test('sessao salva so abre HOME depois da validacao na API', async () => {

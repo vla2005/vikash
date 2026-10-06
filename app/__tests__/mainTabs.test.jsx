@@ -13,6 +13,8 @@ import SwipeableRow from '../src/components/SwipeableRow';
 import ConfirmationDialog from '../src/components/ConfirmationDialog';
 import TransactionDetailsScreen from '../src/screens/TransactionDetailsScreen';
 import CreditCardPurchaseDetailsScreen from '../src/screens/CreditCardPurchaseDetailsScreen';
+import EditProfileScreen from '../src/screens/EditProfileScreen';
+import ChangePasswordScreen from '../src/screens/ChangePasswordScreen';
 import { createCreditCard, updateCreditCard, fetchCreditCards, fetchCreditCardDetails } from '../src/services/creditCards';
 import { fetchFinancialInstitutions } from '../src/services/financialInstitutions';
 jest.mock('../src/services/creditCards', () => ({ createCreditCard: jest.fn(), updateCreditCard: jest.fn(), fetchCreditCards: jest.fn(), fetchCreditCardDetails: jest.fn() }));
@@ -32,7 +34,7 @@ jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({
 jest.mock('react-native-svg', () => {
   const ReactModule = require('react'); const { View } = require('react-native');
   const Shape = props => ReactModule.createElement(View, props);
-  return { __esModule: true, default: Shape, Svg: Shape, Path: Shape, Rect: Shape, Circle: Shape, Ellipse: Shape, Line: Shape, Polyline: Shape };
+  return { __esModule: true, default: Shape, Svg: Shape, G: Shape, Path: Shape, Rect: Shape, Circle: Shape, Ellipse: Shape, Line: Shape, Polyline: Shape };
 });
 jest.mock('../src/hooks/useReducedMotion', () => () => true);
 jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition: () => { throw new Error('Transcrição indisponível neste dispositivo.'); } }));
@@ -78,6 +80,39 @@ test('header and logo stay mounted across tabs and are hidden only on forms and 
   expect(renderer.root.findByType(AppHeader)).toBe(header);
   await act(async () => button('Voltar às categorias').props.onPress());
   expect(headerContainer().props.accessibilityElementsHidden).toBe(false);
+});
+
+test('avatar abre perfil em todas as abas e voltar preserva a tela e o header', async () => {
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  const header = renderer.root.findByType(AppHeader);
+  for (const label of ['Início', 'Extrato', 'Contas', 'Categorias']) {
+    await act(async () => button(label).props.onPress());
+    await act(async () => button('Abrir meu perfil').props.onPress());
+    expect(labels()).toContain('Meu perfil');
+    expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
+    expect(renderer.root.findByType(AppHeader)).toBe(header);
+    await act(async () => button('Voltar do perfil').props.onPress());
+    expect(button(label).props.accessibilityState.selected).toBe(true);
+  }
+  expect(fetchDashboard).toHaveBeenCalledTimes(1);
+  expect(fetchAccounts).toHaveBeenCalledTimes(1);
+  expect(fetchCreditCards).toHaveBeenCalledTimes(1);
+});
+
+test('perfil abre os dois formulários sem integração e cancelar retorna ao perfil', async () => {
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Abrir meu perfil').props.onPress());
+  await act(async () => button('Editar perfil').props.onPress());
+  expect(renderer.root.findByType(EditProfileScreen).props.profile.name).toBe('Viktor Lucena');
+  expect(renderer.root.findByType(EditProfileScreen).props.onSave).toBeUndefined();
+  await act(async () => button('Cancelar').props.onPress());
+  expect(labels()).toContain('Meu perfil');
+  await act(async () => button('Alterar senha').props.onPress());
+  expect(renderer.root.findByType(ChangePasswordScreen).props.onSave).toBeUndefined();
+  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
+  await act(async () => button('Voltar ao perfil').props.onPress());
+  expect(labels()).toContain('Meu perfil');
+  expect(fetchDashboard).toHaveBeenCalledTimes(1);
 });
 
 test('confirmacao envia transcricao com token e mostra sucesso somente depois de salvar', async () => {

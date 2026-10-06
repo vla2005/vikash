@@ -9,6 +9,7 @@ import com.vikash_api.entities.UserEntity;
 import com.vikash_api.services.AuthService;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,9 +46,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody(required = false) RefreshTokenRequest request) {
-        String token = (request != null) ? request.getRefreshToken() : null;
-        authService.logout(token);
+    public ResponseEntity<Void> logout(@Valid @RequestBody(required = false) RefreshTokenRequest request,
+            HttpServletRequest httpRequest) {
+        // A sessão vem do Bearer autenticado, nunca de um refresh token de outra sessão.
+        String authorization = httpRequest.getHeader("Authorization");
+        String accessToken = authorization != null && authorization.startsWith("Bearer ")
+                ? authorization.substring(7) : null;
+        authService.logout(accessToken);
         return ResponseEntity.noContent().build();
     }
 

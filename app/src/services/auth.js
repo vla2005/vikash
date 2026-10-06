@@ -41,3 +41,15 @@ export async function refreshSession(refreshToken) {
   }
   return { ...session, expiresAt: Date.now() + Number(session.expiresIn) * 1000 };
 }
+
+export async function logoutUser(refreshToken, accessToken) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    // The provider renews the session first, so the body uses the current refresh token.
+    // Do not automatically rotate it again while sending this request.
+    await postJson('/api/auth/logout', refreshToken ? { refreshToken } : undefined, undefined, {
+      headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal,
+    });
+  } finally { clearTimeout(timeout); }
+}

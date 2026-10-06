@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { registerUser, loginUser, fetchCurrentUser, refreshSession } from '../services/auth';
+import { registerUser, loginUser, fetchCurrentUser, refreshSession, logoutUser } from '../services/auth';
 import { ApiError, configureAuth } from '../services/apiClient';
 import { createAccount, fetchAccounts, updateAccount } from '../services/accounts';
 import { loadSession, storeSession, clearSession } from '../services/sessionStorage';
@@ -19,14 +19,18 @@ export function OnboardingProvider({ children }) {
   const renewal = useRef(null);
   const generation = useRef(0);
 
-  const reset = useCallback(() => {
+  const endSession = useCallback(() => {
     generation.current += 1;
     renewal.current = null;
     sessionRef.current = null;
     setRestoreError('');
     setSession(null); setProfile({ name: '' }); setAccounts([]); setCompleted(false);
-    clearSession().catch(() => {});
   }, []);
+
+  const reset = useCallback(() => {
+    endSession();
+    clearSession().catch(() => {});
+  }, [endSession]);
 
   const resolveToken = useCallback(async (usedToken, force) => {
     const current = sessionRef.current;
@@ -125,6 +129,22 @@ export function OnboardingProvider({ children }) {
     return account;
   }
 
-  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, completeSetup: () => setCompleted(true), reset }}>{children}</OnboardingContext.Provider>;
+  async function logout() {
+    const current = sessionRef.current;
+    if (current) {
+      await resolveToken(current.accessToken, false);
+      const revoke = () => logoutUser(sessionRef.current?.refreshToken, sessionRef.current?.accessToken);
+      try { await revoke(); }
+      catch (cause) {
+        if (cause.status !== 401) { throw cause; }
+        await resolveToken(sessionRef.current?.accessToken, true);
+        await revoke();
+      }
+    }
+    await clearSession();
+    endSession();
+  }
+
+  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, completeSetup: () => setCompleted(true), logout, reset }}>{children}</OnboardingContext.Provider>;
 }
 export const useOnboarding = () => useContext(OnboardingContext);

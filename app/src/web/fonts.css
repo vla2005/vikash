@@ -21,3 +21,5 @@
   outline-offset: 3px;
 }
 ::selection { background: #D5DFFF; }
+/* FormField já destaca seu contêiner ao receber foco. */
+input[data-focus-container='true']:focus-visible { outline: none; }

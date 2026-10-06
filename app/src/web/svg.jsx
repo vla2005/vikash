@@ -1,8 +1,9 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 function shape(tag) {
-  return function Shape({ children, accessible, ...props }) {
-    return React.createElement(tag, props, children);
+  return function Shape({ children, accessible, style, testID, ...props }) {
+    return React.createElement(tag, { ...props, style: StyleSheet.flatten(style), 'data-testid': testID }, children);
   };
 }
 export const Svg = shape('svg');

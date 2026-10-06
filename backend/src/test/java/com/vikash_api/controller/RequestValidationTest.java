@@ -132,9 +132,10 @@ class RequestValidationTest {
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"a@example.com\",\"password\":\"old123\"}"))
                 .andExpect(status().isOk());
-        mvc.perform(post("/api/auth/logout")).andExpect(status().isNoContent());
+        mvc.perform(post("/api/auth/logout").header("Authorization", "Bearer access-token"))
+                .andExpect(status().isNoContent());
         verify(auth).login(any());
-        verify(auth).logout(null);
+        verify(auth).logout("access-token");
     }
 
     @Test

@@ -1,10 +1,10 @@
 import React, { forwardRef, useContext, useImperativeHandle, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Icon from './Icon';
 import { colors, fontFamily, typography } from '../theme';
 import FormFocusContext from '../contexts/FormFocusContext';
 
-const FormField = forwardRef(function FormField({ label, password = false, error, hint, large = false, style, onFocus, onBlur, ...inputProps }, ref) {
+const FormField = forwardRef(function FormField({ label, password = false, error, hint, large = false, style, inputContainerStyle, leadingIcon, onFocus, onBlur, ...inputProps }, ref) {
   const inputRef = useRef(null);
   const formFocus = useContext(FormFocusContext);
   useImperativeHandle(ref, () => inputRef.current);
@@ -13,8 +13,10 @@ const FormField = forwardRef(function FormField({ label, password = false, error
   return (
     <View style={[styles.field, style]}>
       <Text style={typography.label} nativeID={`${inputProps.testID || label}-label`}>{label}</Text>
-      <View style={[styles.inputContainer, focused && styles.focused, error && styles.invalid]}>
+      <View style={[styles.inputContainer, inputContainerStyle, focused && styles.focused, error && styles.invalid]}>
+        {leadingIcon && <View accessible={false} style={styles.leading}>{leadingIcon}</View>}
         <TextInput ref={inputRef} accessibilityLabel={label} placeholderTextColor="#A0A0A3" selectionColor={colors.primary}
+          dataSet={Platform.OS === 'web' ? { focusContainer: 'true' } : undefined}
           style={[styles.input, large && styles.large]} secureTextEntry={password && !visible}
           {...inputProps}
           onFocus={event => { setFocused(true); formFocus?.onFocus(inputRef.current); onFocus?.(event); }}
@@ -37,6 +39,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, minWidth: 0, paddingHorizontal: 15, paddingVertical: 15, color: colors.text, fontFamily, fontSize: 15 },
   large: { fontSize: 27, fontWeight: '600', paddingVertical: 16, fontVariant: ['tabular-nums'] },
   eye: { padding: 14 },
+  leading: { paddingLeft: 15 },
   error: { color: colors.error, fontFamily, fontSize: 13, lineHeight: 18 },
   hint: { color: colors.secondary, fontFamily, fontSize: 13, lineHeight: 18 },
 });

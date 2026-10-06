@@ -38,7 +38,7 @@ class JwtServiceTest {
     @Test
     @DisplayName("Should generate a valid access token with correct claims")
     void shouldGenerateValidAccessToken() {
-        String token = jwtService.generateAccessToken(testUser);
+        String token = jwtService.generateAccessToken(testUser, "family-123");
 
         assertThat(token).isNotBlank();
         assertThat(jwtService.isAccessTokenValid(token)).isTrue();
@@ -46,6 +46,7 @@ class JwtServiceTest {
 
         Claims claims = jwtService.extractAccessTokenClaims(token);
         assertThat(claims.get("userId")).isEqualTo(testUser.getUuid().toString());
+        assertThat(claims.get("familyId")).isEqualTo("family-123");
         assertThat(claims.get("name")).isEqualTo("Vikash Test");
         assertThat(claims.get("role")).isEqualTo("ROLE_USER");
     }

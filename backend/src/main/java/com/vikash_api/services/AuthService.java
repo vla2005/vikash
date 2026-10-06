@@ -13,6 +13,7 @@ import com.vikash_api.exceptions.InvalidTokenException;
 import com.vikash_api.exceptions.TokenCompromisedException;
 import com.vikash_api.repositories.RefreshTokenRepository;
 import com.vikash_api.repositories.UserRepository;
+import io.jsonwebtoken.Claims;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -80,7 +81,7 @@ public class AuthService {
         }
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = {TokenCompromisedException.class, InvalidTokenException.class})
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         String rawToken = request.getRefreshToken();
 
@@ -88,9 +89,18 @@ public class AuthService {
             throw new InvalidTokenException("Invalid or expired refresh token");
         }
 
+        Claims claims = jwtService.extractRefreshTokenClaims(rawToken);
+        // Refresh e logout usam o mesmo bloqueio para não reabrir uma sessão encerrada.
+        UserEntity user = lockTokenUser(claims);
+        String familyId = getFamilyId(claims);
         String tokenHash = jwtService.hashToken(rawToken);
         RefreshTokenEntity storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new InvalidTokenException("Refresh token was not recognized"));
+
+        if (!storedToken.getUser().getUuid().equals(user.getUuid())
+                || !storedToken.getFamilyId().equals(familyId)) {
+            throw new InvalidTokenException("Refresh token does not belong to this session");
+        }
 
         // 🚨 REUSE DETECTION: If this token is already revoked, potential token theft
         // occurred!
@@ -99,7 +109,7 @@ public class AuthService {
                     storedToken.getFamilyId());
             refreshTokenRepository.revokeAllByFamilyId(storedToken.getFamilyId());
             throw new TokenCompromisedException(
-                    "Security Alert: Token reuse detected. All active sessions have been invalidated.");
+                    "Security Alert: Token reuse detected. This session has been invalidated.");
         }
 
         if (storedToken.isExpired()) {
@@ -112,21 +122,45 @@ public class AuthService {
         storedToken.setRevoked(true);
         refreshTokenRepository.save(storedToken);
 
-        UserEntity user = storedToken.getUser();
         // Continue the same family session
         return createAuthResponse(user, storedToken.getFamilyId());
     }
 
     @Transactional
-    public void logout(String rawRefreshToken) {
-        if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
-            String tokenHash = jwtService.hashToken(rawRefreshToken);
-            refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
-                token.setRevoked(true);
-                refreshTokenRepository.save(token);
-                log.info("Refresh token revoked for user {}", token.getUser().getEmail());
-            });
+    public void logout(String accessToken) {
+        if (!jwtService.isAccessTokenValid(accessToken)) {
+            throw new InvalidTokenException("Invalid or expired access token");
         }
+
+        Claims claims = jwtService.extractAccessTokenClaims(accessToken);
+        UserEntity user = lockTokenUser(claims);
+        String familyId = getFamilyId(claims);
+        if (!refreshTokenRepository.existsByFamilyIdAndUser_UuidAndRevokedFalseAndExpiresAtAfter(
+                familyId, user.getUuid(), Instant.now())) {
+            throw new InvalidTokenException("Session has expired or been revoked");
+        }
+
+        refreshTokenRepository.revokeAllByFamilyId(familyId);
+        log.info("Session revoked for user {}", user.getEmail());
+    }
+
+    private UserEntity lockTokenUser(Claims claims) {
+        UUID userUuid;
+        try {
+            userUuid = UUID.fromString(claims.get("userId", String.class));
+        } catch (IllegalArgumentException e) {
+            throw new InvalidTokenException("Invalid token user");
+        }
+        return userRepository.findByUuidForUpdate(userUuid)
+                .orElseThrow(() -> new InvalidTokenException("Token user was not found"));
+    }
+
+    private String getFamilyId(Claims claims) {
+        String familyId = claims.get("familyId", String.class);
+        if (familyId == null || familyId.isBlank()) {
+            throw new InvalidTokenException("Token session was not found");
+        }
+        return familyId;
     }
 
     public UserResponse getProfile(UserEntity user) {
@@ -134,7 +168,7 @@ public class AuthService {
     }
 
     private AuthResponse createAuthResponse(UserEntity user, String familyId) {
-        String accessToken = jwtService.generateAccessToken(user);
+        String accessToken = jwtService.generateAccessToken(user, familyId);
         String refreshToken = jwtService.generateRefreshToken(user, familyId);
 
         String tokenHash = jwtService.hashToken(refreshToken);
