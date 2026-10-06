@@ -1,7 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import Icon from './Icon';
-import { fontFamilyMedium, colors, fontFamily } from '../theme';
+import { fontFamilyMedium, colors } from '../theme';
 
 export default function PrimaryButton({ title, onPress, loading = false, disabled = false, outlined = false, icon = 'arrow', style }) {
   const unavailable = disabled || loading;
@@ -9,7 +9,7 @@ export default function PrimaryButton({ title, onPress, loading = false, disable
     <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: unavailable, busy: loading }}
       disabled={unavailable} onPress={onPress} style={({ pressed }) => [styles.button, outlined && styles.outlined, unavailable && styles.disabled, pressed && styles.pressed, style]}>
       <Text style={[styles.text, outlined && styles.outlinedText]}>{loading ? 'Aguarde...' : title}</Text>
-      {loading ? <ActivityIndicator color={outlined ? colors.primary : colors.surface} /> : icon && <Icon name={icon} color={outlined ? colors.primary : colors.surface} size={24} />}
+      {!loading && icon && <Icon name={icon} color={outlined ? colors.primary : colors.surface} size={24} />}
     </Pressable>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ListSkeleton } from './Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { searchFinancialInstitutions } from '../constants/financialInstitutions';
 import useFinancialInstitutions from '../hooks/useFinancialInstitutions';
@@ -50,7 +51,7 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
             <TextInput accessibilityLabel="Buscar instituição financeira" placeholder="Buscar por nome" placeholderTextColor={colors.secondary} value={query} onChangeText={setQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" style={styles.searchInput} />
             {query.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setQuery('')} hitSlop={8}><Icon name="close" size={18} color={colors.secondary} /></Pressable>}
           </View>
-          {loading ? <View accessibilityRole="progressbar" accessibilityLabel="Carregando instituições" style={styles.empty}><ActivityIndicator color={colors.primary} /><Text style={styles.description}>Carregando instituições…</Text></View>
+          {loading ? <ScrollView style={styles.list}><ListSkeleton label="Carregando instituições" count={6} showAmount={false} /></ScrollView>
             : error ? <View style={styles.empty}><Text accessibilityRole="alert" style={styles.emptyTitle}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Tentar novamente" onPress={retry} style={styles.retry}><Text style={styles.skipText}>Tentar novamente</Text></Pressable></View>
             : <FlatList data={institutions} keyExtractor={item => String(item.id)} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={styles.list}
             renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={item.name} accessibilityState={{ selected: item.id === value }} onPress={() => select(item)} style={({ pressed }) => [styles.option, item.id === value && styles.selected, pressed && styles.pressed]}>

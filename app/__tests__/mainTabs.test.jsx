@@ -1,7 +1,9 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Text } from 'react-native';
+import { RefreshControl, Text } from 'react-native';
 import MainTabs from '../src/navigation/MainTabs';
+import AppHeader from '../src/components/AppHeader';
+import BrandLogo from '../src/components/BrandLogo';
 import { fetchDashboard } from '../src/services/dashboard';
 jest.mock('../src/services/dashboard', () => ({ fetchDashboard: jest.fn(async () => ({ totalBalance: 2000, incomes: 4200, expenses: 2200 })) }));
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
@@ -59,6 +61,25 @@ beforeEach(() => {
   fetchCategories.mockResolvedValue({ defaultCategories: [{ name: 'Saúde', icon: 'health', color: 'sage' }, { name: 'Mercado', icon: 'basket', color: 'ochre' }], customCategories: [] });
 });
 
+test('header and logo stay mounted across tabs and are hidden only on forms and details', async () => {
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  const header = renderer.root.findByType(AppHeader);
+  const logo = header.findByType(BrandLogo);
+  const headerContainer = () => renderer.root.findAll(node => node.props.testID === 'app-header')[0];
+  for (const label of ['Extrato', 'Contas', 'Categorias', 'Início']) {
+    await act(async () => button(label).props.onPress());
+    expect(renderer.root.findByType(AppHeader)).toBe(header);
+    expect(header.findByType(BrandLogo)).toBe(logo);
+    expect(headerContainer().props.accessibilityElementsHidden).toBe(false);
+  }
+  await act(async () => button('Categorias').props.onPress());
+  await act(async () => button('Criar categoria').props.onPress());
+  expect(headerContainer().props.accessibilityElementsHidden).toBe(true);
+  expect(renderer.root.findByType(AppHeader)).toBe(header);
+  await act(async () => button('Voltar às categorias').props.onPress());
+  expect(headerContainer().props.accessibilityElementsHidden).toBe(false);
+});
+
 test('confirmacao envia transcricao com token e mostra sucesso somente depois de salvar', async () => {
   createTransaction.mockResolvedValue({ uuid: 'saved' });
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
@@ -80,6 +101,28 @@ test('falha ao salvar mostra toast e propaga erro para manter a revisao', async 
 afterEach(async () => { if (renderer) { await act(async () => renderer.unmount()); } });
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
 function labels() { return renderer.root.findAllByType(Text).map(node => node.props.children); }
+
+test('contas só ativa o refresh nativo ao puxar, sem deslocar a tela no carregamento inicial', async () => {
+  let resolveAccounts;
+  let resolveCards;
+  fetchAccounts.mockImplementation(() => new Promise(resolve => { resolveAccounts = resolve; }));
+  fetchCreditCards.mockImplementation(() => new Promise(resolve => { resolveCards = resolve; }));
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  const refreshControl = () => renderer.root.findByType(RefreshControl);
+  expect(refreshControl().props.refreshing).toBe(false);
+  await act(async () => { resolveAccounts([]); resolveCards([]); });
+  expect(refreshControl().props.refreshing).toBe(false);
+
+  await act(async () => refreshControl().props.onRefresh());
+  expect(fetchAccounts).toHaveBeenCalledTimes(2);
+  expect(fetchCreditCards).toHaveBeenCalledTimes(2);
+  expect(refreshControl().props.refreshing).toBe(true);
+  await act(async () => resolveAccounts([]));
+  expect(refreshControl().props.refreshing).toBe(true);
+  await act(async () => resolveCards([]));
+  expect(refreshControl().props.refreshing).toBe(false);
+});
 
 test('exclusao preparada confirma sem chamar endpoint nem remover categoria', async () => {
   fetchCategories.mockResolvedValue({ defaultCategories: [], customCategories: [{ uuid: 'pet-uuid', name: 'Pets', icon: 'paw', color: 'blue' }] });
@@ -263,10 +306,12 @@ test('conta da Home abre seus detalhes por UUID sem consultar novamente a listag
   await act(async () => button('Abrir conta Minha conta Inter').props.onPress());
   expect(fetchAccountDetails).toHaveBeenCalledWith('home-account', 'test-access', expect.anything());
   expect(labels()).toContain('Detalhes da conta');
+  expect(renderer.root.findAll(node => node.props.testID === 'app-header')[0].props.accessibilityElementsHidden).toBe(true);
   expect(labels()).toContain('Transações da conta');
   expect(fetchAccounts).not.toHaveBeenCalled();
   await act(async () => button('Voltar para contas e cartões').props.onPress());
   expect(labels()).toContain('Contas e cartões');
+  expect(renderer.root.findAll(node => node.props.testID === 'app-header')[0].props.accessibilityElementsHidden).toBe(false);
 });
 
 test('movimentacao recente abre detalhes e retorna para Home sem recarregar o dashboard', async () => {

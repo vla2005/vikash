@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, StatusBar, View } from 'react-native';
+import { StatusBar } from 'react-native';
+import { AppSkeleton } from './src/components/Skeleton';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OnboardingProvider } from './src/contexts/OnboardingContext';
 import { ToastProvider } from './src/contexts/ToastContext';
@@ -9,7 +10,7 @@ import useAppFonts from './src/hooks/useAppFonts';
 
 export default function App() {
   const fontsReady = useAppFonts();
-  if (!fontsReady) { return <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color={colors.primary} /></View>; }
+  if (!fontsReady) { return <AppSkeleton />; }
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />

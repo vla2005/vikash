@@ -13,6 +13,7 @@ import { useOnboarding } from '../contexts/OnboardingContext';
 import MainTabs from './MainTabs';
 import ProtectedScreen from './ProtectedScreen';
 import SessionRetry from '../components/SessionRetry';
+import { AppSkeleton } from '../components/Skeleton';
 
 const Stack = createNativeStackNavigator();
 const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.background, primary: colors.primary, text: colors.text, card: colors.background } };
@@ -25,7 +26,7 @@ function ProtectedAccounts(props) { return <ProtectedScreen component={AccountsS
 
 export default function AppNavigator() {
   const { ready, restoreError, retryRestore } = useOnboarding();
-  if (!ready) { return null; }
+  if (!ready) { return <AppSkeleton />; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   return <NavigationContainer theme={theme}>
     <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'slide_from_right' }}>

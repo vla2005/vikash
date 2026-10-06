@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { DetailsSkeleton } from './Skeleton';
 import Icon from './Icon';
 import CategoryIcon from './CategoryIcon';
 import InstitutionLogo from './InstitutionLogo';
@@ -34,7 +35,7 @@ export default function TransactionDetailsLayout({ title, details, loading, erro
   const occurred = details ? dateParts(details.occurredAt) : null;
   return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
     <View style={s.nav}><Pressable accessibilityRole="button" accessibilityLabel="Voltar à lista" onPress={onBack} style={({ pressed }) => [s.action, pressed && s.pressed]}><Icon name="back" size={24} /></Pressable><Text accessibilityRole="header" style={s.navTitle}>{title}</Text><View style={s.action} /></View>
-    {loading ? <View style={s.feedback}><ActivityIndicator color={colors.primary} /><Text style={s.label}>Carregando detalhes…</Text></View>
+    {loading ? <DetailsSkeleton label="Carregando detalhes do lançamento" />
       : error ? <View style={s.feedback}><Icon name="warning" size={32} color="#A3322C" /><Text accessibilityRole="alert" style={s.errorText}>{error}</Text><Pressable accessibilityRole="button" onPress={retry} style={({ pressed }) => [s.retry, pressed && s.pressed]}><Text style={s.link}>Tentar novamente</Text></Pressable></View>
         : details && <>
           <View style={s.hero}>

@@ -18,6 +18,7 @@ import useAccounts from '../hooks/useAccounts';
 import useCreditCards from '../hooks/useCreditCards';
 import useToast from '../hooks/useToast';
 import BottomNavigator from '../components/BottomNavigator';
+import AppHeader from '../components/AppHeader';
 import VoiceDrawer from '../components/VoiceDrawer';
 import { createTransaction } from '../services/transactions';
 import { colors } from '../theme';
@@ -40,6 +41,9 @@ export default function MainTabs() {
   const accountList = useAccounts(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
   const cardList = useCreditCards(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
   const insets = useSafeAreaInsets();
+  const showAppHeader = !itemDetails
+    && !(selected === 'AccountManagement' && (accountForm || cardUuid || accountUuid))
+    && !(selected === 'Categories' && categoryForm);
   useEffect(() => {
     if (Platform.OS !== 'android') { return; }
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -88,7 +92,7 @@ export default function MainTabs() {
   }
   function renderContent() {
     if (selected === 'Home') { return <HomeScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} revision={dashboardRevision} onOpenAccount={openAccount} onOpenCard={openInvoice} onViewCards={() => setSelected('AccountManagement')} onOpenTransaction={openDetails} onViewStatement={() => setSelected('Statement')} />; }
-    if (selected === 'Statement') { return <StatementScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} onOpenTransaction={openDetails} />; }
+    if (selected === 'Statement') { return <StatementScreen accessToken={onboarding?.session?.accessToken} onOpenTransaction={openDetails} />; }
     if (selected === 'AccountManagement') {
       if (accountForm) {
         const close = () => setAccountForm(null);
@@ -97,15 +101,17 @@ export default function MainTabs() {
       }
       if (cardUuid) { return <CreditCardDetailsScreen key={cardUuid} uuid={cardUuid} accessToken={onboarding?.session?.accessToken} onBack={() => { setCardUuid(null); setInvoiceToOpen(null); }} onEdit={card => setAccountForm({ kind: 'card', card })} revision={cardRevision} onPayment={() => { accountList.retry(); cardList.retry(); }} onOpenTransaction={openDetails} initialInvoiceUuid={invoiceToOpen} />; }
       if (accountUuid) { return <AccountDetailsScreen key={accountUuid} uuid={accountUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setAccountUuid(null)} onEdit={account => setAccountForm({ kind: 'account', account })} revision={accountRevision} onOpenTransaction={openDetails} />; }
-      return <AccountsScreen {...accountList} cards={cardList.cards} cardsLoading={cardList.loading} cardsError={cardList.error} onRetryCards={cardList.retry} onOpenCard={setCardUuid} profile={onboarding?.profile} onRetry={accountList.retry} onCreate={() => setAccountForm({ kind: 'account', account: null })} onCreateCard={() => setAccountForm({ kind: 'card' })} onEdit={account => setAccountUuid(account.uuid)} />;
+      return <AccountsScreen {...accountList} cards={cardList.cards} cardsLoading={cardList.loading} cardsError={cardList.error} onRetryCards={cardList.retry} onOpenCard={setCardUuid} onRetry={accountList.retry} onCreate={() => setAccountForm({ kind: 'account', account: null })} onCreateCard={() => setAccountForm({ kind: 'card' })} onEdit={account => setAccountUuid(account.uuid)} />;
     }
     if (categoryForm) {
       return <CategoryFormScreen key={categoryForm.category?.uuid ?? categoryForm.category?.name ?? 'new-category'} category={categoryForm.category} existingCategories={[...defaultCategories, ...categories]} saving={saving} onSave={saveCategory} onCancel={() => setCategoryForm(null)} />;
     }
-    return <CategoriesScreen profile={onboarding?.profile} categories={categories} defaultCategories={defaultCategories} loading={loading} error={error} onRetry={retry} onCreate={() => setCategoryForm({ category: null })} onEdit={category => setCategoryForm({ category })} onDelete={deleteCategory} />;
+    return <CategoriesScreen categories={categories} defaultCategories={defaultCategories} loading={loading} error={error} onRetry={retry} onCreate={() => setCategoryForm({ category: null })} onEdit={category => setCategoryForm({ category })} onDelete={deleteCategory} />;
   }
   return <View style={styles.background}>
     <View style={[styles.canvas, { paddingTop: insets.top }]}>
+      <View testID="app-header" accessibilityElementsHidden={!showAppHeader} importantForAccessibility={showAppHeader ? 'auto' : 'no-hide-descendants'}
+        style={[styles.header, !showAppHeader && styles.hidden]}><AppHeader profile={onboarding?.profile} /></View>
       <View style={[styles.content, itemDetails && styles.hidden]}>{renderContent()}</View>
       {itemDetails && <View style={styles.content}>{itemDetails.purchase
         ? <CreditCardPurchaseDetailsScreen key={itemDetails.uuid} uuid={itemDetails.uuid} selectedInvoiceUuid={itemDetails.invoiceUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setItemDetails(null)} onOpenInvoice={openInvoice} />
@@ -119,5 +125,6 @@ const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: colors.background },
   canvas: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
   content: { flex: 1, paddingBottom: 18 },
+  header: { paddingHorizontal: 20, paddingTop: 20 },
   hidden: { display: 'none' },
 });

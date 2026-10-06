@@ -1,27 +1,27 @@
 import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
-import BrandLogo from '../components/BrandLogo';
 import CategoryBadge from '../components/CategoryBadge';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import Icon from '../components/Icon';
 import SwipeableRow from '../components/SwipeableRow';
+import Skeleton, { SkeletonGroup } from '../components/Skeleton';
 import { normalizeCategoryName } from '../data/categories';
 import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
 
 function CategorySkeleton() {
-  return <View accessibilityLabel="Carregando categorias" accessibilityState={{ busy: true }} style={styles.section}>
-    <View style={[styles.placeholder, styles.placeholderHeading]} />
+  return <SkeletonGroup label="Carregando categorias" style={styles.section}>
+    <Skeleton style={styles.placeholderHeading} />
     <View style={styles.categoryGrid}>
       {Array.from({ length: 6 }, (_, index) => <View key={index} style={styles.defaultCategory}>
-        <View style={[styles.placeholder, styles.placeholderIcon]} />
-        <View style={[styles.placeholder, styles.placeholderName]} />
+        <Skeleton style={styles.placeholderIcon} />
+        <Skeleton style={styles.placeholderName} />
       </View>)}
     </View>
-    <View style={[styles.placeholder, styles.placeholderList]} />
-  </View>;
+    <Skeleton style={styles.placeholderList} />
+  </SkeletonGroup>;
 }
 
-export default function CategoriesScreen({ profile, categories = [], defaultCategories = [], loading, error, onRetry, onCreate, onEdit, onDelete }) {
+export default function CategoriesScreen({ categories = [], defaultCategories = [], loading, error, onRetry, onCreate, onEdit, onDelete }) {
   const [search, setSearch] = useState('');
   const [openRow, setOpenRow] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
@@ -31,9 +31,6 @@ export default function CategoriesScreen({ profile, categories = [], defaultCate
   const compact = useWindowDimensions().width < 350;
   const query = normalizeCategoryName(search);
   const filter = items => items.filter(item => normalizeCategoryName(item.name).includes(query));
-  const nameParts = (profile?.name || '').trim().split(/\s+/).filter(Boolean);
-  const initials = nameParts.filter((_, index) => index === 0 || index === nameParts.length - 1)
-    .map(part => part[0]).join('').toUpperCase() || 'V';
   function requestDelete(category) {
     setOpenRow(null);
     setDeleteError('');
@@ -78,12 +75,8 @@ export default function CategoriesScreen({ profile, categories = [], defaultCate
         : custom ? 'Use “Nova” para criar sua primeira categoria.' : 'Nenhuma categoria padrão disponível.'}</Text></View>}
     </View>;
   }
-  return <><ScrollView contentContainerStyle={[styles.content, compact && styles.compactContent]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+  return <><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
     onScrollBeginDrag={() => setOpenRow(null)}>
-    <View style={styles.brandHeader}>
-      <BrandLogo width={126} />
-      <View accessibilityLabel={profile?.name || 'Seu perfil'} style={styles.avatar}><Text style={styles.initials}>{initials}</Text></View>
-    </View>
     <View style={styles.header}>
       <Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>Categorias</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Criar categoria" onPress={onCreate} style={({ pressed }) => [styles.add, pressed && styles.pressed]}>
@@ -104,11 +97,7 @@ export default function CategoriesScreen({ profile, categories = [], defaultCate
   </>;
 }
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 },
-  compactContent: { paddingHorizontal: 16 },
-  brandHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#DCE3FF', alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fontFamilyBold, fontSize: 15, fontWeight: '700', color: colors.text },
+  content: { paddingHorizontal: 20, paddingBottom: 24 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { flexShrink: 1, fontFamily: fontFamilyBold, fontSize: 34, lineHeight: 44, fontWeight: '700', letterSpacing: -1.2, color: colors.text },
   compactTitle: { fontSize: 30, lineHeight: 40 },
@@ -134,7 +123,6 @@ const styles = StyleSheet.create({
   retry: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 12, backgroundColor: colors.primarySoft },
   retryText: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.primary },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
-  placeholder: { backgroundColor: colors.border, borderRadius: 8 },
   placeholderHeading: { height: 24, width: 100, marginBottom: 20 },
   placeholderIcon: { width: 52, height: 52, borderRadius: 14 },
   placeholderName: { width: '70%', height: 14, marginTop: 5 },

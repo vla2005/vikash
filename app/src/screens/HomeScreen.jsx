@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import BrandLogo from '../components/BrandLogo';
+import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Skeleton, { DashboardSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
 import useDashboard from '../hooks/useDashboard';
 import BalanceEvolutionChart from '../components/BalanceEvolutionChart';
@@ -41,12 +41,11 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
 
   return <>
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
-      <BrandLogo width={126} />
       <Text style={s.greeting}>{greeting}{name ? <Text style={s.name}>, {name}</Text> : ''}</Text>
       <View style={s.balanceSection}>
         <View style={s.balanceCopy}>
           <Text style={s.label}>Saldo total</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={s.balance}>{hidden ? '••••••' : amount(data?.totalBalance)}</Text>
+          {loading && !hidden ? <Skeleton width="85%" height={49} /> : <Text numberOfLines={1} adjustsFontSizeToFit style={s.balance}>{hidden ? '••••••' : amount(data?.totalBalance)}</Text>}
           <Text style={s.caption}>Em todas as suas contas</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={hidden ? 'Mostrar saldo total' : 'Ocultar saldo total'}
@@ -55,8 +54,8 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
         </Pressable>
       </View>
       <View style={s.summary}>
-        <View style={s.metric}><Text style={s.label}>Entradas</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.total, s.incomes]}>{amount(data?.incomes)}</Text></View>
-        <View style={[s.metric, s.divider]}><Text style={s.label}>Saídas</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.total, s.expenses]}>{amount(data?.expenses)}</Text></View>
+        <View style={s.metric}><Text style={s.label}>Entradas</Text>{loading ? <Skeleton height={23} /> : <Text numberOfLines={1} adjustsFontSizeToFit style={[s.total, s.incomes]}>{amount(data?.incomes)}</Text>}</View>
+        <View style={[s.metric, s.divider]}><Text style={s.label}>Saídas</Text>{loading ? <Skeleton height={23} /> : <Text numberOfLines={1} adjustsFontSizeToFit style={[s.total, s.expenses]}>{amount(data?.expenses)}</Text>}</View>
         <Pressable accessibilityRole="button" accessibilityLabel="Selecionar mês e ano" onPress={() => { setPickerYear(period.year); setPickerOpen(true); }}
           style={({ pressed }) => [s.period, pressed && s.pressed]}>
           <View><Text style={s.month}>{months[period.month - 1]}</Text><Text style={s.year}>{period.year}</Text></View>
@@ -74,7 +73,7 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
           onOpenAccount={onOpenAccount} onOpenCard={onOpenCard} onViewAll={onViewCards} />
         <RecentTransactions rows={data.recentTransactions} onOpenTransaction={onOpenTransaction} onViewStatement={onViewStatement} />
       </>}
-      {loading && <View style={s.feedback}><ActivityIndicator color={colors.primary} size="small" /><Text style={s.caption}>Carregando resumo…</Text></View>}
+      {loading && <DashboardSkeleton />}
       {!!error && <View style={s.errorBox}><Text accessibilityRole="alert" style={s.error}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Tentar carregar resumo novamente" onPress={retry} style={s.retry}><Text style={s.link}>Tentar novamente</Text></Pressable></View>}
     </ScrollView>
     <Modal visible={pickerOpen} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setPickerOpen(false)}>
@@ -124,8 +123,8 @@ function ComparisonCard({ label, percentage, period }) {
 }
 
 const s = StyleSheet.create({
-  content: { padding: 22, paddingBottom: 28 },
-  greeting: { fontFamily, fontSize: 18, lineHeight: 27, color: colors.text, marginTop: 28 },
+  content: { paddingHorizontal: 20, paddingBottom: 28 },
+  greeting: { fontFamily, fontSize: 18, lineHeight: 27, color: colors.text, marginTop: 12 },
   name: { fontFamily: fontFamilyBold, fontWeight: '700' },
   balanceSection: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 26, marginBottom: 24 },
   balanceCopy: { flex: 1 }, label: { fontFamily, fontSize: 11, lineHeight: 17, color: colors.secondary },

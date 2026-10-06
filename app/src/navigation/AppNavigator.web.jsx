@@ -9,6 +9,7 @@ import MainTabs from './MainTabs';
 import ProtectedScreen from './ProtectedScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import SessionRetry from '../components/SessionRetry';
+import { AppSkeleton } from '../components/Skeleton';
 
 const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, CreateAccount: CreateAccountScreen, AddFinancialItem: AddFinancialItemScreen, CreateCreditCard: CreateCreditCardScreen, Accounts: AccountsSummaryScreen };
 
@@ -24,7 +25,7 @@ export default function AppNavigator() {
     goBack: () => setStack(previous => previous.length > 1 ? previous.slice(0, -1) : [{ name: 'Home' }]),
     reset: ({ routes }) => setStack(routes),
   };
-  if (!ready) { return null; }
+  if (!ready) { return <AppSkeleton />; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   const key = `${route.name}-${route.params?.accountUuid || ''}`;
   return ['Home', 'CreateAccount', 'AddFinancialItem', 'CreateCreditCard', 'Accounts'].includes(route.name)

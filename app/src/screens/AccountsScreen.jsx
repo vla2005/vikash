@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import BrandLogo from '../components/BrandLogo';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Skeleton, { CreditCardSkeleton, ListSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
 import InstitutionLogo from '../components/InstitutionLogo';
 import CreditCardSummary from '../components/CreditCardSummary';
@@ -9,29 +9,47 @@ import { getAccountType } from '../constants/accountTypes';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, colors, fontFamily, fontFamilyBold } from '../theme';
 
-export default function AccountsScreen({ accounts, profile, loading, error, onRetry, onCreate, onEdit, cards = [], cardsLoading = false, cardsError = '', onRetryCards, onCreateCard, onOpenCard }) {
+export default function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, cards = [], cardsLoading = false, cardsError = '', onRetryCards, onCreateCard, onOpenCard }) {
   const [section, setSection] = useState('accounts');
-  const initials = (profile?.name || '').trim().split(/\s+/).filter(Boolean).map(part => part[0]).filter((_, index, items) => index === 0 || index === items.length - 1).join('').toUpperCase() || 'V';
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshStarted = useRef(false);
+
+  useEffect(() => {
+    if (!refreshing) return;
+    if (loading || cardsLoading) {
+      refreshStarted.current = true;
+    } else if (refreshStarted.current) {
+      refreshStarted.current = false;
+      setRefreshing(false);
+    }
+  }, [refreshing, loading, cardsLoading]);
+
+  function refresh() {
+    refreshStarted.current = loading || cardsLoading;
+    setRefreshing(true);
+    onRetry();
+    onRetryCards?.();
+  }
+
   const total = accounts.reduce((sum, account) => sum + account.balance, 0);
-  function feedback(busy, message, retry, retryLabel, title, description) {
-    return <View style={s.feedback}>{busy ? <><ActivityIndicator color={colors.primary} /><Text style={s.caption}>Carregando…</Text></> : message ? <><Text accessibilityRole="alert" style={s.caption}>{message}</Text><Pressable accessibilityRole="button" accessibilityLabel={retryLabel} onPress={retry} style={s.retry}><Text style={s.link}>Tentar novamente</Text></Pressable></> : <><Icon name="wallet" size={30} color={colors.primary} /><Text style={s.emptyTitle}>{title}</Text><Text style={s.caption}>{description}</Text></>}</View>;
+  function feedback(message, retry, retryLabel, title, description) {
+    return <View style={s.feedback}>{message ? <><Text accessibilityRole="alert" style={s.caption}>{message}</Text><Pressable accessibilityRole="button" accessibilityLabel={retryLabel} onPress={retry} style={s.retry}><Text style={s.link}>Tentar novamente</Text></Pressable></> : <><Icon name="wallet" size={30} color={colors.primary} /><Text style={s.emptyTitle}>{title}</Text><Text style={s.caption}>{description}</Text></>}</View>;
   }
   function creditCards() {
     return <View style={s.panel}>
       <View style={s.sectionHeader}><View style={s.sectionCopy}><Text accessibilityRole="header" style={s.sectionTitle}>Cartões de crédito</Text><Text style={s.caption}>Suas faturas e limites</Text></View>
         <Pressable accessibilityRole="button" accessibilityLabel="Novo cartão" onPress={onCreateCard} style={({ pressed }) => [s.add, pressed && s.pressed]}><Icon name="plus" size={21} color={colors.primary} /><Text style={s.link}>Novo cartão</Text></Pressable>
       </View>
-      {cardsLoading || cardsError || !cards.length ? feedback(cardsLoading, cardsError, onRetryCards, 'Tentar carregar cartões novamente', 'Seu primeiro cartão começa aqui', 'Organize suas faturas e seu limite de crédito.') : cards.map(card => <CreditCardSummary key={card.uuid} card={card} onInvoice={() => onOpenCard?.(card.uuid)} />)}
+      {cardsLoading ? <CreditCardSkeleton /> : cardsError || !cards.length ? feedback(cardsError, onRetryCards, 'Tentar carregar cartões novamente', 'Seu primeiro cartão começa aqui', 'Organize suas faturas e seu limite de crédito.') : cards.map(card => <CreditCardSummary key={card.uuid} card={card} onInvoice={() => onOpenCard?.(card.uuid)} />)}
     </View>;
   }
-  return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={loading || cardsLoading} onRefresh={() => { onRetry(); onRetryCards?.(); }} tintColor={colors.primary} colors={[colors.primary]} />}>
-    <View style={s.header}><BrandLogo width={126} /><View accessibilityLabel={profile?.name || 'Seu perfil'} style={s.avatar}><Text style={s.initials}>{initials}</Text></View></View>
+  return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" />}>
     <Text accessibilityRole="header" style={s.title}>Contas e cartões</Text><Text style={s.subtitle}>Seu dinheiro, do seu jeito.</Text>
     <View style={s.workspace}>
       <SegmentedControl value={section} onChange={setSection} options={[{ value: 'accounts', label: 'Contas', accessibilityLabel: 'Mostrar contas' }, { value: 'cards', label: 'Cartões', accessibilityLabel: 'Mostrar cartões' }]} />
       {section === 'accounts' ? <>
-        <View style={s.total}><View style={s.sectionCopy}><Text style={s.sectionTitle}>Seu dinheiro</Text><Text style={s.caption}>Saldo em contas</Text></View><Text accessibilityLabel="Saldo total em contas" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={s.totalAmount}>{loading || error ? '—' : formatCurrency(total)}</Text></View>
-        {loading || error || !accounts.length ? feedback(loading, error, onRetry, 'Tentar carregar contas novamente', 'Suas contas começam aqui', 'Adicione uma conta para acompanhar seu saldo.') : accounts.map(account => {
+        <View style={s.total}><View style={s.sectionCopy}><Text style={s.sectionTitle}>Seu dinheiro</Text><Text style={s.caption}>Saldo em contas</Text></View>{loading ? <Skeleton width="40%" height={26} /> : <Text accessibilityLabel="Saldo total em contas" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={s.totalAmount}>{error ? '—' : formatCurrency(total)}</Text>}</View>
+        {loading ? <ListSkeleton label="Carregando contas" count={accounts.length || 3} /> : error || !accounts.length ? feedback(error, onRetry, 'Tentar carregar contas novamente', 'Suas contas começam aqui', 'Adicione uma conta para acompanhar seu saldo.') : accounts.map(account => {
           const type = getAccountType(account.type);
           return <Pressable key={account.uuid} accessibilityRole="button" accessibilityLabel={`Abrir conta ${account.description}`} onPress={() => onEdit(account)} style={({ pressed }) => [s.row, pressed && s.pressed]}>
             <InstitutionLogo institution={account.financialInstitution} size={43} fallbackIcon={type.icon} backgroundColor={account.financialInstitution ? colors.surface : colors.surfaceMuted} fallbackColor={colors.text} />
@@ -46,10 +64,7 @@ export default function AccountsScreen({ accounts, profile, loading, error, onRe
   </ScrollView>;
 }
 const s = StyleSheet.create({
-  content: { paddingHorizontal: 12, paddingTop: 20, paddingBottom: 28, gap: 8 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, paddingHorizontal: 6 },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#DCE3FF', alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fontFamilyBold, fontSize: 15, fontWeight: '700', color: colors.text },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28, gap: 8 },
   title: { fontFamily: fontFamilyBold, fontSize: 29, lineHeight: 38, letterSpacing: -1.1, color: colors.text, fontWeight: '700', marginHorizontal: 6 },
   subtitle: { fontFamily, fontSize: 14, lineHeight: 22, color: colors.secondary, marginTop: -4, marginBottom: 4, marginHorizontal: 6 },
   workspace: { backgroundColor: colors.surface, borderRadius: 25, padding: 12 },

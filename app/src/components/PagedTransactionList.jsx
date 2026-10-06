@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ListSkeleton } from './Skeleton';
 import CategoryIcon from './CategoryIcon';
 import useTransactions from '../hooks/useTransactions';
 import { categoryColors } from '../data/categories';
@@ -14,7 +15,7 @@ export default function PagedTransactionList({ accessToken, endpoint, header, em
     renderItem={({ item, index }) => <TransactionRow row={item} onOpen={onOpenTransaction} showSigns={showSigns} showDate={index === 0 || rows[index - 1].date !== item.date} />}
     ListEmptyComponent={!loading && !error ? <View style={s.feedback}><Text style={s.muted}>{emptyMessage}</Text></View> : null}
     ListFooterComponent={<>
-      {loading && <View style={s.feedback}><ActivityIndicator color={colors.primary} /><Text style={s.muted}>Carregando…</Text></View>}
+      {loading && <ListSkeleton count={rows.length ? 2 : 5} label={rows.length ? 'Carregando mais lançamentos' : 'Carregando lançamentos'} />}
       {!!error && <View style={s.feedback}><Text accessibilityRole="alert" style={s.muted}>{error}</Text><Pressable accessibilityRole="button" onPress={retry} style={s.action}><Text style={s.link}>Tentar novamente</Text></Pressable></View>}
       {hasNext && !loading && !error && <Pressable accessibilityRole="button" onPress={loadMore} style={s.action}><Text style={s.link}>Carregar mais transações</Text></Pressable>}
     </>} />;

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { DetailsSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
 import InstitutionLogo from '../components/InstitutionLogo';
 import InvoicePaymentDrawer from '../components/InvoicePaymentDrawer';
@@ -18,7 +19,8 @@ function monthLabel(reference) {
   return `${months[Number(month) - 1]} ${year}`;
 }
 function Feedback({ loading, error, onRetry, empty }) {
-  return <View style={s.feedback}>{loading ? <><ActivityIndicator color={colors.primary} /><Text style={s.muted}>Carregando…</Text></> : error ? <><Text accessibilityRole="alert" style={s.muted}>{error}</Text><Pressable accessibilityRole="button" onPress={onRetry} style={s.action}><Text style={s.link}>Tentar novamente</Text></Pressable></> : <Text style={s.muted}>{empty}</Text>}</View>;
+  if (loading) return <DetailsSkeleton card label="Carregando detalhes do cartão" />;
+  return <View style={s.feedback}>{error ? <><Text accessibilityRole="alert" style={s.muted}>{error}</Text><Pressable accessibilityRole="button" onPress={onRetry} style={s.action}><Text style={s.link}>Tentar novamente</Text></Pressable></> : <Text style={s.muted}>{empty}</Text>}</View>;
 }
 
 export default function CreditCardDetailsScreen({ uuid, accessToken, onBack, onEdit, onPayment, revision = 0, onOpenTransaction, initialInvoiceUuid }) {
