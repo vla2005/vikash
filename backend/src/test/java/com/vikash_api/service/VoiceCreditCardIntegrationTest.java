@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,7 +40,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:voice-invoices;DB_CLOSE_DELAY=-1")
+@SpringBootTest(properties = { "spring.datasource.url=jdbc:h2:mem:voice-invoices;DB_CLOSE_DELAY=-1",
+        "security.ai.per-minute=100", "security.ai.per-day=100" })
 @Transactional
 class VoiceCreditCardIntegrationTest {
     @Autowired TransactionService transactionService;
@@ -62,6 +65,7 @@ class VoiceCreditCardIntegrationTest {
     void setup() {
         var user = userRepository.save(UserEntity.builder().name("Teste").email("voice@test.local").password("test-only").build());
         when(authenticatedUserService.getCurrentUser()).thenReturn(user);
+        when(authenticatedUserService.getCurrentUserId()).thenReturn(user.getId());
         var bank = new FinancialInstitutionEntity();
         ReflectionTestUtils.setField(bank, "name", "Inter");
         ReflectionTestUtils.setField(bank, "logoUrl", "/images/financial-institutions/inter.webp");
@@ -74,6 +78,27 @@ class VoiceCreditCardIntegrationTest {
         card.setClosingDay(3);
         card.setDueDay(10);
         card = creditCardRepository.saveAndFlush(card);
+    }
+
+    @AfterEach
+    void cleanupCommittedVoiceData() {
+        if (TestTransaction.isActive()) { TestTransaction.flagForRollback(); TestTransaction.end(); }
+        transactionRepository.deleteAll();
+        installmentRepository.deleteAll();
+        purchaseRepository.deleteAll();
+        invoiceRepository.deleteAll();
+        accountRepository.deleteAll();
+        creditCardRepository.deleteAll();
+        institutionRepository.deleteAll();
+        userRepository.deleteAll();
+    }
+
+    private void createFromVoice(TransactionRequest request) {
+        // A análise usa transações próprias; confirma as fixtures para elas poderem enxergá-las.
+        boolean active = TestTransaction.isActive();
+        if (active) { TestTransaction.flagForCommit(); TestTransaction.end(); }
+        try { transactionService.create(request); }
+        finally { if (active) { TestTransaction.start(); } }
     }
 
     AiAnalysisResponse analysis(UUID cardUuid, List<String> missingFields) {
@@ -95,7 +120,7 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Notebook", new BigDecimal("1500.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 2, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        transactionService.create(new TransactionRequest("Notebook de 1500 em 3x"));
+        createFromVoice(new TransactionRequest("Notebook de 1500 em 3x"));
         return invoiceRepository.findByCreditCardIdAndReferenceMonth(card.getId(), "2026-10")
                 .orElseThrow().getUuid();
     }
@@ -120,7 +145,7 @@ class VoiceCreditCardIntegrationTest {
             return new AiAnalysisResponse(null, null, TransactionType.INVOICE_PAYMENT, PaymentMethod.OTHER,
                     date, account.getUuid(), card.getUuid(), null, null, null, 1, List.of(), invoiceUuid);
         });
-        transactionService.create(new TransactionRequest(transcription));
+        createFromVoice(new TransactionRequest(transcription));
         var payment = transactionRepository.findAll().getFirst();
         assertThat(payment.getType()).isEqualTo(TransactionType.INVOICE_PAYMENT);
         assertThat(payment.getOccurredAt()).isEqualTo(date);
@@ -128,11 +153,11 @@ class VoiceCreditCardIntegrationTest {
         assertThat(payment.getAccount().getUuid()).isEqualTo(account.getUuid());
         assertThat(payment.getCreditCardInvoice().getUuid()).isEqualTo(invoiceUuid);
         assertThat(payment.getTranscription()).isEqualTo(transcription);
-        assertThat(account.getBalance()).isEqualByComparingTo("1500");
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("1500");
         assertThat(transactionRepository.count()).isEqualTo(1);
         assertThat(purchaseRepository.count()).isEqualTo(1);
         assertThat(creditCardService.getByUuid(card.getUuid()).availableLimit()).isEqualByComparingTo("4000");
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest(transcription)))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest(transcription)))
                 .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class).hasMessageContaining("já foi paga");
         assertThat(transactionRepository.count()).isEqualTo(1);
     }
@@ -145,14 +170,14 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(null, null,
                 TransactionType.INVOICE_PAYMENT, PaymentMethod.PIX, date, account.getUuid(), UUID.randomUUID(),
                 null, null, null, 1, List.of(), invoiceUuid));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Paguei a fatura")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Paguei a fatura")))
                 .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class).hasMessageContaining("não pertence");
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(null, new BigDecimal("100"),
                 TransactionType.INVOICE_PAYMENT, PaymentMethod.PIX, date, account.getUuid(), card.getUuid(),
                 null, null, null, 1, List.of(), invoiceUuid));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Paguei 100 da fatura")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Paguei 100 da fatura")))
                 .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class).hasMessageContaining("total da fatura");
-        assertThat(account.getBalance()).isEqualByComparingTo("2000");
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("2000");
         assertThat(transactionRepository.count()).isZero();
     }
 
@@ -166,7 +191,7 @@ class VoiceCreditCardIntegrationTest {
         assertThat(creditCardService.getByUuid(card.getUuid()).availableLimit()).isEqualByComparingTo("3500");
         invoiceService.pay(invoiceUuid, paymentRequest(account.getUuid()));
         transactionRepository.flush();
-        assertThat(account.getBalance()).isEqualByComparingTo("1500");
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("1500");
         assertThat(creditCardService.getByUuid(card.getUuid()).availableLimit()).isEqualByComparingTo("4000");
         var rows = transactionService.getSummaries(0, 20).getContent();
         assertThat(rows).hasSize(1);
@@ -177,7 +202,7 @@ class VoiceCreditCardIntegrationTest {
         assertThat(creditCardService.getInvoiceTransactions(card.getUuid(), invoiceUuid, 0, 20)).hasSize(1);
         assertThatThrownBy(() -> invoiceService.pay(invoiceUuid, paymentRequest(account.getUuid())))
                 .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class).hasMessageContaining("já foi paga");
-        assertThat(account.getBalance()).isEqualByComparingTo("1500");
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("1500");
         assertThat(transactionRepository.count()).isEqualTo(1);
     }
 
@@ -187,11 +212,11 @@ class VoiceCreditCardIntegrationTest {
         var invoiceUuid = payableInvoice();
         assertThatThrownBy(() -> invoiceService.pay(invoiceUuid, paymentRequest(account.getUuid())))
                 .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class).hasMessageContaining("Saldo insuficiente");
-        assertThat(account.getBalance()).isEqualByComparingTo("100");
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("100");
         account.setBalance(new BigDecimal("2000"));
         var other = userRepository.save(UserEntity.builder().name("Outro").email("pay@test.local").password("test-only").build());
         account.setUser(other);
-        accountRepository.flush();
+        accountRepository.saveAndFlush(account);
         assertThatThrownBy(() -> invoiceService.pay(invoiceUuid, paymentRequest(account.getUuid())))
                 .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class).hasMessageContaining("Conta não encontrada");
         assertThat(invoiceService.getByUuid(invoiceUuid).status()).isEqualTo(com.vikash_api.enums.CreditCardInvoiceStatus.OPEN);
@@ -212,7 +237,7 @@ class VoiceCreditCardIntegrationTest {
                 new com.vikash_api.dtos.requests.CreditCardInvoicePaymentRequest(account.getUuid(), PaymentMethod.PIX, LocalDateTime.of(2026, 10, 2, 14, 0))))
                 .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class).hasMessageContaining("fechamento");
         assertThat(transactionRepository.count()).isZero();
-        assertThat(account.getBalance()).isEqualByComparingTo("2000");
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("2000");
     }
 
     @Test
@@ -262,8 +287,8 @@ class VoiceCreditCardIntegrationTest {
             return analysis(card.getUuid(), List.of());
         });
         var request = new TransactionRequest("Comprei 100 reais no crédito Inter");
-        transactionService.create(request);
-        transactionService.create(request);
+        createFromVoice(request);
+        createFromVoice(request);
         assertThat(purchaseRepository.findAll()).allSatisfy(purchase ->
                 assertThat(purchase.getCreditCard().getUuid()).isEqualTo(card.getUuid()));
         assertThat(installmentRepository.findAll()).extracting(installment -> installment.getCreditCardInvoice().getUuid())
@@ -289,7 +314,7 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Televisão", new BigDecimal("1500.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        transactionService.create(new TransactionRequest("Televisão de 1500 em 3x"));
+        createFromVoice(new TransactionRequest("Televisão de 1500 em 3x"));
         var purchase = purchaseRepository.findAll().getFirst();
         var response = purchaseService.getByUuid(purchase.getUuid());
         assertThat(response.amount()).isEqualByComparingTo("1500");
@@ -311,12 +336,12 @@ class VoiceCreditCardIntegrationTest {
     @Test
     void missingOrUnownedCardNeverCreatesInvoiceOrTransaction() {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(analysis(null, List.of("creditCardUuid")));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Comprei no crédito")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Comprei no crédito")))
                 .isInstanceOf(InvalidTransactionException.class);
         var foreignUser = userRepository.save(UserEntity.builder().name("Outro usuário").email("other@test.local").password("test-only").build());
         when(authenticatedUserService.getCurrentUser()).thenReturn(foreignUser);
         when(aiAnalysisService.analyze(any(), any())).thenReturn(analysis(card.getUuid(), List.of()));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Comprei no crédito Inter")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Comprei no crédito Inter")))
                 .isInstanceOf(CreditCardInvoiceNotFoundException.class);
         assertThat(invoiceRepository.count()).isZero();
         assertThat(transactionRepository.count()).isZero();
@@ -328,7 +353,7 @@ class VoiceCreditCardIntegrationTest {
     @Test
     void missingInstallmentCountIsRejectedWithoutSavingFullAmountAsSinglePurchase() {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(analysis(card.getUuid(), List.of("installmentCount")));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Comprei em 3 vezes no Inter")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Comprei em 3 vezes no Inter")))
                 .isInstanceOf(InvalidTransactionException.class).hasMessageContaining("quantidade de parcelas");
         assertThat(invoiceRepository.count()).isZero();
         assertThat(transactionRepository.count()).isZero();
@@ -339,7 +364,7 @@ class VoiceCreditCardIntegrationTest {
     @Test
     void ambiguousVoiceInvoicePaymentDoesNotCreateExpense() {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(analysis(card.getUuid(), List.of("creditCardInvoiceUuid")));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Paguei a fatura do Inter")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Paguei a fatura do Inter")))
                 .isInstanceOf(InvalidTransactionException.class).hasMessageContaining("mês/ano");
         assertThat(transactionRepository.count()).isZero();
         assertThat(purchaseRepository.count()).isZero();
@@ -350,7 +375,7 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Notebook", new BigDecimal("1500.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        transactionService.create(new TransactionRequest("Comprei um notebook de 1500 em 3x no crédito Inter"));
+        createFromVoice(new TransactionRequest("Comprei um notebook de 1500 em 3x no crédito Inter"));
         transactionRepository.flush();
         var purchase = purchaseRepository.findAll().getFirst();
         assertThat(purchase.getAmount()).isEqualByComparingTo("1500");
@@ -385,7 +410,7 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Compra", new BigDecimal("100.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2027, 1, 30, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        transactionService.create(new TransactionRequest("Compra de 100 em 3x"));
+        createFromVoice(new TransactionRequest("Compra de 100 em 3x"));
         transactionRepository.flush();
         var transactions = installmentRepository.findAll().stream()
                 .sorted(java.util.Comparator.comparing(com.vikash_api.entities.CreditCardInstallmentEntity::getInstallmentNumber)).toList();
@@ -410,7 +435,7 @@ class VoiceCreditCardIntegrationTest {
             when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                     "Compra", new BigDecimal("1500"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                     LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-            assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Compra em 3x")))
+            assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Compra em 3x")))
                     .isInstanceOf(com.vikash_api.exceptions.InvalidCreditCardInvoiceException.class);
             assertThat(transactionRepository.count()).isZero();
         assertThat(purchaseRepository.count()).isZero();
@@ -432,7 +457,7 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Compra", new BigDecimal("1500"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, count, List.of()));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Compra parcelada")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Compra parcelada")))
                 .isInstanceOf(InvalidTransactionException.class);
         assertThat(transactionRepository.count()).isZero();
         assertThat(purchaseRepository.count()).isZero();
@@ -445,7 +470,7 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Compra", new BigDecimal("0.05"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        transactionService.create(new TransactionRequest("Compra de cinco centavos em 3x"));
+        createFromVoice(new TransactionRequest("Compra de cinco centavos em 3x"));
         transactionRepository.flush();
         var transactions = installmentRepository.findAll().stream()
                 .sorted(java.util.Comparator.comparing(com.vikash_api.entities.CreditCardInstallmentEntity::getInstallmentNumber)).toList();
@@ -458,12 +483,12 @@ class VoiceCreditCardIntegrationTest {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Compra", new BigDecimal("1500"), TransactionType.EXPENSE, PaymentMethod.PIX,
                 LocalDateTime.of(2026, 10, 4, 12, 0), null, null, null, null, null, 3, List.of()));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Compra em 3x por Pix")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Compra em 3x por Pix")))
                 .isInstanceOf(InvalidTransactionException.class).hasMessageContaining("somente no cartão");
         when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                 "Compra", new BigDecimal("0.01"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                 LocalDateTime.of(2026, 10, 4, 12, 0), null, card.getUuid(), null, null, null, 3, List.of()));
-        assertThatThrownBy(() -> transactionService.create(new TransactionRequest("Compra de um centavo em 3x")))
+        assertThatThrownBy(() -> createFromVoice(new TransactionRequest("Compra de um centavo em 3x")))
                 .isInstanceOf(InvalidTransactionException.class).hasMessageContaining("pelo menos R$ 0,01");
         assertThat(transactionRepository.count()).isZero();
         assertThat(purchaseRepository.count()).isZero();
@@ -474,7 +499,7 @@ class VoiceCreditCardIntegrationTest {
     @Test
     void editCardUpdatesOwnedCardWithoutChangingExistingInvoiceDates() {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(analysis(card.getUuid(), List.of()));
-        transactionService.create(new TransactionRequest("Compra no Inter"));
+        createFromVoice(new TransactionRequest("Compra no Inter"));
         var invoice = invoiceRepository.findAll().getFirst();
         var closing = invoice.getClosingDate();
         var due = invoice.getDueDate();
@@ -496,13 +521,13 @@ class VoiceCreditCardIntegrationTest {
     @Test
     void cardDetailsIncludePaidInvoicesButLoadOnlySelectedInvoiceTransactionsInPages() {
         when(aiAnalysisService.analyze(any(), any())).thenReturn(analysis(card.getUuid(), List.of()));
-        transactionService.create(new TransactionRequest("Compra de novembro"));
+        createFromVoice(new TransactionRequest("Compra de novembro"));
         var invoice = invoiceRepository.findByCreditCardIdAndReferenceMonth(card.getId(), "2026-11").orElseThrow();
         for (int index = 0; index < 20; index++) {
             when(aiAnalysisService.analyze(any(), any())).thenReturn(new AiAnalysisResponse(
                     "Compra " + index, new BigDecimal("10.00"), TransactionType.EXPENSE, PaymentMethod.CREDIT_CARD,
                     LocalDateTime.of(2026, 10, 4, 13, index), null, card.getUuid(), null, null, null, 1, List.of()));
-            transactionService.create(new TransactionRequest("Compra de teste"));
+            createFromVoice(new TransactionRequest("Compra de teste"));
         }
         var paid = new com.vikash_api.entities.CreditCardInvoiceEntity();
         paid.setCreditCard(card);
@@ -546,8 +571,8 @@ class VoiceCreditCardIntegrationTest {
         october = new AiAnalysisResponse(october.description(), october.amount(), october.type(), october.paymentMethod(),
                 LocalDateTime.of(2026, 10, 2, 12, 0), null, card.getUuid(), null, null, null, 1, List.of());
         when(aiAnalysisService.analyze(any(), any())).thenReturn(october).thenReturn(analysis(card.getUuid(), List.of()));
-        transactionService.create(new TransactionRequest("Compra de outubro"));
-        transactionService.create(new TransactionRequest("Compra de novembro"));
+        createFromVoice(new TransactionRequest("Compra de outubro"));
+        createFromVoice(new TransactionRequest("Compra de novembro"));
         var summary = creditCardService.get().creditCards().getFirst();
         assertThat(summary.currentInvoice().referenceMonth()).isEqualTo("2026-10");
         assertThat(summary.currentInvoice().total()).isEqualByComparingTo("100");

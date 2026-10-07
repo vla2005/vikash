@@ -1,6 +1,7 @@
 package com.vikash_api.services;
 
 import java.time.ZoneId;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -27,6 +28,17 @@ public class AiAnalysisService {
     private final RestClient restClient;
     private final String apiUrl;
     private final String apiKey;
+    @Value("${security.ai.max-input-bytes:100000}")
+    private int maxInputBytes = 100_000;
+    @Value("${security.ai.max-output-tokens:2048}")
+    private int maxOutputTokens = 2048;
+
+    @jakarta.annotation.PostConstruct
+    void validateLimits() {
+        if (maxInputBytes < 1 || maxOutputTokens < 1) {
+            throw new IllegalArgumentException("Os limites de tamanho da IA devem ser positivos.");
+        }
+    }
 
     public AiAnalysisService(
             ObjectMapper objectMapper,
@@ -72,6 +84,11 @@ public class AiAnalysisService {
                 "currentDateTime", ZonedDateTime.now(
                         ZoneId.of("America/Sao_Paulo")).toString());
 
+        String inputJson = objectMapper.writeValueAsString(input);
+        if (inputJson.getBytes(StandardCharsets.UTF_8).length > maxInputBytes) {
+            throw new com.vikash_api.exceptions.InvalidTransactionException(
+                    "O contexto da análise excedeu o limite de tamanho permitido.");
+        }
         var body = Map.of(
                 "systemInstruction", Map.of(
                         "parts", List.of(
@@ -82,8 +99,10 @@ public class AiAnalysisService {
                                 "parts", List.of(
                                         Map.of(
                                                 "text",
-                                                objectMapper.writeValueAsString(input))))),
+                                                inputJson)))),
                 "generationConfig", Map.of(
+                        "candidateCount", 1,
+                        "maxOutputTokens", maxOutputTokens,
                         "responseFormat", Map.of(
                                 "text", Map.of(
                                         "mimeType", "APPLICATION_JSON",

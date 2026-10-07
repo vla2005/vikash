@@ -44,6 +44,8 @@ class AiAnalysisServiceTest {
                 .andExpect(header("x-goog-api-key", "fake-test-key"))
                 .andExpect(request -> {
                     var body = mapper.readTree(((MockClientHttpRequest) request).getBodyAsString());
+                    assertThat(body.path("generationConfig").path("maxOutputTokens").asInt()).isEqualTo(2048);
+                    assertThat(body.path("generationConfig").path("candidateCount").asInt()).isEqualTo(1);
                     assertThat(body.path("generationConfig").path("responseFormat").path("text").path("mimeType").asText()).isEqualTo("APPLICATION_JSON");
                     var input = mapper.readTree(body.path("contents").path(0).path("parts").path(0).path("text").asText());
                     var types = Arrays.stream(TransactionType.values()).map(Enum::name).toList();
@@ -61,6 +63,14 @@ class AiAnalysisServiceTest {
                 .andRespond(withSuccess(geminiResponse("STOP", "{\"paymentMethod\":\"BANK_SLIP\"}"), MediaType.APPLICATION_JSON));
 
         assertThat(service.analyze(" Paguei um boleto ", context).paymentMethod()).isEqualTo(PaymentMethod.BANK_SLIP);
+        server.verify();
+    }
+
+    @Test
+    void rejectsOversizedUtf8ContextBeforeSendingRequest() {
+        ReflectionTestUtils.setField(service, "maxInputBytes", 1000);
+        assertThatThrownBy(() -> service.analyze("é".repeat(600), context))
+                .isInstanceOf(com.vikash_api.exceptions.InvalidTransactionException.class);
         server.verify();
     }
 

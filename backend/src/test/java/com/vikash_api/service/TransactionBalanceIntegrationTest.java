@@ -31,7 +31,8 @@ import com.vikash_api.services.TransactionService;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:transaction-balances;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000")
+@SpringBootTest(properties = { "spring.datasource.url=jdbc:h2:mem:transaction-balances;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000",
+        "security.ai.per-user-concurrent=2" })
 class TransactionBalanceIntegrationTest {
     @Autowired TransactionService service;
     @Autowired AccountRepository accounts;
@@ -47,6 +48,7 @@ class TransactionBalanceIntegrationTest {
         user = users.save(UserEntity.builder().name("Teste")
                 .email(UUID.randomUUID() + "@balance.test").password("test-only").build());
         when(authenticatedUserService.getCurrentUser()).thenReturn(user);
+        when(authenticatedUserService.getCurrentUserId()).thenReturn(user.getId());
         account = new AccountEntity();
         account.setUser(user);
         account.setDescription("Carteira");
@@ -60,6 +62,7 @@ class TransactionBalanceIntegrationTest {
     void simultaneousIncomesDoNotOverwriteEachOtherAfterReadingAiContext() throws Exception {
         var bothReadContext = new CyclicBarrier(2);
         when(aiAnalysisService.analyze(any(), any())).thenAnswer(call -> {
+            assertThat(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             bothReadContext.await(10, TimeUnit.SECONDS);
             return income("100.00");
         });

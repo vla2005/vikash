@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.test.context.transaction.TestTransaction;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -50,8 +52,17 @@ class AccountStatementIntegrationTest {
     void setup() {
         user = userRepository.save(UserEntity.builder().name("Teste").email("account-detail@test.local").password("test-only").build());
         when(authenticatedUserService.getCurrentUser()).thenReturn(user);
+        when(authenticatedUserService.getCurrentUserId()).thenReturn(user.getId());
         wallet = account("Dinheiro");
         otherAccount = account("Outra carteira");
+    }
+
+    @AfterEach
+    void cleanupCommittedVoiceData() {
+        if (TestTransaction.isActive()) { TestTransaction.flagForRollback(); TestTransaction.end(); }
+        transactionRepository.deleteAll();
+        accountRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     AccountEntity account(String description) {
@@ -181,7 +192,10 @@ class AccountStatementIntegrationTest {
                 "Lançamento de teste", new BigDecimal(amount), type, PaymentMethod.PIX,
                 LocalDateTime.of(2026, 10, 4, 12, 0), accountUuid, null, destinationUuid,
                 null, null, 1, java.util.List.of()));
-        transactionService.create(new com.vikash_api.dtos.requests.TransactionRequest("Lançamento de teste"));
+        boolean active = TestTransaction.isActive();
+        if (active) { TestTransaction.flagForCommit(); TestTransaction.end(); }
+        try { transactionService.create(new com.vikash_api.dtos.requests.TransactionRequest("Lançamento de teste")); }
+        finally { if (active) { TestTransaction.start(); } }
     }
 
     @Test

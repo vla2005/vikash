@@ -11,6 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.vikash_api.dtos.requests.TransactionRequest;
 import com.vikash_api.dtos.requests.AiAnalysisContext;
@@ -62,6 +65,8 @@ public class TransactionService {
     private final CreditCardInvoiceRepository creditCardInvoiceRepository;
     private final CreditCardInvoiceService creditCardInvoiceService;
     private final EntityManager entityManager;
+    private final PlatformTransactionManager transactionManager;
+    private final AiUsageService aiUsageService;
 
     @Transactional(readOnly = true)
     public TransactionResponse getByUuid(UUID uuid) {
@@ -99,8 +104,20 @@ public class TransactionService {
                         institution.getName(), institution.getLogoUrl()));
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void create(TransactionRequest request) {
+        Long userId = authenticatedUserService.getCurrentUserId();
+        try (var permit = aiUsageService.acquire(userId)) {
+            var read = new TransactionTemplate(transactionManager);
+            read.setReadOnly(true);
+            AiAnalysisContext context = read.execute(status -> getAnalysisContext());
+            AiAnalysisResponse analysis = aiAnalysisService.analyze(request.transcription(), context);
+            var write = new TransactionTemplate(transactionManager);
+            write.executeWithoutResult(status -> saveAnalysis(request, analysis));
+        }
+    }
+
+    private AiAnalysisContext getAnalysisContext() {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         AllAccountsResponse accounts = accountService.get();
 
@@ -126,12 +143,14 @@ public class TransactionService {
                 categories.defaultCategories(),
                 categories.customCategories(),
                 creditCardInvoiceRepository.findAnalysisContextByUserId(currentUser.getId()));
+        // Também limpa o contexto do OpenEntityManagerInView usado nas requisições web.
+        entityManager.clear();
+        return context;
+    }
 
-
-        // ----------------- Analise da IA ----------------- //
-        AiAnalysisResponse analysis = aiAnalysisService.analyze(request.transcription(), context);
-        // ----------------- Fim Analise da IA ----------------- //
-
+    private void saveAnalysis(TransactionRequest request, AiAnalysisResponse analysis) {
+        // Reconsulta o usuário e os dados escolhidos após a análise; nenhuma entidade vem do contexto.
+        UserEntity currentUser = authenticatedUserService.getCurrentUser();
         validateAnalysis(analysis);
         if (analysis.type() == TransactionType.INVOICE_PAYMENT) {
             var paymentRequest = new CreditCardInvoicePaymentRequest(

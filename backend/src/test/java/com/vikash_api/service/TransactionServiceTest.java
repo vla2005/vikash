@@ -33,6 +33,7 @@ import com.vikash_api.services.CategoryService;
 import com.vikash_api.services.TransactionService;
 import com.vikash_api.services.AuthenticatedUserService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -59,7 +60,24 @@ class TransactionServiceTest {
     @Mock CreditCardInvoiceService creditCardInvoiceService;
     @Mock com.vikash_api.repositories.CreditCardInvoiceRepository creditCardInvoiceRepository;
     @Mock jakarta.persistence.EntityManager entityManager;
+    @Mock org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @Mock com.vikash_api.services.AiUsageService aiUsageService;
     @InjectMocks TransactionService service;
+
+    @BeforeEach
+    void configureTransactions() {
+        lenient().when(transactionManager.getTransaction(any()))
+                .thenReturn(mock(org.springframework.transaction.TransactionStatus.class));
+    }
+
+    @Test
+    void rejectsUsageBeforeReadingContextOrCallingGemini() {
+        when(authenticatedUserService.getCurrentUserId()).thenReturn(1L);
+        when(aiUsageService.acquire(1L)).thenThrow(new com.vikash_api.exceptions.RequestLimitException("Aguarde", 60));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.create(new TransactionRequest("Almoço")))
+                .isInstanceOf(com.vikash_api.exceptions.RequestLimitException.class);
+        verifyNoInteractions(accountService, categoryService, aiAnalysisService, transactionManager, transactionRepository);
+    }
 
     @Test
     void passesContextWithoutBalanceAndSavesTransactionWithDefaultCategory() {
