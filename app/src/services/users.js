@@ -16,6 +16,7 @@ export async function updateUser(values, accessToken) {
   try {
     user = await putJson('/api/user/update', {
       name: values.name.trim(), email: values.email.trim().toLowerCase(),
+      ...(values.password !== undefined ? { password: values.password } : {}),
     }, accessToken, {
       headers: { access_token: accessToken },
       conflictMessage: 'Este e-mail já está sendo utilizado.',

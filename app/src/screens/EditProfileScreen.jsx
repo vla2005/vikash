@@ -11,14 +11,16 @@ import { colors, fontFamily, fontFamilyBold } from '../theme';
 export default function EditProfileScreen({ profile, onBack, onSave }) {
   const emailRef = useRef(null);
   const form = useProfileForm({
-    initialValues: { name: profile?.name || '', email: profile?.email || '' },
-    validate: validateProfile,
-    toRequest: values => ({ name: values.name.trim(), email: values.email.trim() }),
+    initialValues: { name: profile?.name || '', email: profile?.email || '', password: '' },
+    validate: values => validateProfile(values, profile?.email || ''),
+    toRequest: values => ({ name: values.name.trim(), email: values.email.trim(),
+      ...(values.password ? { password: values.password } : {}) }),
     onSave, onSaved: onBack,
     successMessage: 'Perfil atualizado.', unavailableMessage: 'A edição do perfil estará disponível em breve.',
     errorMessage: 'Não foi possível atualizar seu perfil. Tente novamente.',
   });
   const { values, errors, saving, change, submit } = form;
+  const emailChanged = values.email.trim().toLowerCase() !== (profile?.email || '').trim().toLowerCase();
   return <ProfileFormLayout title="Editar perfil" submitText="Salvar alterações" onSubmit={submit} onBack={onBack} saving={saving} error={form.requestError} notice="Suas alterações serão usadas em todo o app.">
     <View style={s.heading}><Text accessibilityRole="header" style={s.title}>Do seu jeito.</Text><Text style={s.subtitle}>Mantenha seus dados atualizados.</Text></View>
     <View style={styles.identity}>
@@ -28,6 +30,7 @@ export default function EditProfileScreen({ profile, onBack, onSave }) {
     <View style={s.fields}>
       <FormField label="Nome completo" value={values.name} onChangeText={value => change('name', value)} error={errors.name} placeholder="Como você se chama?" editable={!saving} maxLength={100} autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} inputContainerStyle={s.input} testID="profile-name" />
       <FormField ref={emailRef} label="E-mail" value={values.email} onChangeText={value => change('email', value)} error={errors.email} placeholder="seu@email.com" hint="Use um e-mail que você acessa com frequência." editable={!saving} maxLength={150} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" returnKeyType="done" onSubmitEditing={submit} inputContainerStyle={s.input} leadingIcon={<EnvelopeSimple size={22} color={colors.secondary} />} testID="profile-email" />
+      {(emailChanged || errors.password || values.password) && <FormField label="Senha atual" password value={values.password} onChangeText={value => change('password', value)} error={errors.password} placeholder="Confirme sua senha" hint="Para sua segurança, confirme a senha ao alterar seu e-mail." editable={!saving} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" textContentType="password" returnKeyType="done" onSubmitEditing={submit} inputContainerStyle={s.input} testID="profile-password" />}
     </View>
   </ProfileFormLayout>;
 }

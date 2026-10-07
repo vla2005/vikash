@@ -7,6 +7,8 @@ import com.vikash_api.enums.Role;
 import com.vikash_api.exceptions.EmailAlreadyExistsException;
 import com.vikash_api.exceptions.InvalidCredentialsException;
 import com.vikash_api.repositories.UserRepository;
+import com.vikash_api.repositories.PasswordResetTokenRepository;
+import jakarta.persistence.EntityManager;
 import com.vikash_api.services.AuthenticatedUserService;
 import com.vikash_api.services.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +28,8 @@ class UserServiceTest {
     @Mock AuthenticatedUserService authenticatedUserService;
     @Mock UserRepository userRepository;
     @Mock PasswordEncoder passwordEncoder;
+    @Mock PasswordResetTokenRepository passwordResetTokenRepository;
+    @Mock EntityManager entityManager;
     @InjectMocks UserService service;
     UserEntity user;
 
@@ -35,12 +39,14 @@ class UserServiceTest {
                 .email("livia@example.com").password("stored-hash").role(Role.ROLE_USER)
                 .createdAt(LocalDateTime.of(2026, 10, 1, 12, 0)).active(true).build();
         when(authenticatedUserService.getCurrentUser()).thenReturn(user);
+        lenient().when(userRepository.findByUuidForUpdate(user.getUuid())).thenReturn(java.util.Optional.of(user));
     }
 
     @Test
     void updatesAndNormalizesOnlyProfileFields() {
         when(userRepository.save(user)).thenReturn(user);
-        var response = service.update(new UserRequest(" Lívia Silva ", " NOVO@example.com "));
+        when(passwordEncoder.matches(" Senha123! ", "stored-hash")).thenReturn(true);
+        var response = service.update(new UserRequest(" Lívia Silva ", " NOVO@example.com ", " Senha123! "));
 
         assertThat(response.getName()).isEqualTo("Lívia Silva");
         assertThat(response.getEmail()).isEqualTo("novo@example.com");
@@ -49,7 +55,8 @@ class UserServiceTest {
         assertThat(response.getCreatedAt()).isEqualTo(user.getCreatedAt());
         assertThat(user.getPassword()).isEqualTo("stored-hash");
         verify(userRepository).existsByEmail("novo@example.com");
-        verifyNoInteractions(passwordEncoder);
+        verify(passwordResetTokenRepository).markAllUsedByUser(eq(user), any());
+        verify(entityManager).refresh(user);
     }
 
     @Test
@@ -63,10 +70,49 @@ class UserServiceTest {
     @Test
     void rejectsAnotherUsersEmailWithoutChangingTheProfile() {
         when(userRepository.existsByEmail("outro@example.com")).thenReturn(true);
-        assertThatThrownBy(() -> service.update(new UserRequest("Outro nome", " OUTRO@example.com ")))
+        when(passwordEncoder.matches("Senha123!", "stored-hash")).thenReturn(true);
+        assertThatThrownBy(() -> service.update(new UserRequest("Outro nome", " OUTRO@example.com ", "Senha123!")))
                 .isInstanceOf(EmailAlreadyExistsException.class);
         assertThat(user.getName()).isEqualTo("Lívia Matos");
         assertThat(user.getEmail()).isEqualTo("livia@example.com");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changingEmailRequiresTheCurrentPasswordBeforeAnyMutation() {
+        for (String password : new String[] { null, "", "   ", "incorrect" }) {
+            assertThatThrownBy(() -> service.update(new UserRequest("Outro nome", "novo@example.com", password)))
+                    .isInstanceOf(InvalidCredentialsException.class);
+        }
+        assertThat(user.getEmail()).isEqualTo("livia@example.com");
+        assertThat(user.getName()).isEqualTo("Lívia Matos");
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(passwordResetTokenRepository);
+    }
+
+    @Test
+    void unicodeLookalikesDoNotBypassEmailReauthentication() {
+        assertThatThrownBy(() -> service.update(new UserRequest("Lívia", "lıvia@example.com")))
+                .isInstanceOf(InvalidCredentialsException.class);
+        user.setEmail("silvia@example.com");
+        assertThatThrownBy(() -> service.update(new UserRequest("Lívia", "ſilvia@example.com")))
+                .isInstanceOf(InvalidCredentialsException.class);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void emailCaseOnlyChangeDoesNotRequireAPasswordOrInvalidateLinks() {
+        when(userRepository.save(user)).thenReturn(user);
+        service.update(new UserRequest("Lívia", " LIVIA@example.com "));
+        verifyNoInteractions(passwordEncoder, passwordResetTokenRepository);
+    }
+
+    @Test
+    void reauthenticationUsesThePasswordReloadedAfterTheLock() {
+        doAnswer(invocation -> { user.setPassword("changed-hash"); return null; }).when(entityManager).refresh(user);
+        assertThatThrownBy(() -> service.update(new UserRequest("Lívia", "novo@example.com", "old-password")))
+                .isInstanceOf(InvalidCredentialsException.class);
+        verify(passwordEncoder).matches("old-password", "changed-hash");
         verify(userRepository, never()).save(any());
     }
 

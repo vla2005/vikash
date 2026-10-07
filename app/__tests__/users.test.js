@@ -16,6 +16,12 @@ test('atualiza perfil com PUT, nome/email normalizados e token nos headers', asy
   }));
 });
 
+test('envia a senha atual sem trim ao alterar email', async () => {
+  global.fetch.mockResolvedValue(response({ name: 'Lívia', email: 'novo@example.com' }));
+  await updateUser({ name: 'Lívia', email: 'novo@example.com', password: ' Password123! ' }, 'token');
+  expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toEqual({ name: 'Lívia', email: 'novo@example.com', password: ' Password123! ' });
+});
+
 test('conflito de email sem fieldErrors é associado ao input de email', async () => {
   global.fetch.mockResolvedValue(response({ message: 'Este email já está sendo utilizado', fieldErrors: null }, 409));
   await expect(updateUser({ name: 'Lívia', email: 'livia@example.com' }, 'token')).rejects.toMatchObject({

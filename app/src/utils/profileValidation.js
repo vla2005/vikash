@@ -1,6 +1,6 @@
 import { validateNewPassword } from './passwordValidation';
 
-export function validateProfile({ name, email }) {
+export function validateProfile({ name, email, password }, currentEmail) {
   const errors = {};
   if (name.trim().length > 100 || name.replace(/\s/g, '').length < 2) {
     errors.name = 'Use entre 2 e 100 caracteres para o nome.';
@@ -9,6 +9,10 @@ export function validateProfile({ name, email }) {
     errors.email = 'Informe um e-mail válido.';
   } else if (email.trim().length > 150) {
     errors.email = 'Use um e-mail com até 150 caracteres.';
+  }
+  if (currentEmail !== undefined && email.trim().toLowerCase() !== currentEmail.trim().toLowerCase()
+      && !password?.trim()) {
+    errors.password = 'Confirme sua senha atual para alterar o e-mail.';
   }
   return errors;
 }

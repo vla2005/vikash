@@ -59,7 +59,7 @@ class UserIntegrationTest {
     void changingEmailAllowsRefreshAndLoginWithTheUpdatedAddress() {
         AuthResponse auth = register("livia@example.com");
         UserResponse updated = client.put().uri("/api/user/update").header("Authorization", bearer(auth))
-                .contentType(MediaType.APPLICATION_JSON).body(new UserRequest("Lívia Silva", " NOVO@example.com "))
+                .contentType(MediaType.APPLICATION_JSON).body(new UserRequest("Lívia Silva", " NOVO@example.com ", "Password123!"))
                 .retrieve().body(UserResponse.class);
         assertThat(updated.getEmail()).isEqualTo("novo@example.com");
         AuthResponse renewed = refresh(auth);
@@ -76,7 +76,7 @@ class UserIntegrationTest {
         AuthResponse auth = register("livia@example.com");
         register("outro@example.com");
         assertThatThrownBy(() -> client.put().uri("/api/user/update").header("Authorization", bearer(auth))
-                .contentType(MediaType.APPLICATION_JSON).body(new UserRequest("Outro nome", " OUTRO@example.com "))
+                .contentType(MediaType.APPLICATION_JSON).body(new UserRequest("Outro nome", " OUTRO@example.com ", "Password123!"))
                 .retrieve().toBodilessEntity()).isInstanceOf(HttpClientErrorException.Conflict.class);
         assertThat(users.findByUuid(auth.getUser().getUuid()).orElseThrow().getEmail()).isEqualTo("livia@example.com");
         assertThat(users.findByUuid(auth.getUser().getUuid()).orElseThrow().getName()).isEqualTo("Usuário de teste");

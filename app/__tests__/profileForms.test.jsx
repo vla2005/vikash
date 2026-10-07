@@ -57,9 +57,35 @@ test('nome e email inválidos impedem callback; futuro callback recebe só name 
   expect(error('Nome completo')).toBeTruthy(); expect(error('E-mail')).toBeTruthy();
   expect(save).not.toHaveBeenCalled();
   await change('Nome completo', '  Lívia Matos  '); await change('E-mail', '  livia@example.com  ');
+  await change('Senha atual', ' Senha123! ');
   await act(async () => button('Salvar alterações').props.onPress());
-  expect(save).toHaveBeenCalledWith({ name: 'Lívia Matos', email: 'livia@example.com' });
+  expect(save).toHaveBeenCalledWith({ name: 'Lívia Matos', email: 'livia@example.com', password: ' Senha123! ' });
   expect(back).toHaveBeenCalledTimes(1);
+});
+
+test('perfil desatualizado revela o campo de senha quando a API pede confirmação', async () => {
+  const save = jest.fn().mockRejectedValueOnce(new ApiError('Confirme a senha', 400, { password: 'Confirme sua senha atual.' })).mockResolvedValueOnce({});
+  await render(<EditProfileScreen profile={{ name: 'Lívia', email: 'livia@example.com' }} onSave={save} onBack={jest.fn()} />);
+  await change('Nome completo', 'Lívia Silva');
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(error('Senha atual')).toBe('Confirme sua senha atual.');
+  await change('Senha atual', 'Password123!');
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(save).toHaveBeenLastCalledWith({ name: 'Lívia Silva', email: 'livia@example.com', password: 'Password123!' });
+});
+
+test('trocar email exige senha e erro da API aparece abaixo do campo', async () => {
+  const save = jest.fn().mockRejectedValue(new ApiError('Senha incorreta', 400, { password: 'Confirme sua senha atual.' }));
+  await render(<EditProfileScreen profile={{ name: 'Lívia', email: 'livia@example.com' }} onSave={save} onBack={jest.fn()} />);
+  expect(input('Senha atual')).toBeUndefined();
+  await change('E-mail', 'novo@example.com');
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(error('Senha atual')).toBeTruthy();
+  expect(save).not.toHaveBeenCalled();
+  await change('Senha atual', ' Password123! ');
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(save).toHaveBeenCalledWith({ name: 'Lívia', email: 'novo@example.com', password: ' Password123! ' });
+  expect(error('Senha atual')).toBe('Confirme sua senha atual.');
 });
 
 test('senhas começam vazias, podem ser mostradas e salvar não faz requisição enquanto integração não existe', async () => {
@@ -177,6 +203,7 @@ test('email duplicado aparece abaixo do input, preserva valores e permite tentar
   expect(back).not.toHaveBeenCalled();
   expect(useToast().showToast).toHaveBeenLastCalledWith({ type: 'error', message: 'Não foi possível atualizar seu perfil. Tente novamente.' });
   await change('E-mail', 'livia.novo@example.com');
+  await change('Senha atual', 'Senha123!');
   global.fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ name: 'Lívia', email: 'livia.novo@example.com' }) });
   await act(async () => button('Salvar alterações').props.onPress());
   expect(back).toHaveBeenCalledTimes(1);
