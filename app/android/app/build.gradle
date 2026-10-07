@@ -72,6 +72,14 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+apply from: 'release-signing-policy.gradle'
+def releaseCredentials = [
+    storeFile: System.getenv('VIKASH_RELEASE_STORE_FILE') ? file(System.getenv('VIKASH_RELEASE_STORE_FILE')) : null,
+    storePassword: System.getenv('VIKASH_RELEASE_STORE_PASSWORD'),
+    keyAlias: System.getenv('VIKASH_RELEASE_KEY_ALIAS'),
+    keyPassword: System.getenv('VIKASH_RELEASE_KEY_PASSWORD')
+]
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -92,18 +100,35 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            storeFile releaseCredentials.storeFile
+            storePassword releaseCredentials.storePassword
+            keyAlias releaseCredentials.keyAlias
+            keyPassword releaseCredentials.keyPassword
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// Falha antes de executar qualquer tarefa de release se as credenciais forem inseguras/incompletas.
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.project == project && it.name.toLowerCase(java.util.Locale.ROOT).contains('release') }) {
+        if (project.properties.keySet().any { it.toString().startsWith('android.injected.signing.') }) {
+            throw new GradleException('Use VIKASH_RELEASE_* para assinar release; android.injected.signing.* não é permitido.')
+        }
+        if (gradle.startParameter.configurationCacheRequested) {
+            throw new GradleException('Execute a build de release com --no-configuration-cache para validar a assinatura em cada execução.')
+        }
+        validateReleaseSigning(releaseCredentials, file('debug.keystore'))
     }
 }
 

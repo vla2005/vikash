@@ -33,6 +33,14 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+release-signing.properties
+*.apk
+*.aab
 .kotlin/
 
 # node.js
