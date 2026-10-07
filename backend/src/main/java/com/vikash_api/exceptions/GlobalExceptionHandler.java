@@ -155,7 +155,7 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
-                "An unexpected internal error occurred: " + ex.getMessage(),
+                "Não foi possível concluir a solicitação. Tente novamente mais tarde.",
                 request.getRequestURI(),
                 null
         );
