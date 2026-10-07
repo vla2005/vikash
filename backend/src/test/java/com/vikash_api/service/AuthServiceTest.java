@@ -57,10 +57,23 @@ class AuthServiceTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
+    @Mock
+    private com.vikash_api.services.LoginAttemptService loginAttemptService;
+
     @InjectMocks
     private AuthService authService;
 
     private UserEntity testUser;
+
+    @Test
+    void rateLimitStopsBeforeDatabaseAndPasswordVerification() {
+        var request = new LoginRequest("person@example.com", "wrong");
+        doThrow(new com.vikash_api.exceptions.RequestLimitException("Aguarde", 60))
+                .when(loginAttemptService).check("person@example.com", "127.0.0.1");
+        assertThatThrownBy(() -> authService.login(request, "127.0.0.1"))
+                .isInstanceOf(com.vikash_api.exceptions.RequestLimitException.class);
+        verifyNoInteractions(userRepository, authenticationManager, refreshTokenRepository);
+    }
 
     @BeforeEach
     void setUp() {

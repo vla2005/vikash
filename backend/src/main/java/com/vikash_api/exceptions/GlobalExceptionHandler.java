@@ -25,6 +25,14 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(RequestLimitException.class)
+    public ResponseEntity<ErrorResponse> handleRequestLimit(RequestLimitException ex, HttpServletRequest request) {
+        var response = buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", ex.getMessage(),
+                request.getRequestURI(), null);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", Long.toString(ex.getRetryAfterSeconds())).body(response.getBody());
+    }
+
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException ex, HttpServletRequest request) {
         String message = "Informe o parâmetro " + ex.getParameterName() + ".";

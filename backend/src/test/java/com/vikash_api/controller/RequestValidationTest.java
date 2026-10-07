@@ -183,7 +183,7 @@ class RequestValidationTest {
                 .andExpect(status().isOk());
         mvc.perform(post("/api/auth/logout").header("Authorization", "Bearer access-token"))
                 .andExpect(status().isNoContent());
-        verify(auth).login(any());
+        verify(auth).login(any(), eq("127.0.0.1"));
         verify(auth).logout("access-token");
     }
 

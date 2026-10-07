@@ -39,6 +39,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final LoginAttemptService loginAttemptService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -65,7 +66,13 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
+        return login(request, "internal");
+    }
+
+    @Transactional
+    public AuthResponse login(LoginRequest request, String origin) {
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        loginAttemptService.check(normalizedEmail, origin);
 
         try {
             // Impede um login com a senha antiga de criar uma sessão durante o reset.
