@@ -67,6 +67,17 @@ class AuthIntegrationTest {
     private RestClient restClient;
 
     @Test
+    void logoutWithoutAuthenticationCannotRevokeTheRefreshTokenInItsBody() {
+        AuthResponse auth = register("logout-auth-required@example.com");
+        int status = restClient.post().uri("/logout").contentType(MediaType.APPLICATION_JSON)
+                .body(new RefreshTokenRequest(auth.getRefreshToken()))
+                .exchange((request, response) -> response.getStatusCode().value());
+        assertThat(status).isEqualTo(401);
+        assertThat(meStatus(auth.getAccessToken())).isEqualTo(200);
+        assertThat(refresh(auth.getRefreshToken()).getAccessToken()).isNotBlank();
+    }
+
+    @Test
     void logoutRevokesAccessAndRefreshTokensFromTheSession() {
         AuthResponse auth = restClient.post().uri("/register")
                 .contentType(MediaType.APPLICATION_JSON)

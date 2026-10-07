@@ -27,6 +27,7 @@ class RequestValidationTest {
     private final CreditCardInvoiceService invoices = mock(CreditCardInvoiceService.class);
     private final CreditCardService cards = mock(CreditCardService.class);
     private final CreditCardPurchaseService purchases = mock(CreditCardPurchaseService.class);
+    private final UserService users = mock(UserService.class);
     private LocalValidatorFactoryBean validator;
     private MockMvc mvc;
     private static final String UUID = "b4fbe04a-29d0-49e6-a52a-15ca00cb7bc5";
@@ -37,12 +38,48 @@ class RequestValidationTest {
         validator.afterPropertiesSet();
         mvc = MockMvcBuilders.standaloneSetup(new AuthController(auth), new AccountController(accounts),
                         new CategoryController(categories), new TransactionController(transactions),
-                        new CreditCardInvoiceController(invoices), new CreditCardController(cards), new CreditCardPurchaseController(purchases))
+                        new CreditCardInvoiceController(invoices), new CreditCardController(cards), new CreditCardPurchaseController(purchases), new UserController(users))
                 .setValidator(validator).setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 
     @AfterEach
     void closeValidator() { validator.close(); }
+
+    static Stream<Arguments> invalidPasswordUpdates() {
+        return Stream.of(
+                Arguments.of("old123", "Ab1!", "newPassword"),
+                Arguments.of("old123", "abcdef1!", "newPassword"),
+                Arguments.of("old123", "Abcdefg!", "newPassword"),
+                Arguments.of("old123", "Abcdefg1", "newPassword"),
+                Arguments.of("old123", "Abcdef1 ", "newPassword"),
+                Arguments.of("old123", "Abcdef1á", "newPassword"),
+                Arguments.of("old123", "A".repeat(71) + "1!", "newPassword"),
+                Arguments.of("old123", "Á" + "a".repeat(69) + "1!", "newPassword"),
+                Arguments.of("old123", null, "newPassword"),
+                Arguments.of("old123", "", "newPassword"),
+                Arguments.of("   ", "Abcdef1!", "password")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPasswordUpdates")
+    void rejectsInvalidPasswordUpdatesBeforeCallingService(String password, String newPassword, String field) throws Exception {
+        String newPasswordJson = newPassword == null ? "null" : "\"" + newPassword + "\"";
+        mvc.perform(patch("/api/user/update-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"password\":\"" + password + "\",\"newPassword\":" + newPasswordJson + "}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors." + field).isString());
+        verifyNoInteractions(users);
+    }
+
+    @Test
+    void acceptsStrongNewPasswordsAndDoesNotApplyTheNewPolicyToTheCurrentPassword() throws Exception {
+        for (String newPassword : new String[] { "Abcdef1!", "Ábcdef1!", "A".repeat(70) + "1!" }) {
+            mvc.perform(patch("/api/user/update-password").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"password\":\"old123\",\"newPassword\":\"" + newPassword + "\"}"))
+                    .andExpect(status().isNoContent());
+        }
+        verify(users, times(3)).updatePassword(argThat(request -> request.password().equals("old123")));
+    }
 
     @Test
     void detailsUseUuidQueryParameterAndRejectInvalidOrMissingUuid() throws Exception {
@@ -100,12 +137,24 @@ class RequestValidationTest {
             Arguments.of("POST", "/api/auth/register", "{\"name\":\" A \",\"email\":\"a@example.com\",\"password\":\"secret123\"}", "name"),
             Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"invalid\",\"password\":\"secret123\"}", "email"),
             Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"a@example.com\",\"password\":\"short\"}", "password"),
+            Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"a@example.com\",\"password\":\"abcdef1!\"}", "password"),
+            Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"a@example.com\",\"password\":\"Abcdefg!\"}", "password"),
+            Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"a@example.com\",\"password\":\"Abcdefg1\"}", "password"),
+            Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"a@example.com\",\"password\":\"Abcdef1 \"}", "password"),
+            Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"a@example.com\",\"password\":\"Abcdef1á\"}", "password"),
             Arguments.of("POST", "/api/auth/register", "{\"name\":\"Teste\",\"email\":\"a@example.com\",\"password\":\"" + "é".repeat(37) + "\"}", "password"),
             Arguments.of("POST", "/api/auth/login", "{\"email\":\"a@example.com\",\"password\":\"" + "a".repeat(73) + "\"}", "password"),
             Arguments.of("POST", "/api/auth/login", "{\"email\":\"" + "a".repeat(140) + "@example.com\",\"password\":\"secret123\"}", "email"),
             Arguments.of("POST", "/api/auth/refresh", "{}", "refreshToken"),
             Arguments.of("POST", "/api/auth/refresh", "{\"refreshToken\":\"" + "a".repeat(4097) + "\"}", "refreshToken"),
-            Arguments.of("POST", "/api/auth/logout", "{\"refreshToken\":\"   \"}", "refreshToken")
+            Arguments.of("POST", "/api/auth/logout", "{\"refreshToken\":\"   \"}", "refreshToken"),
+            Arguments.of("PUT", "/api/user/update", "{}", "name"),
+            Arguments.of("PUT", "/api/user/update", "{\"name\":\"   \",\"email\":\"a@example.com\"}", "name"),
+            Arguments.of("PUT", "/api/user/update", "{\"name\":\" A \",\"email\":\"a@example.com\"}", "name"),
+            Arguments.of("PUT", "/api/user/update", "{\"name\":\"" + "a".repeat(101) + "\",\"email\":\"a@example.com\"}", "name"),
+            Arguments.of("PUT", "/api/user/update", "{\"name\":\"Teste\",\"email\":\"invalid\"}", "email"),
+            Arguments.of("PUT", "/api/user/update", "{\"name\":\"Teste\"}", "email"),
+            Arguments.of("PUT", "/api/user/update", "{\"name\":\"Teste\",\"email\":\"" + "a".repeat(140) + "@example.com\"}", "email")
         );
     }
 
@@ -114,7 +163,7 @@ class RequestValidationTest {
     void rejectsInvalidRequestsBeforeCallingServices(String method, String path, String body, String field) throws Exception {
         mvc.perform(request(HttpMethod.valueOf(method), path).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors." + field).isString());
-        verifyNoInteractions(auth, accounts, categories, transactions, invoices);
+        verifyNoInteractions(auth, accounts, categories, transactions, invoices, users);
     }
 
     @Test
@@ -141,7 +190,7 @@ class RequestValidationTest {
     @Test
     void acceptsExactStorageAndTranscriptionLimits() throws Exception {
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"" + "a".repeat(100) + "\",\"email\":\"a@example.com\",\"password\":\"" + "é".repeat(36) + "\"}"))
+                .content("{\"name\":\"" + "a".repeat(100) + "\",\"email\":\"a@example.com\",\"password\":\"É" + "é".repeat(33) + "ab1!\"}"))
                 .andExpect(status().isCreated());
         mvc.perform(post("/api/account/create").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"type\":\"CARTEIRA\",\"description\":\"" + "a".repeat(100) + "\",\"balance\":-9999999999999.99}"))

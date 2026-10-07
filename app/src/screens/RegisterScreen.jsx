@@ -9,6 +9,7 @@ import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
 import { validateRegistration } from '../utils/validation';
+import { PASSWORD_HINT } from '../utils/passwordValidation';
 import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 
 export default function RegisterScreen({ navigation }) {
@@ -48,8 +49,8 @@ export default function RegisterScreen({ navigation }) {
     <View style={styles.form}>
       <FormField label="Nome" placeholder="Como você se chama?" value={values.name} onChangeText={value => change('name', value)} error={errors.name} maxLength={100} autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} testID="register-name" />
       <FormField ref={emailRef} label="E-mail" placeholder="seu@email.com" value={values.email} onChangeText={value => change('email', value)} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} testID="register-email" />
-      <FormField ref={passwordRef} label="Senha" placeholder="Crie uma senha" password value={values.password} onChangeText={value => change('password', value)} error={errors.password} hint="Use pelo menos 8 caracteres." maxLength={100} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => confirmRef.current?.focus()} testID="register-password" />
-      <FormField ref={confirmRef} label="Confirmar senha" placeholder="Repita sua senha" password value={values.confirmPassword} onChangeText={value => change('confirmPassword', value)} error={errors.confirmPassword} maxLength={100} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="done" onSubmitEditing={submit} testID="register-confirm" />
+      <FormField ref={passwordRef} label="Senha" placeholder="Crie uma senha" password value={values.password} onChangeText={value => change('password', value)} error={errors.password} hint={PASSWORD_HINT} maxLength={72} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => confirmRef.current?.focus()} testID="register-password" />
+      <FormField ref={confirmRef} label="Confirmar senha" placeholder="Repita sua senha" password value={values.confirmPassword} onChangeText={value => change('confirmPassword', value)} error={errors.confirmPassword} maxLength={72} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="done" onSubmitEditing={submit} testID="register-confirm" />
     </View>
     <View style={styles.nextStep}><View style={styles.nextIcon}><Icon name="user" color={colors.primary} size={23} /></View><Text style={styles.nextText}>Depois, você adiciona suas contas.</Text></View>
     <InlineNotice message={requestError} error />

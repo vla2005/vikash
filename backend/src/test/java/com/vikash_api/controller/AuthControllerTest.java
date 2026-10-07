@@ -58,7 +58,7 @@ class AuthControllerTest {
         RegisterRequest request = RegisterRequest.builder()
                 .name("Vikash")
                 .email("vikash@example.com")
-                .password("secret123")
+                .password("Secret123!")
                 .build();
 
         AuthResponse authResponse = AuthResponse.builder()

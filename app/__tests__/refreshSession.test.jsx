@@ -59,6 +59,34 @@ test('falha de rede ao sair preserva a sessão para tentar novamente', async () 
   expect(clearSession).not.toHaveBeenCalled();
 });
 
+test('logout conserva a sessão até a API confirmar a revogação e depois limpa o armazenamento', async () => {
+  await render();
+  global.fetch.mockClear();
+  let finish;
+  global.fetch.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  let pending;
+  await act(async () => { pending = state.logout(); });
+  expect(state.session.accessToken).toBe('old-access');
+  expect(clearSession).not.toHaveBeenCalled();
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/logout', expect.objectContaining({
+    method: 'POST', body: JSON.stringify({ refreshToken: 'old-refresh' }),
+    headers: expect.objectContaining({ Authorization: 'Bearer old-access' }),
+  }));
+  await act(async () => { finish(response(null, 204)); await pending; });
+  expect(state.session).toBeNull();
+  expect(clearSession).toHaveBeenCalledTimes(1);
+});
+
+test.each([403, 500])('logout rejeitado pela API (%i) não apaga a sessão', async status => {
+  await render();
+  global.fetch.mockClear();
+  global.fetch.mockResolvedValue(response(null, status));
+  await act(async () => { await expect(state.logout()).rejects.toMatchObject({ status }); });
+  expect(state.session.accessToken).toBe('old-access');
+  expect(clearSession).not.toHaveBeenCalled();
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
 test('401 repete o POST uma vez com token novo e atualiza ambos os headers', async () => {
   await render();
   global.fetch.mockClear();
@@ -157,4 +185,61 @@ test('erro 500 na renovacao preserva os tokens para nova tentativa', async () =>
   await render();
   expect(clearSession).not.toHaveBeenCalled();
   expect(state.restoreError).not.toBe('');
+});
+
+test('atualizar perfil usa PUT e propaga os dados da resposta para a sessão e todas as telas', async () => {
+  await render();
+  const updated = { ...user, name: 'Nome atualizado', email: 'novo@example.com' };
+  global.fetch.mockClear();
+  global.fetch.mockResolvedValue(response(updated));
+  await act(async () => { await state.updateProfile({ name: updated.name, email: updated.email }); });
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/user/update', expect.objectContaining({
+    method: 'PUT', headers: expect.objectContaining({ Authorization: 'Bearer old-access' }),
+  }));
+  expect(state.profile).toEqual(updated);
+  expect(state.session).toMatchObject({ ...saved, user: updated });
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
+test('falha ao atualizar perfil conserva os dados atuais', async () => {
+  await render();
+  global.fetch.mockResolvedValue(response({ fieldErrors: { email: 'E-mail já utilizado.' } }, 409));
+  await act(async () => { await expect(state.updateProfile({ name: 'Outro nome', email: 'novo@example.com' }))
+    .rejects.toMatchObject({ status: 409 }); });
+  expect(state.profile).toEqual(user);
+  expect(state.session.accessToken).toBe(saved.accessToken);
+});
+
+test('atualização de perfil não restaura uma sessão encerrada enquanto a request estava pendente', async () => {
+  await render();
+  let finish;
+  global.fetch.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  let pending;
+  await act(async () => { pending = state.updateProfile({ name: 'Outro nome', email: 'novo@example.com' }).catch(cause => cause); });
+  await act(async () => state.reset());
+  await act(async () => { finish(response({ name: 'Outro nome', email: 'novo@example.com' }));
+    expect(await pending).toMatchObject({ status: 401 }); });
+  expect(state.session).toBeNull();
+  expect(state.profile).toEqual({ name: '' });
+});
+
+test('PATCH de senha renova token expirado, repete o body validado e não guarda as senhas na sessão', async () => {
+  await render();
+  global.fetch.mockClear();
+  global.fetch.mockImplementation(async (url, options) => {
+    if (url.endsWith('/refresh')) { return response(rotated); }
+    return response(null, options.headers.Authorization === 'Bearer old-access' ? 401 : 204);
+  });
+  await act(async () => { await state.changePassword({ password: 'old123', newPassword: 'Nova12345!' }); });
+  const calls = global.fetch.mock.calls.filter(([url]) => url.endsWith('/api/user/update-password'));
+  expect(calls).toHaveLength(2);
+  expect(calls[1][1]).toMatchObject({ method: 'PATCH',
+    body: JSON.stringify({ password: 'old123', newPassword: 'Nova12345!' }),
+    headers: { Authorization: 'Bearer new-access', access_token: 'new-access' },
+  });
+  expect(state.session.refreshToken).toBe('new-refresh');
+  expect(state.profile).toEqual(user);
+  expect(JSON.stringify(storeSession.mock.calls)).not.toContain('Nova12345!');
+  expect(state.session).not.toHaveProperty('password');
+  expect(state.session).not.toHaveProperty('newPassword');
 });

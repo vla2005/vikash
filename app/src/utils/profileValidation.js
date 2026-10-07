@@ -1,3 +1,5 @@
+import { validateNewPassword } from './passwordValidation';
+
 export function validateProfile({ name, email }) {
   const errors = {};
   if (name.trim().length > 100 || name.replace(/\s/g, '').length < 2) {
@@ -11,22 +13,12 @@ export function validateProfile({ name, email }) {
   return errors;
 }
 
-function utf8Size(value) {
-  let size = 0;
-  for (const character of value) {
-    const code = character.codePointAt(0);
-    size += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
-  }
-  return size;
-}
-
 export function validatePasswordChange({ currentPassword, newPassword, confirmPassword }) {
   const errors = {};
   if (!currentPassword.trim()) { errors.currentPassword = 'Informe sua senha atual.'; }
-  if (!newPassword.trim() || newPassword.length < 8) {
-    errors.newPassword = 'Use pelo menos 8 caracteres.';
-  } else if (utf8Size(newPassword) > 72) {
-    errors.newPassword = 'Use até 72 bytes. Acentos podem ocupar mais de um byte.';
+  const passwordError = validateNewPassword(newPassword);
+  if (passwordError) {
+    errors.newPassword = passwordError;
   } else if (newPassword === currentPassword) {
     errors.newPassword = 'Escolha uma senha diferente da atual.';
   }

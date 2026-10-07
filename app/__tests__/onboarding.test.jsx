@@ -3,6 +3,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { TextInput } from 'react-native';
 import { OnboardingProvider, useOnboarding } from '../src/contexts/OnboardingContext';
 import RegisterScreen from '../src/screens/RegisterScreen';
+import FormField from '../src/components/FormField';
 import CreateAccountScreen from '../src/screens/CreateAccountScreen';
 import FinancialInstitutionPicker from '../src/components/FinancialInstitutionPicker';
 import LoginScreen from '../src/screens/LoginScreen';
@@ -46,14 +47,28 @@ async function renderScreen(screen) {
 function input(testID) { return renderer.root.findAllByType(TextInput).find(node => node.props.testID === testID); }
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
 
+test.each(['Ab1!', 'abcdef1!', 'Abcdefg!', 'Abcdefg1'])('cadastro bloqueia %s antes de enviar qualquer request', async password => {
+  await renderScreen(<RegisterScreen navigation={navigation} />);
+  await act(() => {
+    input('register-name').props.onChangeText('Viktor Lucena');
+    input('register-email').props.onChangeText('viktor@exemplo.com');
+    input('register-password').props.onChangeText(password);
+    input('register-confirm').props.onChangeText(password);
+  });
+  await act(() => button('Criar cadastro').props.onPress());
+  expect(renderer.root.findAllByType(FormField).find(field => field.props.testID === 'register-password').props.error).toBeTruthy();
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(navigation.reset).not.toHaveBeenCalled();
+});
+
 test('cadastro valido navega para primeira conta sem guardar a senha', async () => {
   await renderScreen(<RegisterScreen navigation={navigation} />);
-  await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('senha-segura'); input('register-confirm').props.onChangeText('senha-segura'); });
+  await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('Senha123!'); input('register-confirm').props.onChangeText('Senha123!'); });
   await act(() => button('Criar cadastro').props.onPress());
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AddFinancialItem' }] });
   expect(currentState.profile).toEqual(session.user);
   expect(currentState.session.accessToken).toBe('access-test');
-  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/register', expect.objectContaining({ body: JSON.stringify({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }) }));
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/register', expect.objectContaining({ body: JSON.stringify({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'Senha123!' }) }));
   expect(currentState.session.password).toBeUndefined();
   expect(input('register-password').props.value).toBe('');
   expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Cadastro realizado!' }));
@@ -167,7 +182,7 @@ test('erro da API nao vira lista local; tentar novamente recarrega instituicoes'
 test('email duplicado mantem cadastro na tela e nao autentica', async () => {
   global.fetch.mockResolvedValue({ ok: false, status: 409, json: async () => ({ message: 'Email already exists' }) });
   await renderScreen(<RegisterScreen navigation={navigation} />);
-  await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('senha-segura'); input('register-confirm').props.onChangeText('senha-segura'); });
+  await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('Senha123!'); input('register-confirm').props.onChangeText('Senha123!'); });
   await act(() => button('Criar cadastro').props.onPress());
   expect(navigation.reset).not.toHaveBeenCalled();
   expect(currentState.session).toBeNull();
@@ -188,7 +203,7 @@ test('envios repetidos durante cadastro fazem somente uma requisicao', async () 
   let finish;
   global.fetch.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
   await renderScreen(<RegisterScreen navigation={navigation} />);
-  await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('senha-segura'); input('register-confirm').props.onChangeText('senha-segura'); });
+  await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('Senha123!'); input('register-confirm').props.onChangeText('Senha123!'); });
   let pending;
   await act(() => { const submit = button('Criar cadastro').props.onPress; pending = submit(); submit(); });
   expect(global.fetch).toHaveBeenCalledTimes(1);

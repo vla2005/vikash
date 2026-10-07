@@ -45,6 +45,15 @@ test('erro de logout mantém popup com mensagem e permite nova tentativa', async
   expect(renderer.root.findByType(ConfirmationDialog).props.visible).toBe(false);
 });
 
+test('cancelar confirmação de logout fecha popup e não encerra a sessão', async () => {
+  const logout = jest.fn();
+  await act(async () => { renderer = TestRenderer.create(<ProfileScreen profile={{ name: 'Lívia Matos' }} onLogout={logout} />); });
+  await act(async () => button('Sair da conta').props.onPress());
+  await act(async () => renderer.root.findByType(ConfirmationDialog).props.onCancel());
+  expect(renderer.root.findByType(ConfirmationDialog).props.visible).toBe(false);
+  expect(logout).not.toHaveBeenCalled();
+});
+
 test.each([[' Viktor  Lucena ', 'VL'], ['Viktor', 'V'], ['', 'V']])('iniciais de %s', (name, expected) => {
   expect(getProfileInitials(name)).toBe(expected);
 });

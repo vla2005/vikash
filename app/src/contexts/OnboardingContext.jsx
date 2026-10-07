@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { registerUser, loginUser, fetchCurrentUser, refreshSession, logoutUser } from '../services/auth';
 import { ApiError, configureAuth } from '../services/apiClient';
 import { createAccount, fetchAccounts, updateAccount } from '../services/accounts';
+import { updatePassword, updateUser } from '../services/users';
 import { loadSession, storeSession, clearSession } from '../services/sessionStorage';
 
 const OnboardingContext = createContext(null);
@@ -129,6 +130,18 @@ export function OnboardingProvider({ children }) {
     return account;
   }
 
+  async function updateProfile(values) {
+    const version = generation.current;
+    const user = await updateUser(values, sessionRef.current?.accessToken);
+    if (version !== generation.current || !sessionRef.current) {
+      throw new ApiError('A sessão foi encerrada. Entre novamente.', 401);
+    }
+    const updated = { ...sessionRef.current, user };
+    sessionRef.current = updated;
+    setSession(updated); setProfile(user);
+    return user;
+  }
+
   async function logout() {
     const current = sessionRef.current;
     if (current) {
@@ -145,6 +158,6 @@ export function OnboardingProvider({ children }) {
     endSession();
   }
 
-  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, completeSetup: () => setCompleted(true), logout, reset }}>{children}</OnboardingContext.Provider>;
+  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, updateProfile, changePassword: values => updatePassword(values, sessionRef.current?.accessToken), completeSetup: () => setCompleted(true), logout, reset }}>{children}</OnboardingContext.Provider>;
 }
 export const useOnboarding = () => useContext(OnboardingContext);

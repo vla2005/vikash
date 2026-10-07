@@ -28,7 +28,7 @@ jest.mock('../src/hooks/useToast', () => { const showToast = jest.fn(); return {
 import { createCategory, fetchCategories, updateCategory } from '../src/services/categories';
 
 jest.mock('../src/services/categories', () => ({ createCategory: jest.fn(async values => ({ ...values })), fetchCategories: jest.fn(), updateCategory: jest.fn(async () => null) }));
-jest.mock('../src/contexts/OnboardingContext', () => ({ useOnboarding: () => ({ session: { accessToken: 'test-access' }, profile: { name: 'Viktor Lucena' }, accounts: [] }) }));
+jest.mock('../src/contexts/OnboardingContext', () => ({ useOnboarding: () => ({ session: { accessToken: 'test-access' }, profile: { name: 'Viktor Lucena' }, accounts: [], updateProfile: jest.fn(), changePassword: jest.fn() }) }));
 
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }) }));
 jest.mock('react-native-svg', () => {
@@ -99,16 +99,16 @@ test('avatar abre perfil em todas as abas e voltar preserva a tela e o header', 
   expect(fetchCreditCards).toHaveBeenCalledTimes(1);
 });
 
-test('perfil abre os dois formulários sem integração e cancelar retorna ao perfil', async () => {
+test('perfil conecta os dois formulários e cancelar retorna ao perfil', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Abrir meu perfil').props.onPress());
   await act(async () => button('Editar perfil').props.onPress());
   expect(renderer.root.findByType(EditProfileScreen).props.profile.name).toBe('Viktor Lucena');
-  expect(renderer.root.findByType(EditProfileScreen).props.onSave).toBeUndefined();
+  expect(renderer.root.findByType(EditProfileScreen).props.onSave).toEqual(expect.any(Function));
   await act(async () => button('Cancelar').props.onPress());
   expect(labels()).toContain('Meu perfil');
   await act(async () => button('Alterar senha').props.onPress());
-  expect(renderer.root.findByType(ChangePasswordScreen).props.onSave).toBeUndefined();
+  expect(renderer.root.findByType(ChangePasswordScreen).props.onSave).toEqual(expect.any(Function));
   expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
   await act(async () => button('Voltar ao perfil').props.onPress());
   expect(labels()).toContain('Meu perfil');

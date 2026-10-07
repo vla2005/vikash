@@ -16,6 +16,7 @@ export default function EditProfileScreen({ profile, onBack, onSave }) {
     toRequest: values => ({ name: values.name.trim(), email: values.email.trim() }),
     onSave, onSaved: onBack,
     successMessage: 'Perfil atualizado.', unavailableMessage: 'A edição do perfil estará disponível em breve.',
+    errorMessage: 'Não foi possível atualizar seu perfil. Tente novamente.',
   });
   const { values, errors, saving, change, submit } = form;
   return <ProfileFormLayout title="Editar perfil" submitText="Salvar alterações" onSubmit={submit} onBack={onBack} saving={saving} error={form.requestError} notice="Suas alterações serão usadas em todo o app.">

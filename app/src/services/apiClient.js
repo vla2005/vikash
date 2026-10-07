@@ -39,6 +39,10 @@ export function putJson(path, body, accessToken, options = {}) {
   return requestJson('PUT', path, body, accessToken, options);
 }
 
+export function patchJson(path, body, accessToken, options = {}) {
+  return requestJson('PATCH', path, body, accessToken, options);
+}
+
 async function requestJson(method, path, body, accessToken, options) {
   let response;
   try {

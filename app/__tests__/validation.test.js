@@ -14,7 +14,7 @@ describe('Formularios', () => {
     expect(errors.confirmPassword).toBeDefined();
   });
   test('aceita cadastro completo', () => {
-    expect(validateRegistration({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura', confirmPassword: 'senha-segura' })).toEqual({});
+    expect(validateRegistration({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'Senha123!', confirmPassword: 'Senha123!' })).toEqual({});
   });
 });
 describe('Saldo em reais', () => {

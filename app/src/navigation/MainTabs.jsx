@@ -117,9 +117,8 @@ export default function MainTabs() {
   }
   function renderProfile() {
     const backToProfile = () => setProfileForm(null);
-    // Conecte onSave aos services quando os endpoints de perfil e senha existirem.
-    if (profileForm === 'edit') { return <EditProfileScreen profile={onboarding?.profile} onBack={backToProfile} />; }
-    if (profileForm === 'password') { return <ChangePasswordScreen onBack={backToProfile} />; }
+    if (profileForm === 'edit') { return <EditProfileScreen profile={onboarding?.profile} onSave={onboarding?.updateProfile} onBack={backToProfile} />; }
+    if (profileForm === 'password') { return <ChangePasswordScreen onSave={onboarding?.changePassword} onBack={backToProfile} />; }
     return <ProfileScreen profile={onboarding?.profile} onBack={() => setProfileVisible(false)} onLogout={onboarding.logout}
       onEdit={() => setProfileForm('edit')} onPassword={() => setProfileForm('password')}
       onSupport={() => showToast({ type: 'info', message: 'O suporte estará disponível em breve.' })} />;
