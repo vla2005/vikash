@@ -162,7 +162,7 @@ test('form envia PATCH somente após confirmar a nova senha e retorna ao perfil 
     method: 'PATCH', body: JSON.stringify({ password: 'old123', newPassword: 'Nova12345!' }),
   }));
   expect(back).toHaveBeenCalledTimes(1);
-  expect(useToast().showToast).toHaveBeenLastCalledWith({ type: 'success', message: 'Senha alterada.' });
+  expect(useToast().showToast).toHaveBeenLastCalledWith({ type: 'success', message: 'Senha alterada. Entre novamente.' });
 });
 
 test('erros da API para password aparecem na senha atual e mantêm o formulário aberto', async () => {

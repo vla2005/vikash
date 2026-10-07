@@ -68,6 +68,9 @@ public class AuthService {
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         try {
+            // Impede um login com a senha antiga de criar uma sessão durante o reset.
+            userRepository.findByEmailForUpdate(normalizedEmail)
+                    .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(normalizedEmail, request.getPassword()));
 

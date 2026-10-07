@@ -18,7 +18,7 @@ export default function ChangePasswordScreen({ onBack, onSave, onForgotPassword 
     validate: validatePasswordChange,
     toRequest: values => ({ password: values.currentPassword, newPassword: values.newPassword }),
     onSave, onSaved: onBack,
-    successMessage: 'Senha alterada.', unavailableMessage: 'A alteração de senha estará disponível em breve.',
+    successMessage: 'Senha alterada. Entre novamente.', unavailableMessage: 'A alteração de senha estará disponível em breve.',
     errorMessage: 'Não foi possível alterar sua senha. Tente novamente.',
     errorFieldMap: { password: 'currentPassword' },
   });

@@ -8,6 +8,7 @@ import com.vikash_api.exceptions.EmailAlreadyExistsException;
 import com.vikash_api.exceptions.InvalidCredentialsException;
 import com.vikash_api.repositories.UserRepository;
 import com.vikash_api.repositories.PasswordResetTokenRepository;
+import com.vikash_api.repositories.RefreshTokenRepository;
 import jakarta.persistence.EntityManager;
 import com.vikash_api.services.AuthenticatedUserService;
 import com.vikash_api.services.UserService;
@@ -29,6 +30,7 @@ class UserServiceTest {
     @Mock UserRepository userRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock PasswordResetTokenRepository passwordResetTokenRepository;
+    @Mock RefreshTokenRepository refreshTokenRepository;
     @Mock EntityManager entityManager;
     @InjectMocks UserService service;
     UserEntity user;
@@ -124,6 +126,9 @@ class UserServiceTest {
         assertThat(user.getPassword()).isEqualTo("new-hash");
         assertThat(user.getEmail()).isEqualTo("livia@example.com");
         verify(userRepository).save(user);
+        verify(refreshTokenRepository).revokeAllByUser(user);
+        verify(passwordResetTokenRepository).markAllUsedByUser(eq(user), any());
+        verify(entityManager).refresh(user);
     }
 
     @Test
@@ -133,5 +138,6 @@ class UserServiceTest {
         assertThat(user.getPassword()).isEqualTo("stored-hash");
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any());
+        verifyNoInteractions(refreshTokenRepository, passwordResetTokenRepository);
     }
 }

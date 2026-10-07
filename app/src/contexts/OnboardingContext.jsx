@@ -158,6 +158,15 @@ export function OnboardingProvider({ children }) {
     endSession();
   }
 
-  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, updateProfile, changePassword: values => updatePassword(values, sessionRef.current?.accessToken), completeSetup: () => setCompleted(true), logout, reset }}>{children}</OnboardingContext.Provider>;
+  async function changePassword(values) {
+    const version = generation.current;
+    await updatePassword(values, sessionRef.current?.accessToken);
+    if (version !== generation.current) {
+      throw new ApiError('A sessão foi encerrada. Entre novamente.', 401);
+    }
+    reset();
+  }
+
+  return <OnboardingContext.Provider value={{ profile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, updateProfile, changePassword, completeSetup: () => setCompleted(true), logout, reset }}>{children}</OnboardingContext.Provider>;
 }
 export const useOnboarding = () => useContext(OnboardingContext);

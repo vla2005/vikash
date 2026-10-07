@@ -130,6 +130,7 @@ class AuthServiceTest {
                 .build();
 
         Authentication auth = mock(Authentication.class);
+        when(userRepository.findByEmailForUpdate("vikash@example.com")).thenReturn(Optional.of(testUser));
         when(auth.getPrincipal()).thenReturn(testUser);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
         when(jwtService.generateAccessToken(eq(testUser), anyString())).thenReturn("access_token_123");
@@ -154,6 +155,7 @@ class AuthServiceTest {
                 .build();
 
         when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("Bad credentials"));
+        when(userRepository.findByEmailForUpdate("vikash@example.com")).thenReturn(Optional.of(testUser));
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(BadCredentialsException.class)

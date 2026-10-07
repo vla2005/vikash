@@ -237,9 +237,28 @@ test('PATCH de senha renova token expirado, repete o body validado e não guarda
     body: JSON.stringify({ password: 'old123', newPassword: 'Nova12345!' }),
     headers: { Authorization: 'Bearer new-access', access_token: 'new-access' },
   });
-  expect(state.session.refreshToken).toBe('new-refresh');
-  expect(state.profile).toEqual(user);
+  expect(state.session).toBeNull();
+  expect(state.profile).toEqual({ name: '' });
+  expect(clearSession).toHaveBeenCalled();
   expect(JSON.stringify(storeSession.mock.calls)).not.toContain('Nova12345!');
-  expect(state.session).not.toHaveProperty('password');
-  expect(state.session).not.toHaveProperty('newPassword');
+});
+
+test('senha incorreta conserva a sessão e uma resposta antiga não encerra um novo login', async () => {
+  await render();
+  global.fetch.mockResolvedValue(response({ fieldErrors: { password: 'Senha incorreta' } }, 400));
+  await act(async () => { await expect(state.changePassword({ password: 'wrong', newPassword: 'Nova12345!' })).rejects.toMatchObject({ status: 400 }); });
+  expect(state.session.accessToken).toBe(saved.accessToken);
+  let finish;
+  global.fetch.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  let pending;
+  await act(async () => { pending = state.changePassword({ password: 'old123', newPassword: 'Nova12345!' }).catch(cause => cause); });
+  await act(async () => state.reset());
+  const nextLogin = { ...rotated, accessToken: 'other-access', refreshToken: 'other-refresh' };
+  global.fetch.mockImplementation(async url => url.endsWith('/login') ? response(nextLogin) : response(user));
+  await act(async () => state.login({ email: user.email, password: 'Outra12345!' }));
+  const clearedBeforeResponse = clearSession.mock.calls.length;
+  await act(async () => { finish(response(null, 204)); expect(await pending).toMatchObject({ status: 401 }); });
+  expect(state.session.accessToken).toBe('other-access');
+  expect(storeSession).toHaveBeenLastCalledWith(expect.objectContaining(nextLogin));
+  expect(clearSession).toHaveBeenCalledTimes(clearedBeforeResponse);
 });

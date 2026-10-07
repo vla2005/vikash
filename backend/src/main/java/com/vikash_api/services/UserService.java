@@ -15,6 +15,7 @@ import com.vikash_api.exceptions.EmailAlreadyExistsException;
 import com.vikash_api.exceptions.InvalidCredentialsException;
 import com.vikash_api.repositories.UserRepository;
 import com.vikash_api.repositories.PasswordResetTokenRepository;
+import com.vikash_api.repositories.RefreshTokenRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class UserService {
     private final AuthenticatedUserService authenticatedUserService;
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final EntityManager entityManager;
 
     @Transactional
@@ -57,13 +59,15 @@ public class UserService {
 
     @Transactional
     public void updatePassword(UpdatePasswordRequest request){
-        UserEntity currentUser = authenticatedUserService.getCurrentUser();
+        UserEntity currentUser = getCurrentUserForUpdate();
         if (!passwordEncoder.matches(request.password(), currentUser.getPassword())) {
             throw new InvalidCredentialsException("As senhas não coincidem");
         }
 
         currentUser.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(currentUser);
+        passwordResetTokenRepository.markAllUsedByUser(currentUser, Instant.now());
+        refreshTokenRepository.revokeAllByUser(currentUser);
     }
 
     private UserEntity getCurrentUserForUpdate() {
