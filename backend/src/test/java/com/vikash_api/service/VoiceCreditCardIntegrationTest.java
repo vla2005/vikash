@@ -130,6 +130,33 @@ class VoiceCreditCardIntegrationTest {
     }
 
     @Test
+    void voiceRecognizesAndPaysInvoiceCreatedFromInitialBalanceWithoutPurchases() {
+        card.setUnallocatedUsedLimit(new BigDecimal("2200"));
+        creditCardRepository.saveAndFlush(card);
+        var month = java.time.YearMonth.now().minusMonths(1);
+        invoiceService.distributeInitialAmounts(card.getUuid(), new com.vikash_api.dtos.requests.CreditCardInitialInvoicesRequest(
+                List.of(new com.vikash_api.dtos.requests.CreditCardInitialInvoiceRequest(month.toString(),
+                        new BigDecimal("800"), month.atDay(3), month.atDay(10)))));
+        var invoiceUuid = invoiceRepository.findByCreditCardIdAndReferenceMonth(card.getId(), month.toString()).orElseThrow().getUuid();
+        var account = paymentAccount("2000");
+        var date = LocalDateTime.now().minusMinutes(1);
+        String transcription = "Paguei a fatura de 800 do Inter com minha carteira";
+        when(aiAnalysisService.analyze(eq(transcription), any())).thenAnswer(call -> {
+            AiAnalysisContext context = call.getArgument(1);
+            assertThat(context.creditCardInvoices()).anySatisfy(invoice -> assertThat(invoice.uuid()).isEqualTo(invoiceUuid));
+            return new AiAnalysisResponse(null, new BigDecimal("800"), TransactionType.INVOICE_PAYMENT, PaymentMethod.PIX,
+                    date, account.getUuid(), card.getUuid(), null, null, null, 1, List.of(), invoiceUuid);
+        });
+        createFromVoice(new TransactionRequest(transcription));
+        assertThat(transactionRepository.findAll()).singleElement().satisfies(payment ->
+                assertThat(payment.getAmount()).isEqualByComparingTo("800"));
+        assertThat(accountRepository.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("1200");
+        assertThat(creditCardService.getByUuid(card.getUuid()).availableLimit()).isEqualByComparingTo("3600");
+        assertThat(creditCardService.getByUuid(card.getUuid()).unallocatedUsedLimit()).isEqualByComparingTo("1400");
+        assertThat(purchaseRepository.count()).isZero();
+    }
+
+    @Test
     void voicePaysIdentifiedInvoiceUsingAccountAndSpokenDate() {
         var account = paymentAccount("2000");
         var invoiceUuid = payableInvoice();

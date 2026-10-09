@@ -14,6 +14,7 @@ public record InvoiceAmountProjection(
     LocalDate closingDate,
     LocalDate dueDate,
     CreditCardInvoiceStatus status,
+    BigDecimal initialAmount,
     BigDecimal total
 ) {
 }

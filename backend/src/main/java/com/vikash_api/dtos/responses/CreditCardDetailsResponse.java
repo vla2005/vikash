@@ -7,4 +7,5 @@ import java.util.UUID;
 public record CreditCardDetailsResponse(UUID uuid, String description, BigDecimal creditLimit,
         BigDecimal availableLimit, Integer closingDay, Integer dueDay,
         FinancialInstitutionResponse financialInstitution, UUID currentInvoiceUuid,
-        List<CreditCardInvoiceSummaryResponse> invoices) {}
+        List<CreditCardInvoiceSummaryResponse> invoices, BigDecimal usedLimit,
+        BigDecimal unallocatedUsedLimit, BigDecimal initialCommittedAmount, BigDecimal allocatedInitialAmount) {}

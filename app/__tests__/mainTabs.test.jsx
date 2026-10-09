@@ -15,9 +15,9 @@ import TransactionDetailsScreen from '../src/screens/TransactionDetailsScreen';
 import CreditCardPurchaseDetailsScreen from '../src/screens/CreditCardPurchaseDetailsScreen';
 import EditProfileScreen from '../src/screens/EditProfileScreen';
 import ChangePasswordScreen from '../src/screens/ChangePasswordScreen';
-import { createCreditCard, updateCreditCard, fetchCreditCards, fetchCreditCardDetails } from '../src/services/creditCards';
+import { createCreditCard, updateCreditCard, fetchCreditCards, fetchCreditCardDetails, distributeCreditCardInitialInvoices } from '../src/services/creditCards';
 import { fetchFinancialInstitutions } from '../src/services/financialInstitutions';
-jest.mock('../src/services/creditCards', () => ({ createCreditCard: jest.fn(), updateCreditCard: jest.fn(), fetchCreditCards: jest.fn(), fetchCreditCardDetails: jest.fn() }));
+jest.mock('../src/services/creditCards', () => ({ createCreditCard: jest.fn(), updateCreditCard: jest.fn(), fetchCreditCards: jest.fn(), fetchCreditCardDetails: jest.fn(), distributeCreditCardInitialInvoices: jest.fn() }));
 jest.mock('../src/services/financialInstitutions', () => ({ fetchFinancialInstitutions: jest.fn() }));
 import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCreditCardPurchaseDetails } from '../src/services/transactions';
 jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn(), fetchTransactions: jest.fn(async () => ({ rows: [], page: 0, hasNext: false })), fetchTransactionDetails: jest.fn(), fetchCreditCardPurchaseDetails: jest.fn() }));
@@ -40,6 +40,27 @@ jest.mock('../src/hooks/useReducedMotion', () => () => true);
 jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition: () => { throw new Error('Transcrição indisponível neste dispositivo.'); } }));
 
 let renderer;
+
+test('detalhes abrem distribuição e recarregam cartão após PATCH bem sucedido', async () => {
+  const card = { uuid: 'card', description: 'Meu cartão', creditLimit: 5000, availableLimit: 2800,
+    unallocatedUsedLimit: 2200, initialCommittedAmount: 2200, closingDay: 3, dueDay: 10,
+    financialInstitution: { id: 42, name: 'Inter' }, currentInvoiceUuid: null, invoices: [] };
+  fetchCreditCards.mockResolvedValue([card]);
+  fetchCreditCardDetails.mockResolvedValue(card);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  await act(async () => button('Abrir cartão Meu cartão').props.onPress());
+  await act(async () => button('Distribuir valores iniciais nas faturas').props.onPress());
+  expect(button('Continuar depois')).toBeTruthy();
+  await act(async () => button('Adicionar fatura').props.onPress());
+  const field = renderer.root.findAll(node => node.props.testID?.startsWith('initial-amount-') && node.props.onChangeText)[0];
+  await act(async () => field.props.onChangeText('80000'));
+  fetchCreditCardDetails.mockResolvedValue({ ...card, unallocatedUsedLimit: 1400 });
+  await act(async () => button('Salvar distribuição').props.onPress());
+  expect(distributeCreditCardInitialInvoices).toHaveBeenCalledWith('card', [expect.objectContaining({ initialAmount: 800 })], 'test-access');
+  expect(labels()).toContain('Detalhes do cartão');
+  expect(fetchCreditCardDetails).toHaveBeenCalledTimes(3);
+});
 beforeEach(() => {
   fetchDashboard.mockReset();
   fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 4200, expenses: 2200 });
@@ -48,6 +69,7 @@ beforeEach(() => {
   fetchTransactionDetails.mockReset();
   fetchCreditCardPurchaseDetails.mockReset();
   createCreditCard.mockReset();
+  distributeCreditCardInitialInvoices.mockReset();
   updateCreditCard.mockReset();
   fetchCreditCards.mockReset();
   fetchCreditCards.mockResolvedValue([]);
@@ -276,7 +298,7 @@ test('cartao valida dias, envia ID real e preserva dados na falha antes de volta
     await act(async () => input('Vencimento').props.onChangeText('31'));
     createCreditCard.mockRejectedValueOnce(new Error('Falha de conexão'));
     await act(async () => button('Criar cartão').props.onPress());
-    expect(createCreditCard).toHaveBeenCalledWith({ financialInstitutionId: 42, description: 'Meu cartão Inter', creditLimit: 5000, closingDay: 1, dueDay: 31 }, 'test-access');
+    expect(createCreditCard).toHaveBeenCalledWith({ financialInstitutionId: 42, description: 'Meu cartão Inter', creditLimit: 5000, availableLimit: 5000, closingDay: 1, dueDay: 31 }, 'test-access');
     expect(labels()).toContain('Falha de conexão');
     expect(input('Descrição').props.value).toBe('Meu cartão Inter');
     expect(requests).not.toHaveBeenCalled();

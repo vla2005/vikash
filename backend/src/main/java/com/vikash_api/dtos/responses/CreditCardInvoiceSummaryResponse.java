@@ -12,6 +12,7 @@ public record CreditCardInvoiceSummaryResponse(
     BigDecimal total,
     LocalDate closingDate,
     LocalDate dueDate,
-    CreditCardInvoiceStatus status
+    CreditCardInvoiceStatus status,
+    BigDecimal initialAmount
 ) {
 }

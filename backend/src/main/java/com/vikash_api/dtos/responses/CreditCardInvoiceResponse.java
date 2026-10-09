@@ -1,5 +1,6 @@
 package com.vikash_api.dtos.responses;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,6 +16,8 @@ public record CreditCardInvoiceResponse(
     LocalDate dueDate,
     CreditCardInvoiceStatus status,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    BigDecimal initialAmount,
+    BigDecimal total
 ) {
 }

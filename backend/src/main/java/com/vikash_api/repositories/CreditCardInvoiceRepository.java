@@ -30,17 +30,32 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
     @Query("""
         SELECT new com.vikash_api.repositories.projections.InvoiceAmountProjection(
             card.id, invoice.uuid, invoice.referenceMonth, invoice.closingDate, invoice.dueDate,
-            invoice.status, COALESCE(SUM(t.amount), 0)
+            invoice.status, invoice.initialAmount, invoice.initialAmount + COALESCE(SUM(t.amount), 0)
         )
         FROM CreditCardInvoiceEntity invoice
         JOIN invoice.creditCard card
         LEFT JOIN CreditCardInstallmentEntity t ON t.creditCardInvoice = invoice
         WHERE card.user.id = :userId AND card.uuid = :cardUuid
         GROUP BY card.id, invoice.id, invoice.uuid, invoice.referenceMonth,
-            invoice.closingDate, invoice.dueDate, invoice.status
+            invoice.closingDate, invoice.dueDate, invoice.status, invoice.initialAmount
         ORDER BY invoice.dueDate DESC, invoice.id DESC
     """)
     List<InvoiceAmountProjection> findAmountsByCardUuidAndUserId(@Param("cardUuid") UUID cardUuid, @Param("userId") Long userId);
+
+    @Query("""
+        SELECT new com.vikash_api.repositories.projections.InvoiceAmountProjection(
+            card.id, invoice.uuid, invoice.referenceMonth, invoice.closingDate, invoice.dueDate,
+            invoice.status, invoice.initialAmount, invoice.initialAmount + COALESCE(SUM(t.amount), 0)
+        )
+        FROM CreditCardInvoiceEntity invoice
+        JOIN invoice.creditCard card
+        LEFT JOIN CreditCardInstallmentEntity t ON t.creditCardInvoice = invoice
+        WHERE card.user.id = :userId
+        GROUP BY card.id, invoice.id, invoice.uuid, invoice.referenceMonth,
+            invoice.closingDate, invoice.dueDate, invoice.status, invoice.initialAmount
+        ORDER BY invoice.dueDate DESC, invoice.id DESC
+    """)
+    List<InvoiceAmountProjection> findAmountsByUserId(@Param("userId") Long userId);
 
     @EntityGraph(attributePaths = "creditCard")
     List<CreditCardInvoiceEntity> findByCreditCardUserIdOrderByDueDateDescIdDesc(Long userId);
@@ -59,7 +74,7 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
     @Query("""
         SELECT new com.vikash_api.repositories.projections.InvoiceAmountProjection(
             card.id, invoice.uuid, invoice.referenceMonth, invoice.closingDate, invoice.dueDate,
-            invoice.status, COALESCE(SUM(t.amount), 0)
+            invoice.status, invoice.initialAmount, invoice.initialAmount + COALESCE(SUM(t.amount), 0)
         )
         FROM CreditCardInvoiceEntity invoice
         JOIN invoice.creditCard card
@@ -67,7 +82,7 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
         WHERE card.user.id = :userId AND card.active = true
             AND invoice.status <> com.vikash_api.enums.CreditCardInvoiceStatus.PAID
         GROUP BY card.id, invoice.id, invoice.uuid, invoice.referenceMonth,
-            invoice.closingDate, invoice.dueDate, invoice.status
+            invoice.closingDate, invoice.dueDate, invoice.status, invoice.initialAmount
         ORDER BY invoice.dueDate ASC, invoice.id ASC
     """)
     List<InvoiceAmountProjection> findUnpaidAmountsByUserId(@Param("userId") Long userId);

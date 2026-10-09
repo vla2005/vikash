@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
 import { colors, fontFamily, typography } from '../theme';
 
-export default function SelectionField({ label, value, options, onChange, placeholder = 'Selecione', searchable = false, error, hint, renderLeading, renderOption, numColumns = 1 }) {
+export default function SelectionField({ label, value, options, onChange, placeholder = 'Selecione', searchable = false, error, hint, renderLeading, renderOption, numColumns = 1, disabled = false }) {
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
@@ -14,7 +14,7 @@ export default function SelectionField({ label, value, options, onChange, placeh
   const filtered = options.filter(option => normalize(option.label).includes(normalize(query.trim())));
   return <View style={styles.field}>
     <Text style={typography.label}>{label}</Text>
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ expanded: visible }} aria-expanded={visible} onPress={() => { Keyboard.dismiss(); setQuery(''); setVisible(true); }} style={[styles.trigger, error && styles.invalid]}>{selected && renderLeading?.(selected)}<Text style={[styles.value, !selected && styles.placeholder]} numberOfLines={1}>{selected?.label || placeholder}</Text><Icon name="chevronDown" color={colors.secondary} size={20} /></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} accessibilityState={{ expanded: visible, disabled }} aria-expanded={visible} onPress={() => { Keyboard.dismiss(); setQuery(''); setVisible(true); }} style={[styles.trigger, error && styles.invalid]}>{selected && renderLeading?.(selected)}<Text style={[styles.value, !selected && styles.placeholder]} numberOfLines={1}>{selected?.label || placeholder}</Text><Icon name="chevronDown" color={colors.secondary} size={20} /></Pressable>
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : hint && <Text style={styles.hint}>{hint}</Text>}
     <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
       <View style={styles.overlay}><Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Fechar seleção" onPress={() => setVisible(false)} />

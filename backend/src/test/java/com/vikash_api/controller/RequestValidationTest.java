@@ -38,12 +38,65 @@ class RequestValidationTest {
         validator.afterPropertiesSet();
         mvc = MockMvcBuilders.standaloneSetup(new AuthController(auth), new AccountController(accounts),
                         new CategoryController(categories), new TransactionController(transactions),
-                        new CreditCardInvoiceController(invoices), new CreditCardController(cards), new CreditCardPurchaseController(purchases), new UserController(users))
+                        new CreditCardInvoiceController(invoices), new CreditCardController(cards, invoices), new CreditCardPurchaseController(purchases), new UserController(users))
                 .setValidator(validator).setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 
     @AfterEach
     void closeValidator() { validator.close(); }
+
+    @Test
+    void createsCardWithAvailableLimitAndDistributesInvoicesWithEmptyResponses() throws Exception {
+        mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content("""
+                {"financialInstitutionId":1,"description":"Meu cartão","creditLimit":5000,
+                 "closingDay":3,"dueDay":10,"availableLimit":0}
+                """))
+                .andExpect(status().isCreated()).andExpect(content().string(""));
+        verify(cards).create(argThat(request -> request.availableLimit().signum() == 0));
+        mvc.perform(patch("/api/credit-card/" + UUID + "/initial-invoices")
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"invoices":[{"referenceMonth":" 2026-10 ","initialAmount":800,
+                  "closingDate":"2026-10-03","dueDate":"2026-10-10"}]}
+                """))
+                .andExpect(status().isNoContent()).andExpect(content().string(""));
+        verify(invoices).distributeInitialAmounts(eq(java.util.UUID.fromString(UUID)),
+                argThat(request -> request.invoices().getFirst().referenceMonth().equals("2026-10")));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"-1", "0.001", "10000000000000"})
+    void rejectsInvalidAvailableLimitBeforeCallingService(String amount) throws Exception {
+        mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content("""
+                {"financialInstitutionId":1,"description":"Meu cartão","creditLimit":5000,
+                 "closingDay":3,"dueDay":10,"availableLimit":%s}
+                """.formatted(amount)))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.availableLimit").isString());
+        verifyNoInteractions(cards);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "{}", "{\"invoices\":[]}", "{\"invoices\":[null]}",
+            "{\"invoices\":[{\"referenceMonth\":\"2026-13\",\"initialAmount\":-1}]}",
+            "{\"invoices\":[{\"referenceMonth\":\"2026-10\",\"initialAmount\":0.001,\"closingDate\":\"2026-10-03\",\"dueDate\":\"2026-10-10\"}]}"
+    })
+    void rejectsInvalidInitialInvoiceRequestsBeforeCallingService(String body) throws Exception {
+        mvc.perform(patch("/api/credit-card/" + UUID + "/initial-invoices")
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors").isNotEmpty());
+        verifyNoInteractions(invoices);
+    }
+
+    @Test
+    void invalidInitialSetupReturnsFieldErrorInsteadOfInternalError() throws Exception {
+        doThrow(new com.vikash_api.exceptions.InvalidCreditCardSetupException("availableLimit", "Limite inválido."))
+                .when(cards).create(any());
+        mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content("""
+                {"financialInstitutionId":1,"description":"Meu cartão","creditLimit":5000,
+                 "closingDay":3,"dueDay":10,"availableLimit":6000}
+                """))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.availableLimit").value("Limite inválido."));
+    }
 
     @Test
     void recoveryEndpointsReturnEmptyOkResponses() throws Exception {

@@ -51,6 +51,9 @@ public class CreditCardEntity {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal creditLimit;
 
+    @Column(nullable = false, precision = 15, scale = 2, columnDefinition = "numeric(15,2) default 0")
+    private BigDecimal unallocatedUsedLimit = BigDecimal.ZERO;
+
     @Min(value = 1, message = "O dia de fechamento deve estar entre 1 e 31.")
     @Max(value = 31, message = "O dia de fechamento deve estar entre 1 e 31.")
     @Column(nullable = false)

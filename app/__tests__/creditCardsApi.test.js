@@ -1,9 +1,30 @@
-import { createCreditCard, fetchCreditCards, updateCreditCard, payCreditCardInvoice } from '../src/services/creditCards';
+import { createCreditCard, fetchCreditCards, fetchCreditCardDetails, updateCreditCard, payCreditCardInvoice, distributeCreditCardInitialInvoices } from '../src/services/creditCards';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
 beforeEach(() => { global.fetch = jest.fn(); });
 afterEach(() => { global.fetch = originalFetch; });
 const values = { financialInstitutionId: 42, description: ' Meu cartão Inter ', creditLimit: 5000, closingDay: 3, dueDay: 10 };
+
+test('POST inclui disponível zero e PATCH envia só os valores iniciais absolutos com token', async () => {
+  global.fetch.mockResolvedValue({ ok: true, status: 204, json: async () => { throw new SyntaxError('sem corpo'); } });
+  await createCreditCard({ ...values, availableLimit: 0 }, 'token');
+  expect(JSON.parse(global.fetch.mock.calls[0][1].body).availableLimit).toBe(0);
+  const invoice = { uuid: 'ignored', referenceMonth: '2026-10', initialAmount: 800, closingDate: '2026-10-03', dueDate: '2026-10-10' };
+  await expect(distributeCreditCardInitialInvoices('card', [invoice], 'token')).resolves.toBeNull();
+  expect(global.fetch).toHaveBeenLastCalledWith('http://api.test/api/credit-card/card/initial-invoices', expect.objectContaining({
+    method: 'PATCH', headers: expect.objectContaining({ access_token: 'token', Authorization: 'Bearer token' }),
+    body: JSON.stringify({ invoices: [{ referenceMonth: '2026-10', initialAmount: 800, closingDate: '2026-10-03', dueDate: '2026-10-10' }] }),
+  }));
+  expect(() => distributeCreditCardInitialInvoices('card', [invoice], null)).toThrow('Entre na sua conta');
+});
+
+test('GET normaliza todos os valores iniciais sem perder parcelas ou faturas', async () => {
+  global.fetch.mockResolvedValue({ ok: true, json: async () => ({ uuid: 'card', description: 'Inter', creditLimit: '5000', availableLimit: '2800',
+    usedLimit: '2200', unallocatedUsedLimit: '1400', allocatedInitialAmount: '800', initialCommittedAmount: '2200',
+    invoices: [{ uuid: 'invoice', referenceMonth: '2026-10', initialAmount: '800', total: '900', closingDate: '2026-10-03', dueDate: '2026-10-10', status: 'CLOSED' }] }) });
+  expect(await fetchCreditCardDetails('card', 'token')).toMatchObject({ usedLimit: 2200, unallocatedUsedLimit: 1400,
+    allocatedInitialAmount: 800, initialCommittedAmount: 2200, invoices: [{ initialAmount: 800, total: 900 }] });
+});
 
 test('pagamento envia UUID da conta e token; valor da fatura é calculado no servidor', async () => {
   global.fetch.mockResolvedValue({ ok: true, status: 204, json: async () => { throw new SyntaxError('sem corpo'); } });

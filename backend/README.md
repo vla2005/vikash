@@ -86,3 +86,85 @@ Get-Content -Raw -Encoding utf8 migrations/2026-10-09-add-financial-institutions
 Também é possível abrir o script no HeidiSQL, selecionar o banco `vikash_db` e executá-lo. No servidor de produção, execute o mesmo arquivo na instância de PostgreSQL do Vikash.
 
 O endpoint `/api/institutions` já retorna os novos registros após a execução, sem precisar recompilar a API. As logos WebP estão incluídas no app; a opção genérica usa um ícone vetorial, sem download de imagem.
+
+## Cartões com limite já comprometido
+
+Antes de atualizar uma API que já possui dados, execute `migrations/2026-10-09-credit-card-initial-balances.sql` no banco correspondente. O script adiciona as colunas com valor zero para os registros existentes, preserva os dados e pode ser executado novamente. Ele também cria restrições para impedir valores iniciais negativos no banco.
+
+Com o banco local em execução, use na pasta `backend`:
+
+```powershell
+Get-Content -Raw -Encoding utf8 migrations/2026-10-09-credit-card-initial-balances.sql | docker compose -f compose.yaml -f compose.local.yaml exec -T postgres sh -c 'exec psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1'
+```
+
+No servidor, execute esse arquivo no PostgreSQL da aplicação antes do deploy. Também é possível executá-lo pelo HeidiSQL. As migrações desta pasta são manuais; o Compose não as executa automaticamente.
+
+### Cadastro
+
+`POST /api/credit-card` aceita `availableLimit` além dos campos anteriores:
+
+```json
+{
+  "financialInstitutionId": 1,
+  "description": "Meu cartão",
+  "creditLimit": 5000,
+  "availableLimit": 2800,
+  "closingDay": 3,
+  "dueDay": 10
+}
+```
+
+A resposta continua sendo `201`, sem body. Nesse exemplo, `2200` ficam comprometidos, inicialmente sem distribuição em faturas. O limite disponível pode ser zero, mas não pode ser negativo nem superar o limite total. Se o campo for omitido, todo o limite fica disponível, mantendo a compatibilidade com os cadastros atuais do app.
+
+O cadastro não cria compras, parcelas ou movimentações na conta. A edição normal do cartão, por `PUT /api/credit-card/update/{uuid}`, mantém o valor inicial comprometido.
+
+### Distribuir ou corrigir valores iniciais
+
+Use `PATCH /api/credit-card/{uuid}/initial-invoices`, autenticado como o dono do cartão:
+
+```json
+{
+  "invoices": [
+    {
+      "referenceMonth": "2026-10",
+      "initialAmount": 800,
+      "closingDate": "2026-10-03",
+      "dueDate": "2026-10-10"
+    },
+    {
+      "referenceMonth": "2026-11",
+      "initialAmount": 700,
+      "closingDate": "2026-11-03",
+      "dueDate": "2026-11-10"
+    }
+  ]
+}
+```
+
+A resposta é `204`, sem body. Restam `700` sem distribuição, e o limite disponível continua em `2800`.
+
+`initialAmount` é o valor inicial final desejado para aquele mês, e não um acréscimo. Reenviar o mesmo JSON não duplica a dívida. Para reduzir um valor ou movê-lo para outro mês, envie os novos valores das faturas afetadas no mesmo lote. O valor reduzido volta ao saldo ainda não distribuído. Faturas omitidas permanecem como estão. Definir zero remove apenas o valor inicial, preservando a fatura e suas compras; se não houver fatura naquele mês, zero não cria uma fatura vazia.
+
+Cada lote aceita entre 1 e 120 faturas, sem repetir meses. O vencimento deve ser posterior ao fechamento e pertencer ao mês de referência. Se a fatura já existir, informe suas datas atuais; as compras e parcelas existentes são preservadas. Faturas novas ficam abertas quando o fechamento está no futuro, ou fechadas quando essa data já chegou, considerando `America/Sao_Paulo`. Faturas pagas não podem ter seus valores iniciais alterados. Cartões arquivados não aceitam distribuição.
+
+O lote inteiro é confirmado ou revertido. Distribuições, compras e pagamentos utilizam o bloqueio do cartão para coordenar operações simultâneas. Erros de configuração retornam `400` com `fieldErrors`; cartão inexistente ou de outro usuário retorna `404`.
+
+### Consultas e pagamento
+
+As respostas de cartões, inclusive as do dashboard, acrescentam `usedLimit` e `unallocatedUsedLimit`. Os detalhes em `GET /api/credit-card/{uuid}` também acrescentam:
+
+- `allocatedInitialAmount`: soma dos valores iniciais distribuídos, incluindo faturas já pagas.
+- `initialCommittedAmount`: valor inicial distribuído mais o que ainda falta distribuir. Mantém o histórico inicial mesmo após pagamentos.
+
+As respostas das faturas expõem `initialAmount` separadamente. O `total` soma esse valor às parcelas das compras registradas. O extrato paginado da fatura continua retornando somente as parcelas reais.
+
+O cálculo do limite é:
+
+```text
+limite utilizado = valores totais das faturas não pagas + valor ainda não distribuído
+limite disponível = limite total - limite utilizado
+```
+
+O pagamento integral, pelo endpoint existente ou por comando de voz, usa o total completo da fatura. Uma fatura composta apenas pelo valor inicial também pode ser paga depois do fechamento. Pagar a fatura de `800` do exemplo reduz o saldo da conta em `800` e aumenta o limite disponível para `3600`, sem mexer nos `700` ainda não distribuídos.
+
+Os valores iniciais não entram no gráfico de gastos por categoria, pois não representam compras categorizadas registradas no app. O pagamento gera uma única movimentação do tipo `INVOICE_PAYMENT` na conta. Compras novas continuam criando suas parcelas normalmente e consumindo limite adicional.

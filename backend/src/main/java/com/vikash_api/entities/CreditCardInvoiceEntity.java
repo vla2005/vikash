@@ -1,5 +1,6 @@
 package com.vikash_api.entities;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -47,6 +48,9 @@ public class CreditCardInvoiceEntity {
     @Pattern(regexp = "[0-9]{4}-(0[1-9]|1[0-2])", message = "O mês de referência deve estar no formato AAAA-MM.")
     @Column(nullable = false, name = "reference_month", length = 7)
     private String referenceMonth;
+
+    @Column(nullable = false, precision = 15, scale = 2, columnDefinition = "numeric(15,2) default 0")
+    private BigDecimal initialAmount = BigDecimal.ZERO;
 
     @Column(nullable = false)
     private LocalDate closingDate;

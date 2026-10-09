@@ -1,4 +1,18 @@
-import { ApiError, authenticatedFetch, postJson, putJson } from './apiClient';
+import { ApiError, authenticatedFetch, patchJson, postJson, putJson } from './apiClient';
+
+function initialAmount(value) {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount) || amount < 0) { throw new Error('A API retornou o valor inicial do cartão em formato inesperado.'); }
+  return amount;
+}
+
+export function distributeCreditCardInitialInvoices(uuid, invoices, accessToken) {
+  if (!accessToken) { throw new Error('Entre na sua conta antes de distribuir as faturas.'); }
+  return patchJson(`/api/credit-card/${encodeURIComponent(uuid)}/initial-invoices`, {
+    invoices: invoices.map(invoice => ({ referenceMonth: invoice.referenceMonth, initialAmount: invoice.initialAmount,
+      closingDate: invoice.closingDate, dueDate: invoice.dueDate })),
+  }, accessToken, { headers: { access_token: accessToken } });
+}
 
 export function payCreditCardInvoice(uuid, values, accessToken) {
   if (!accessToken) { throw new Error('Entre na sua conta antes de pagar uma fatura.'); }
@@ -21,8 +35,13 @@ export async function fetchCreditCardDetails(uuid, accessToken, signal) {
         || !/^\d{4}-\d{2}-\d{2}$/.test(invoice.dueDate) || !['OPEN', 'CLOSED', 'PAID'].includes(invoice.status))) {
     throw new Error('A API retornou os detalhes do cartão em formato inesperado.');
   }
+  const invoices = card.invoices.map(invoice => ({ ...invoice, total: Number(invoice.total), initialAmount: initialAmount(invoice.initialAmount) }));
+  const unallocatedUsedLimit = initialAmount(card.unallocatedUsedLimit);
+  const allocatedInitialAmount = initialAmount(card.allocatedInitialAmount ?? invoices.reduce((sum, invoice) => sum + invoice.initialAmount, 0));
   return { ...card, creditLimit: Number(card.creditLimit), availableLimit: Number(card.availableLimit),
-    invoices: card.invoices.map(invoice => ({ ...invoice, total: Number(invoice.total) })) };
+    usedLimit: Number(card.usedLimit ?? Number(card.creditLimit) - Number(card.availableLimit)),
+    unallocatedUsedLimit, allocatedInitialAmount,
+    initialCommittedAmount: initialAmount(card.initialCommittedAmount ?? allocatedInitialAmount + unallocatedUsedLimit), invoices };
 }
 
 export async function fetchCreditCards(accessToken, signal) {
@@ -43,7 +62,10 @@ export function normalizeCreditCards(cards) {
           || !/^\d{4}-\d{2}-\d{2}$/.test(invoice.dueDate) || !/^\d{4}-\d{2}-\d{2}$/.test(invoice.closingDate)))) {
       throw new Error('A API retornou os dados do cartão em formato inesperado.');
     }
-    return { ...card, creditLimit: Number(card.creditLimit), availableLimit: Number(card.availableLimit), currentInvoice: invoice ? { ...invoice, total: Number(invoice.total) } : null };
+    return { ...card, creditLimit: Number(card.creditLimit), availableLimit: Number(card.availableLimit),
+      usedLimit: Number(card.usedLimit ?? Number(card.creditLimit) - Number(card.availableLimit)),
+      unallocatedUsedLimit: initialAmount(card.unallocatedUsedLimit),
+      currentInvoice: invoice ? { ...invoice, total: Number(invoice.total), initialAmount: initialAmount(invoice.initialAmount) } : null };
   });
 }
 
@@ -53,6 +75,7 @@ export function createCreditCard(values, accessToken) {
     financialInstitutionId: values.financialInstitutionId,
     description: values.description.trim(),
     creditLimit: values.creditLimit,
+    availableLimit: values.availableLimit,
     closingDay: values.closingDay,
     dueDay: values.dueDay,
   }, accessToken, {

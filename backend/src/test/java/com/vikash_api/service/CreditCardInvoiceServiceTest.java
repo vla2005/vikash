@@ -35,6 +35,7 @@ class CreditCardInvoiceServiceTest {
     @Mock AuthenticatedUserService authenticatedUserService;
     @Mock CreditCardInvoiceRepository creditCardInvoiceRepository;
     @Mock CreditCardRepository creditCardRepository;
+    @Mock com.vikash_api.repositories.CreditCardInstallmentRepository creditCardInstallmentRepository;
     @InjectMocks CreditCardInvoiceService service;
     CreditCardEntity card;
     CreditCardInvoiceEntity invoice;
@@ -65,6 +66,7 @@ class CreditCardInvoiceServiceTest {
             saved.setUuid(invoice.getUuid());
             return saved;
         });
+        when(creditCardInstallmentRepository.sumByInvoiceId(null)).thenReturn(java.math.BigDecimal.ZERO);
         var response = service.create(request());
         assertThat(response.uuid()).isEqualTo(invoice.getUuid());
         assertThat(response.creditCardUuid()).isEqualTo(card.getUuid());
@@ -117,6 +119,7 @@ class CreditCardInvoiceServiceTest {
         when(creditCardInvoiceRepository.findByUuidAndCreditCardUserId(invoice.getUuid(), 7L)).thenReturn(Optional.of(invoice));
         when(creditCardRepository.findOwnedForUpdate(card.getUuid(), 7L)).thenReturn(Optional.of(card));
         when(creditCardInvoiceRepository.saveAndFlush(invoice)).thenReturn(invoice);
+        when(creditCardInstallmentRepository.sumByInvoiceId(null)).thenReturn(java.math.BigDecimal.ZERO);
         assertThat(service.update(invoice.getUuid(), request()).dueDate()).isEqualTo(request().dueDate());
         verify(creditCardInvoiceRepository).existsByCreditCardIdAndReferenceMonthAndUuidNot(10L, "2026-10", invoice.getUuid());
         invoice.setStatus(CreditCardInvoiceStatus.CLOSED);

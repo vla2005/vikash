@@ -1,39 +1,46 @@
 package com.vikash_api.services;
 
 import java.math.BigDecimal;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
-import java.time.LocalDateTime;
-import com.vikash_api.repositories.CreditCardInstallmentRepository;
-import com.vikash_api.repositories.AccountRepository;
-import com.vikash_api.repositories.TransactionRepository;
-import com.vikash_api.dtos.requests.CreditCardInvoicePaymentRequest;
-import com.vikash_api.enums.PaymentMethod;
-import com.vikash_api.enums.TransactionType;
-import com.vikash_api.entities.TransactionEntity;
-
-import java.time.YearMonth;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vikash_api.dtos.requests.CreditCardInitialInvoiceRequest;
+import com.vikash_api.dtos.requests.CreditCardInitialInvoicesRequest;
+import com.vikash_api.dtos.requests.CreditCardInvoicePaymentRequest;
 import com.vikash_api.dtos.requests.CreditCardInvoiceRequest;
 import com.vikash_api.dtos.responses.AllCreditCardInvoicesResponse;
 import com.vikash_api.dtos.responses.CreditCardInvoiceResponse;
 import com.vikash_api.entities.CreditCardEntity;
 import com.vikash_api.entities.CreditCardInvoiceEntity;
+import com.vikash_api.entities.TransactionEntity;
 import com.vikash_api.entities.UserEntity;
 import com.vikash_api.enums.CreditCardInvoiceStatus;
+import com.vikash_api.enums.PaymentMethod;
+import com.vikash_api.enums.TransactionType;
 import com.vikash_api.exceptions.CreditCardInvoiceAlreadyExistsException;
 import com.vikash_api.exceptions.CreditCardInvoiceNotFoundException;
 import com.vikash_api.exceptions.InvalidCreditCardInvoiceException;
+import com.vikash_api.exceptions.InvalidCreditCardSetupException;
+import com.vikash_api.repositories.AccountRepository;
+import com.vikash_api.repositories.CreditCardInstallmentRepository;
 import com.vikash_api.repositories.CreditCardInvoiceRepository;
 import com.vikash_api.repositories.CreditCardRepository;
+import com.vikash_api.repositories.TransactionRepository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -47,6 +54,72 @@ public class CreditCardInvoiceService {
     private final CreditCardInstallmentRepository creditCardInstallmentRepository;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+
+    @Transactional
+    public void distributeInitialAmounts(UUID cardUuid, CreditCardInitialInvoicesRequest request) {
+        var user = authenticatedUserService.getCurrentUser();
+        var card = lockCard(cardUuid, user.getId());
+        entityManager.refresh(card, LockModeType.PESSIMISTIC_WRITE);
+        if (!Boolean.TRUE.equals(card.getActive())) {
+            throw new InvalidCreditCardSetupException("invoices", "Não é possível distribuir valores de um cartão arquivado.");
+        }
+
+        var months = new HashSet<String>();
+        List<CreditCardInvoiceEntity> invoices = new ArrayList<>();
+        BigDecimal difference = BigDecimal.ZERO;
+        for (var item : request.invoices()) {
+            if (!months.add(item.referenceMonth())) {
+                throw new InvalidCreditCardSetupException("invoices", "Informe cada mês de referência apenas uma vez.");
+            }
+            validateInitialInvoice(item);
+            var invoice = creditCardInvoiceRepository.findByCreditCardIdAndReferenceMonth(card.getId(), item.referenceMonth())
+                    .orElse(null);
+            if (invoice != null) {
+                entityManager.refresh(invoice, LockModeType.PESSIMISTIC_WRITE);
+                if (invoice.getStatus() == CreditCardInvoiceStatus.PAID) {
+                    throw new InvalidCreditCardSetupException("invoices", "Não é possível alterar o valor inicial de uma fatura paga.");
+                }
+                if (!invoice.getClosingDate().equals(item.closingDate()) || !invoice.getDueDate().equals(item.dueDate())) {
+                    throw new InvalidCreditCardSetupException("invoices", "As datas devem corresponder às da fatura existente.");
+                }
+            } else {
+                invoice = new CreditCardInvoiceEntity();
+                invoice.setCreditCard(card);
+                invoice.setReferenceMonth(item.referenceMonth());
+                invoice.setClosingDate(item.closingDate());
+                invoice.setDueDate(item.dueDate());
+                invoice.setStatus(item.closingDate().isAfter(LocalDate.now(ZoneId.of("America/Sao_Paulo")))
+                        ? CreditCardInvoiceStatus.OPEN : CreditCardInvoiceStatus.CLOSED);
+            }
+            difference = difference.add(item.initialAmount().subtract(invoice.getInitialAmount()));
+            invoices.add(invoice);
+        }
+
+        // Confere o lote inteiro antes de mudar valores, permitindo mover saldo entre meses.
+        BigDecimal remaining = card.getUnallocatedUsedLimit().subtract(difference);
+        if (remaining.signum() < 0) {
+            throw new InvalidCreditCardSetupException("invoices", "O valor distribuído excede o limite comprometido ainda não distribuído.");
+        }
+        for (int index = 0; index < invoices.size(); index++) {
+            var invoice = invoices.get(index);
+            invoice.setInitialAmount(request.invoices().get(index).initialAmount());
+            if (invoice.getId() != null || invoice.getInitialAmount().signum() > 0) { save(invoice); }
+        }
+        card.setUnallocatedUsedLimit(remaining);
+        creditCardRepository.save(card);
+    }
+
+    private void validateInitialInvoice(CreditCardInitialInvoiceRequest request) {
+        if (request.initialAmount().signum() < 0) {
+            throw new InvalidCreditCardSetupException("invoices", "O valor inicial não pode ser negativo.");
+        }
+        if (!request.dueDate().isAfter(request.closingDate())) {
+            throw new InvalidCreditCardSetupException("invoices", "O vencimento deve ser posterior ao fechamento.");
+        }
+        if (!YearMonth.from(request.dueDate()).toString().equals(request.referenceMonth())) {
+            throw new InvalidCreditCardSetupException("invoices", "O mês de referência deve corresponder ao mês do vencimento.");
+        }
+    }
 
     @Transactional
     public void pay(UUID uuid, CreditCardInvoicePaymentRequest request) {
@@ -87,7 +160,7 @@ public class CreditCardInvoiceService {
         if (!Boolean.TRUE.equals(account.getActive())) {
             throw new InvalidCreditCardInvoiceException("Escolha uma conta ativa para pagar a fatura.");
         }
-        var total = creditCardInstallmentRepository.sumByInvoiceId(invoice.getId());
+        var total = invoice.getInitialAmount().add(creditCardInstallmentRepository.sumByInvoiceId(invoice.getId()));
         if (total.signum() <= 0) { throw new InvalidCreditCardInvoiceException("Esta fatura não tem valor a pagar."); }
         if (expectedAmount != null && expectedAmount.compareTo(total) != 0) {
             throw new InvalidCreditCardInvoiceException("O valor informado deve corresponder ao total da fatura. Pagamentos parciais ainda não são suportados.");
@@ -130,7 +203,12 @@ public class CreditCardInvoiceService {
         var invoices = creditCardUuid == null
                 ? creditCardInvoiceRepository.findByCreditCardUserIdOrderByDueDateDescIdDesc(currentUser.getId())
                 : creditCardInvoiceRepository.findByCreditCardUuidAndCreditCardUserIdOrderByDueDateDescIdDesc(creditCardUuid, currentUser.getId());
-        return new AllCreditCardInvoicesResponse(invoices.stream().map(this::toResponse).toList());
+        var amounts = creditCardUuid == null
+                ? creditCardInvoiceRepository.findAmountsByUserId(currentUser.getId())
+                : creditCardInvoiceRepository.findAmountsByCardUuidAndUserId(creditCardUuid, currentUser.getId());
+        var totals = amounts.stream().collect(Collectors.toMap(amount -> amount.uuid(), amount -> amount.total()));
+        return new AllCreditCardInvoicesResponse(invoices.stream()
+                .map(invoice -> toResponse(invoice, totals.getOrDefault(invoice.getUuid(), invoice.getInitialAmount()))).toList());
     }
 
     @Transactional(readOnly = true)
@@ -266,9 +344,13 @@ public class CreditCardInvoiceService {
     }
 
     private CreditCardInvoiceResponse toResponse(CreditCardInvoiceEntity invoice) {
+        return toResponse(invoice, invoice.getInitialAmount().add(creditCardInstallmentRepository.sumByInvoiceId(invoice.getId())));
+    }
+
+    private CreditCardInvoiceResponse toResponse(CreditCardInvoiceEntity invoice, BigDecimal total) {
         CreditCardEntity card = invoice.getCreditCard();
         return new CreditCardInvoiceResponse(invoice.getUuid(), card.getUuid(), card.getDescription(),
                 invoice.getReferenceMonth(), invoice.getClosingDate(), invoice.getDueDate(), invoice.getStatus(),
-                invoice.getCreatedAt(), invoice.getUpdatedAt());
+                invoice.getCreatedAt(), invoice.getUpdatedAt(), invoice.getInitialAmount(), total);
     }
 }

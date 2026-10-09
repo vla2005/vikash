@@ -6,6 +6,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,10 +16,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vikash_api.dtos.requests.CreditCardRequest;
+import com.vikash_api.dtos.requests.CreditCardCreateRequest;
+import com.vikash_api.dtos.requests.CreditCardInitialInvoicesRequest;
 import com.vikash_api.dtos.responses.AllCreditCardsResponse;
 import com.vikash_api.dtos.responses.CreditCardDetailsResponse;
 import com.vikash_api.dtos.responses.TransactionSummaryResponse;
 import com.vikash_api.services.CreditCardService;
+import com.vikash_api.services.CreditCardInvoiceService;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -31,6 +35,14 @@ import lombok.RequiredArgsConstructor;
 public class CreditCardController {
 
     private final CreditCardService creditCardService;
+    private final CreditCardInvoiceService creditCardInvoiceService;
+
+    @PatchMapping("/{uuid}/initial-invoices")
+    public ResponseEntity<Void> distributeInitialAmounts(@PathVariable UUID uuid,
+            @Valid @RequestBody CreditCardInitialInvoicesRequest request) {
+        creditCardInvoiceService.distributeInitialAmounts(uuid, request);
+        return ResponseEntity.noContent().build();
+    }
 
     @PutMapping("/update/{uuid}")
     public ResponseEntity<Void> updateCreditCard(@PathVariable UUID uuid,
@@ -60,7 +72,7 @@ public class CreditCardController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createCreditCard(@Valid @RequestBody CreditCardRequest request) {
+    public ResponseEntity<Void> createCreditCard(@Valid @RequestBody CreditCardCreateRequest request) {
         creditCardService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

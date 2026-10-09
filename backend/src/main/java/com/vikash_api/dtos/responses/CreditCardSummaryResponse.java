@@ -11,6 +11,8 @@ public record CreditCardSummaryResponse(
     Integer closingDay,
     Integer dueDay,
     FinancialInstitutionResponse financialInstitution,
-    CreditCardInvoiceSummaryResponse currentInvoice
+    CreditCardInvoiceSummaryResponse currentInvoice,
+    BigDecimal usedLimit,
+    BigDecimal unallocatedUsedLimit
 ) {
 }
