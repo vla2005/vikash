@@ -10,6 +10,7 @@ import ResetPasswordScreen from '../src/screens/ResetPasswordScreen';
 import useRecoveryLinkWeb from '../src/hooks/useRecoveryLink.web';
 
 jest.mock('../src/hooks/useAppFonts', () => () => true);
+jest.mock('../src/services/nativeSplash', () => ({ hideNativeSplash: jest.fn(() => Promise.resolve()) }));
 jest.mock('../src/components/Skeleton', () => ({ AppSkeleton: () => null }));
 jest.mock('../src/navigation/AppNavigator', () => jest.fn(() => null));
 jest.mock('../src/screens/ForgotPasswordScreen', () => jest.fn(() => null));
