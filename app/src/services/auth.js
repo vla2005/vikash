@@ -1,5 +1,29 @@
 import { ApiError, authenticatedFetch, postJson } from './apiClient';
 import { API_BASE_URL } from '../config/api';
+import { RESET_TOKEN_PATTERN, validateRecoveryEmail } from '../utils/passwordRecovery';
+import { validateNewPassword } from '../utils/passwordValidation';
+
+async function sendRecoveryRequest(path, body) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try { await postJson(path, body, undefined, { signal: controller.signal }); }
+  finally { clearTimeout(timeout); }
+}
+
+export async function requestPasswordReset({ email }) {
+  const errors = validateRecoveryEmail({ email });
+  if (Object.keys(errors).length) { throw new ApiError('Confira o e-mail informado.', 400, errors); }
+  await sendRecoveryRequest('/api/auth/forgot-password', { email: email.trim().toLowerCase() });
+}
+
+export async function resetPassword({ token, newPassword }) {
+  if (!RESET_TOKEN_PATTERN.test(token || '')) {
+    throw new ApiError('Link de recuperação inválido.', 400, { token: 'Solicite um novo link de recuperação.' });
+  }
+  const error = validateNewPassword(newPassword);
+  if (error) { throw new ApiError('Confira sua nova senha.', 400, { newPassword: error }); }
+  await sendRecoveryRequest('/api/auth/reset-password', { token, newPassword });
+}
 
 export async function fetchCurrentUser(accessToken, renew = true) {
   const controller = new AbortController();

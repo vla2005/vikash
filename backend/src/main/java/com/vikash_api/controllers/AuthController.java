@@ -3,6 +3,8 @@ package com.vikash_api.controllers;
 import com.vikash_api.dtos.requests.LoginRequest;
 import com.vikash_api.dtos.requests.RefreshTokenRequest;
 import com.vikash_api.dtos.requests.RegisterRequest;
+import com.vikash_api.dtos.requests.ForgotPasswordRequest;
+import com.vikash_api.dtos.requests.ResetPasswordRequest;
 import com.vikash_api.dtos.responses.AuthResponse;
 import com.vikash_api.dtos.responses.UserResponse;
 import com.vikash_api.entities.UserEntity;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,6 +29,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/forgot-password")
+    @ResponseStatus(HttpStatus.OK)
+    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.requestPasswordReset(request);
+    }
+
+    @PostMapping("/reset-password")
+    @ResponseStatus(HttpStatus.OK)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {

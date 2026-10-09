@@ -45,6 +45,56 @@ class RequestValidationTest {
     @AfterEach
     void closeValidator() { validator.close(); }
 
+    @Test
+    void recoveryEndpointsReturnEmptyOkResponses() throws Exception {
+        mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\" LIVIA@example.com \"}"))
+                .andExpect(status().isOk()).andExpect(content().string(""));
+        verify(auth).requestPasswordReset(argThat(request -> request.email().equals("livia@example.com")));
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + "A".repeat(43) + "\",\"newPassword\":\"NewPassword123!\"}"))
+                .andExpect(status().isOk()).andExpect(content().string(""));
+        verify(auth).resetPassword(any());
+    }
+
+    static Stream<Arguments> invalidRecoveryRequests() {
+        return Stream.of(
+                Arguments.of("/api/auth/forgot-password", "{}", "email"),
+                Arguments.of("/api/auth/forgot-password", "{\"email\":\"invalid\"}", "email"),
+                Arguments.of("/api/auth/forgot-password", "{\"email\":\"" + "a".repeat(151) + "@example.com\"}", "email"),
+                Arguments.of("/api/auth/reset-password", "{}", "token"),
+                Arguments.of("/api/auth/reset-password", "{\"token\":\"invalid\",\"newPassword\":\"NewPassword123!\"}", "token"),
+                Arguments.of("/api/auth/reset-password", "{\"token\":\"" + "!".repeat(43) + "\",\"newPassword\":\"NewPassword123!\"}", "token"),
+                Arguments.of("/api/auth/reset-password", "{\"token\":\"" + "A".repeat(43) + "\",\"newPassword\":\"weak\"}", "newPassword")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidRecoveryRequests")
+    void rejectsInvalidRecoveryRequestsBeforeCallingService(String path, String body, String field) throws Exception {
+        mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors." + field).isString());
+        verifyNoInteractions(auth);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"short1!", "abcdefg1!", "Abcdefgh!", "Abcdefg1", "Abcdef1á"})
+    void resetEnforcesTheSamePasswordPolicyAsRegistration(String password) throws Exception {
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + "A".repeat(43) + "\",\"newPassword\":\"" + password + "\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.newPassword").isString());
+        verifyNoInteractions(auth);
+    }
+
+    @Test
+    void invalidResetLinkReturnsAFriendlyTokenError() throws Exception {
+        doThrow(new com.vikash_api.exceptions.PasswordResetException("Link inválido ou expirado."))
+                .when(auth).resetPassword(any());
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + "A".repeat(43) + "\",\"newPassword\":\"NewPassword123!\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.token").value("Link inválido ou expirado."));
+    }
+
     static Stream<Arguments> invalidPasswordUpdates() {
         return Stream.of(
                 Arguments.of("old123", "Ab1!", "newPassword"),

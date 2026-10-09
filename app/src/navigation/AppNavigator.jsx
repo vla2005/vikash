@@ -3,6 +3,7 @@ import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import CreateAccountScreen from '../screens/CreateAccountScreen';
 import AddFinancialItemScreen from '../screens/AddFinancialItemScreen';
 import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
@@ -24,15 +25,16 @@ function ProtectedAddFinancialItem(props) { return <ProtectedScreen component={A
 function ProtectedCreateCreditCard(props) { return <ProtectedScreen component={CreateCreditCardScreen} active={useIsFocused()} {...props} />; }
 function ProtectedAccounts(props) { return <ProtectedScreen component={AccountsSummaryScreen} active={useIsFocused()} {...props} />; }
 
-export default function AppNavigator() {
+export default function AppNavigator({ initialRouteName = 'Home' }) {
   const { ready, restoreError, retryRestore } = useOnboarding();
   if (!ready) { return <AppSkeleton />; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   return <NavigationContainer theme={theme}>
-    <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'slide_from_right' }}>
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'slide_from_right' }}>
       <Stack.Screen name="Home" component={ProtectedHome} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="CreateAccount" component={ProtectedCreateAccount} />
       <Stack.Screen name="AddFinancialItem" component={ProtectedAddFinancialItem} />
       <Stack.Screen name="CreateCreditCard" component={ProtectedCreateCreditCard} />

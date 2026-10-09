@@ -28,6 +28,16 @@ const originalFetch = global.fetch;
 const navigation = { reset: jest.fn(), navigate: jest.fn(), goBack: jest.fn() };
 const session = { accessToken: 'access-test', refreshToken: 'refresh-test', user: { name: 'Viktor Lucena', email: 'viktor@exemplo.com' } };
 function response(data) { return { ok: true, json: async () => data }; }
+
+test('esqueci minha senha abre a tela de recuperação com o e-mail informado', async () => {
+  await renderScreen(<LoginScreen navigation={navigation} />);
+  const emailInput = renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === 'E-mail');
+  await act(async () => emailInput.props.onChangeText('livia@example.com'));
+  const forgot = renderer.root.findAll(node => node.props.onPress && node.props.children?.props?.children === 'Esqueci minha senha')[0];
+  await act(async () => forgot.props.onPress());
+  expect(navigation.navigate).toHaveBeenCalledWith('ForgotPassword', { email: 'livia@example.com' });
+  expect(global.fetch).not.toHaveBeenCalled();
+});
 function apiFetch(url, options) {
   if (url.endsWith('/auth/me')) { return Promise.resolve(response(session.user)); }
   if (url.includes('/auth/')) { return Promise.resolve(response(session)); }

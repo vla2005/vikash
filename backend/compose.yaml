@@ -50,6 +50,15 @@ services:
       AI_GLOBAL_CONCURRENT: ${AI_GLOBAL_CONCURRENT:-4}
       AI_MAX_INPUT_BYTES: ${AI_MAX_INPUT_BYTES:-100000}
       AI_MAX_OUTPUT_TOKENS: ${AI_MAX_OUTPUT_TOKENS:-2048}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@vikash.local}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS_ENABLE:-true}
+      SMTP_SSL_ENABLE: ${SMTP_SSL_ENABLE:-false}
+      PASSWORD_RESET_URL: ${PASSWORD_RESET_URL:-http://localhost:5173/reset-password}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vikash_db
       SPRING_PROFILES_ACTIVE: docker
     ports:

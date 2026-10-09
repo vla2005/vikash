@@ -3,16 +3,22 @@ package com.vikash_api.services;
 import com.vikash_api.dtos.requests.LoginRequest;
 import com.vikash_api.dtos.requests.RefreshTokenRequest;
 import com.vikash_api.dtos.requests.RegisterRequest;
+import com.vikash_api.dtos.requests.ForgotPasswordRequest;
+import com.vikash_api.dtos.requests.ResetPasswordRequest;
 import com.vikash_api.dtos.responses.AuthResponse;
 import com.vikash_api.dtos.responses.UserResponse;
 import com.vikash_api.entities.RefreshTokenEntity;
 import com.vikash_api.entities.UserEntity;
+import com.vikash_api.entities.PasswordResetTokenEntity;
 import com.vikash_api.enums.Role;
 import com.vikash_api.exceptions.EmailAlreadyExistsException;
 import com.vikash_api.exceptions.InvalidTokenException;
 import com.vikash_api.exceptions.TokenCompromisedException;
+import com.vikash_api.exceptions.PasswordResetException;
+import com.vikash_api.exceptions.EmailDeliveryException;
 import com.vikash_api.repositories.RefreshTokenRepository;
 import com.vikash_api.repositories.UserRepository;
+import com.vikash_api.repositories.PasswordResetTokenRepository;
 import io.jsonwebtoken.Claims;
 
 import lombok.RequiredArgsConstructor;
@@ -23,11 +29,19 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
 import java.util.UUID;
 import java.util.Locale;
+import java.util.Base64;
+import java.security.SecureRandom;
 
 @Slf4j
 @Service
@@ -40,6 +54,83 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final LoginAttemptService loginAttemptService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final JavaMailSender mailSender;
+
+    @Value("${security.password-reset.url}")
+    private String passwordResetUrl;
+
+    @Value("${spring.mail.from}")
+    private String mailFrom;
+
+    // O envio ocorre fora da resposta HTTP para não revelar se o e-mail está cadastrado.
+    @Async
+    @Transactional
+    public void requestPasswordReset(ForgotPasswordRequest request) {
+        UserEntity user = userRepository.findByEmailForUpdate(request.email()).orElse(null);
+        if (user == null || !user.isActive()) { return; }
+
+        Instant now = Instant.now();
+        // Evita enviar vários links para o mesmo usuário em menos de um minuto.
+        if (passwordResetTokenRepository.existsByUserAndCreatedAtAfter(user, now.minusSeconds(60))) { return; }
+
+        byte[] randomBytes = new byte[32];
+        new SecureRandom().nextBytes(randomBytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+
+        passwordResetTokenRepository.markAllUsedByUser(user, now);
+        passwordResetTokenRepository.save(PasswordResetTokenEntity.builder()
+                .user(user)
+                .email(user.getEmail())
+                .tokenHash(jwtService.hashToken(token))
+                .expiresAt(now.plusSeconds(15 * 60))
+                .build());
+
+        sendPasswordResetEmail(user, token);
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String tokenHash = jwtService.hashToken(request.token());
+        UUID userUuid = passwordResetTokenRepository.findUserUuidByTokenHash(tokenHash)
+                .orElseThrow(() -> new PasswordResetException("Link de recuperação inválido ou expirado. Solicite um novo link."));
+
+        // Mesmo bloqueio de refresh e logout: o token só pode ser usado uma vez.
+        UserEntity user = userRepository.findByUuidForUpdate(userUuid)
+                .orElseThrow(() -> new PasswordResetException("Link de recuperação inválido ou expirado. Solicite um novo link."));
+        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new PasswordResetException("Link de recuperação inválido ou expirado. Solicite um novo link."));
+
+        Instant now = Instant.now();
+        if (resetToken.getUsedAt() != null || !resetToken.getExpiresAt().isAfter(now)
+                || !user.isActive() || !resetToken.getEmail().equals(user.getEmail())) {
+            throw new PasswordResetException("Link de recuperação inválido ou expirado. Solicite um novo link.");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        resetToken.setUsedAt(now);
+        passwordResetTokenRepository.save(resetToken);
+        passwordResetTokenRepository.markAllUsedByUser(user, now);
+        refreshTokenRepository.revokeAllByUser(user);
+    }
+
+    private void sendPasswordResetEmail(UserEntity user, String token) {
+        String link = UriComponentsBuilder.fromUriString(passwordResetUrl)
+                .queryParam("token", token).build().toUriString();
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(mailFrom);
+        message.setTo(user.getEmail());
+        message.setSubject("Redefina sua senha no Vikash");
+        message.setText("Para redefinir sua senha, acesse o link abaixo:\n\n" + link
+                + "\n\nEste link é válido por 15 minutos e só pode ser utilizado uma vez."
+                + "\nSe você não solicitou a recuperação, ignore este e-mail.");
+        try {
+            mailSender.send(message);
+        } catch (MailException ex) {
+            throw new EmailDeliveryException("Não foi possível enviar o e-mail de recuperação.", ex);
+        }
+    }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import CreateAccountScreen from '../screens/CreateAccountScreen';
 import AddFinancialItemScreen from '../screens/AddFinancialItemScreen';
 import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
@@ -11,12 +12,12 @@ import { useOnboarding } from '../contexts/OnboardingContext';
 import SessionRetry from '../components/SessionRetry';
 import { AppSkeleton } from '../components/Skeleton';
 
-const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, CreateAccount: CreateAccountScreen, AddFinancialItem: AddFinancialItemScreen, CreateCreditCard: CreateCreditCardScreen, Accounts: AccountsSummaryScreen };
+const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, ForgotPassword: ForgotPasswordScreen, CreateAccount: CreateAccountScreen, AddFinancialItem: AddFinancialItemScreen, CreateCreditCard: CreateCreditCardScreen, Accounts: AccountsSummaryScreen };
 
 // A previa web usa as mesmas telas; o app nativo usa o stack nativo.
-export default function AppNavigator() {
+export default function AppNavigator({ initialRouteName = 'Home' }) {
   const { ready, restoreError, retryRestore } = useOnboarding();
-  const [stack, setStack] = useState([{ name: 'Home' }]);
+  const [stack, setStack] = useState([{ name: initialRouteName }]);
   const route = stack[stack.length - 1];
   const Screen = screens[route.name];
   const navigation = {

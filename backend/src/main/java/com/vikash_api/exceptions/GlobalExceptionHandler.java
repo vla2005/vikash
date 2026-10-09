@@ -3,6 +3,7 @@ package com.vikash_api.exceptions;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -31,6 +32,19 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(), null);
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header("Retry-After", Long.toString(ex.getRetryAfterSeconds())).body(response.getBody());
+    }
+
+    @ExceptionHandler(TaskRejectedException.class)
+    public ResponseEntity<ErrorResponse> handleEmailQueueFull(Exception ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable",
+                "Não foi possível receber sua solicitação agora. Tente novamente em alguns instantes.",
+                request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(PasswordResetException.class)
+    public ResponseEntity<ErrorResponse> handlePasswordReset(PasswordResetException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Password Reset Error", ex.getMessage(),
+                request.getRequestURI(), Map.of("token", ex.getMessage()));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)

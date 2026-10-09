@@ -1,10 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
 import BrandLogo from '../components/BrandLogo';
 import FormField from '../components/FormField';
 import PrimaryButton from '../components/PrimaryButton';
-import Icon from '../components/Icon';
 import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
@@ -15,7 +14,6 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
-  const [recoveryVisible, setRecoveryVisible] = useState(false);
   const passwordRef = useRef(null);
   const { login } = useOnboarding();
   const { showToast } = useToast();
@@ -53,22 +51,13 @@ export default function LoginScreen({ navigation }) {
         <FormField ref={passwordRef} label="Senha" placeholder="Sua senha" password value={password} onChangeText={value => { setPassword(value); setErrors(previous => ({ ...previous, password: undefined })); }}
           error={errors.password} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" textContentType="password" returnKeyType="go" onSubmitEditing={submit} testID="login-password" />
       </View>
-      <Pressable accessibilityRole="button" onPress={() => setRecoveryVisible(true)} style={styles.forgot} hitSlop={8}><Text style={styles.link}>Esqueci minha senha</Text></Pressable>
+      <Pressable accessibilityRole="button" disabled={loading} onPress={() => navigation.navigate('ForgotPassword', { email })} style={styles.forgot} hitSlop={8}><Text style={styles.link}>Esqueci minha senha</Text></Pressable>
       <InlineNotice message={requestError} error />
       <PrimaryButton title="Entrar" onPress={submit} loading={loading} style={styles.submit} />
       <View style={styles.footer}>
         <Text style={styles.footerText}>Ainda não tem cadastro?</Text>
         <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Register')} hitSlop={8}><Text style={styles.link}>Criar cadastro</Text></Pressable>
       </View>
-      <Modal visible={recoveryVisible} transparent animationType="fade" onRequestClose={() => setRecoveryVisible(false)}>
-        <View style={styles.overlay}>
-          <View accessibilityViewIsModal style={styles.dialog}>
-            <View style={styles.dialogHeader}><Text style={styles.dialogTitle}>Recuperar acesso</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar" hitSlop={12} onPress={() => setRecoveryVisible(false)}><Icon name="close" /></Pressable></View>
-            <Text style={typography.body}>A recuperação de senha estará disponível em breve.</Text>
-            <PrimaryButton title="Entendi" onPress={() => setRecoveryVisible(false)} icon={false} />
-          </View>
-        </View>
-      </Modal>
     </Screen>
   );
 }
@@ -81,8 +70,4 @@ const styles = StyleSheet.create({
   submit: { marginTop: 28 },
   footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 7, marginTop: 28 },
   footerText: { color: colors.secondary, fontFamily, fontSize: 14, lineHeight: 20 },
-  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.backdrop, padding: 24 },
-  dialog: { maxWidth: 390, width: '100%', backgroundColor: colors.background, borderRadius: 24, padding: 24, gap: 22 },
-  dialogHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
-  dialogTitle: { ...typography.title, fontSize: 23, lineHeight: 28 },
 });

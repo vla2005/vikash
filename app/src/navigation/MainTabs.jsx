@@ -15,6 +15,7 @@ import CreditCardPurchaseDetailsScreen from '../screens/CreditCardPurchaseDetail
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useCategories from '../hooks/useCategories';
 import useAccounts from '../hooks/useAccounts';
@@ -118,7 +119,8 @@ export default function MainTabs() {
   function renderProfile() {
     const backToProfile = () => setProfileForm(null);
     if (profileForm === 'edit') { return <EditProfileScreen profile={onboarding?.profile} onSave={onboarding?.updateProfile} onBack={backToProfile} />; }
-    if (profileForm === 'password') { return <ChangePasswordScreen onSave={onboarding?.changePassword} onBack={backToProfile} />; }
+    if (profileForm === 'password') { return <ChangePasswordScreen onSave={onboarding?.changePassword} onBack={backToProfile} onForgotPassword={() => setProfileForm('recovery')} />; }
+    if (profileForm === 'recovery') { return <ForgotPasswordScreen initialEmail={onboarding?.profile?.email} onBack={() => setProfileForm('password')} backLabel="Voltar para alterar senha" />; }
     return <ProfileScreen profile={onboarding?.profile} onBack={() => setProfileVisible(false)} onLogout={onboarding.logout}
       onEdit={() => setProfileForm('edit')} onPassword={() => setProfileForm('password')}
       onSupport={() => showToast({ type: 'info', message: 'O suporte estará disponível em breve.' })} />;
