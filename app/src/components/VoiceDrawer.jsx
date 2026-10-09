@@ -87,8 +87,8 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   </Modal>;
 }
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.backdrop },
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: colors.dialogBackdrop },
+  backdrop: { ...StyleSheet.absoluteFillObject },
   drawer: { width: '100%', maxWidth: 460, backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 12, paddingHorizontal: 20 },
   handle: { width: 40, height: 4, borderRadius: 3, backgroundColor: '#CFCFD2', alignSelf: 'center' },
   close: { position: 'absolute', right: 12, top: 6, width: 36, height: 36, alignItems: 'center', justifyContent: 'center', zIndex: 1 },

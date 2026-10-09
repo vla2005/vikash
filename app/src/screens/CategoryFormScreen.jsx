@@ -2,9 +2,13 @@ import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import CategoryIcon from '../components/CategoryIcon';
 import Icon from '../components/Icon';
+import SelectionField from '../components/SelectionField';
 import useToast from '../hooks/useToast';
 import { categoryColors, categoryIcons, normalizeCategoryName } from '../data/categories';
 import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
+
+const iconOptions = categoryIcons.map(([value, label]) => ({ value, label }));
+const colorOptions = categoryColors.map(item => ({ value: item.key, label: item.label, background: item.background, foreground: item.foreground }));
 
 export default function CategoryFormScreen({ category, existingCategories, onSave, onCancel, saving = false }) {
   const { showToast } = useToast();
@@ -39,14 +43,18 @@ export default function CategoryFormScreen({ category, existingCategories, onSav
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar às categorias" onPress={onCancel} style={styles.back}><Icon name="back" /></Pressable><Text accessibilityRole="header" style={styles.title}>{category ? 'Editar categoria' : 'Nova categoria'}</Text><View style={styles.back} /></View>
       <Text style={styles.subtitle}>{category ? 'Ajuste sua categoria como preferir.' : 'Crie uma categoria com a sua cara.'}</Text>
-      <View style={styles.preview}><View style={[styles.previewIcon, { backgroundColor: palette.background }]}><CategoryIcon name={icon} size={42} /></View><Text numberOfLines={2} style={styles.previewName}>{name.trim() || 'Sua categoria'}</Text><Text style={styles.previewLabel}>Prévia</Text></View>
+      <View style={styles.preview}><View style={[styles.previewIcon, { backgroundColor: palette.background }]}><CategoryIcon name={icon} size={42} color={palette.foreground} /></View><Text numberOfLines={2} style={styles.previewName}>{name.trim() || 'Sua categoria'}</Text><Text style={styles.previewLabel}>Prévia</Text></View>
       <Text style={styles.label}>Nome da categoria</Text>
       <TextInput accessibilityLabel="Nome da categoria" value={name} onChangeText={value => { setName(value); setError(''); }} placeholder="Ex.: Pets, viagens, estudos" placeholderTextColor={colors.secondary} maxLength={50} autoCapitalize="sentences" returnKeyType="done" onSubmitEditing={submit} style={[styles.input, error && styles.invalid]} />
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-      <Text style={[styles.label, styles.sectionLabel]}>Ícone</Text>
-      <View style={styles.grid}>{categoryIcons.map(([key, label]) => <View key={key} style={styles.iconCell}><Pressable accessibilityRole="button" accessibilityLabel={`Ícone ${label}`} accessibilityState={{ selected: icon === key }} aria-pressed={icon === key} onPress={() => setIcon(key)} style={[styles.iconButton, icon === key && styles.selectedIcon]}><CategoryIcon name={key} size={27} /></Pressable></View>)}</View>
-      <Text style={[styles.label, styles.sectionLabel]}>Cor</Text>
-      <View style={styles.colorRow}>{categoryColors.map(item => <View key={item.key} style={styles.iconCell}><Pressable accessibilityRole="button" accessibilityLabel={`Cor ${item.label}`} accessibilityState={{ selected: color === item.key }} aria-pressed={color === item.key} onPress={() => setColor(item.key)} style={[styles.colorOutline, color === item.key && styles.selectedColor]}><View style={[styles.color, { backgroundColor: item.background }]}>{color === item.key && <Icon name="check" color={item.foreground} size={25} />}</View></Pressable></View>)}</View>
+      <View style={styles.appearance}>
+        <SelectionField label="Ícone" value={icon} options={iconOptions} onChange={setIcon} searchable numColumns={4}
+          renderOption={option => <CategoryIcon name={option.value} size={30} color={palette.foreground} />}
+          renderLeading={option => <View style={[styles.optionIcon, { backgroundColor: palette.background }]}><CategoryIcon name={option.value} size={23} color={palette.foreground} /></View>} />
+        <SelectionField label="Cor" value={color} options={colorOptions} onChange={setColor} searchable numColumns={4}
+          renderOption={option => <View style={[styles.colorSwatch, styles.colorOption, { backgroundColor: option.background, borderColor: option.foreground }]} />}
+          renderLeading={option => <View style={[styles.colorSwatch, { backgroundColor: option.background, borderColor: option.foreground }]} />} />
+      </View>
       <Pressable accessibilityRole="button" accessibilityLabel={category ? 'Salvar categoria' : 'Criar categoria'} accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={submit} style={({ pressed }) => [styles.save, (pressed || saving) && styles.pressed]}><Text style={styles.saveText}>{saving ? 'Salvando...' : category ? 'Salvar alterações' : 'Criar categoria'}</Text></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Cancelar criação de categoria" disabled={saving} onPress={onCancel} style={styles.cancel}><Text style={styles.cancelText}>Cancelar</Text></Pressable>
     </ScrollView>
@@ -67,15 +75,10 @@ const styles = StyleSheet.create({
   input: { fontFamily, fontSize: 16, color: colors.text, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 14, minHeight: 50 },
   invalid: { borderColor: colors.error },
   error: { fontFamily, fontSize: 13, color: colors.error, marginTop: 8 },
-  sectionLabel: { marginTop: 24 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3 },
-  iconCell: { width: '16.666666%', padding: 3 },
-  iconButton: { minHeight: 44, aspectRatio: 1, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  selectedIcon: { borderWidth: 2, borderColor: colors.primary, backgroundColor: colors.primarySoft },
-  colorRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3 },
-  colorOutline: { width: '100%', maxWidth: 48, minHeight: 44, aspectRatio: 1, alignSelf: 'center', borderWidth: 2, borderColor: 'transparent', borderRadius: 24, padding: 2 },
-  selectedColor: { borderColor: colors.primary },
-  color: { flex: 1, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  appearance: { marginTop: 24, gap: 18 },
+  optionIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  colorSwatch: { width: 28, height: 28, borderRadius: 14, borderWidth: 1 },
+  colorOption: { width: 36, height: 36, borderRadius: 18 },
   save: { marginTop: 28, backgroundColor: colors.primary, borderRadius: 16, minHeight: 52, justifyContent: 'center', alignItems: 'center' },
   saveText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
   cancel: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 5 },

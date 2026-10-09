@@ -15,6 +15,19 @@ import logo13 from '../../assets/institutions/original.webp';
 import logo14 from '../../assets/institutions/sicredi.webp';
 import logo15 from '../../assets/institutions/sicoob.webp';
 import logo16 from '../../assets/institutions/safra.webp';
+import brb from '../../assets/institutions/brb.webp';
+import banrisul from '../../assets/institutions/banrisul.webp';
+import bmg from '../../assets/institutions/bmg.webp';
+import digio from '../../assets/institutions/digio.webp';
+import sofisa from '../../assets/institutions/sofisa-direto.webp';
+import xp from '../../assets/institutions/xp.webp';
+import recargapay from '../../assets/institutions/recargapay.webp';
+import daycoval from '../../assets/institutions/daycoval.webp';
+import banestes from '../../assets/institutions/banestes.webp';
+import nordeste from '../../assets/institutions/banco-do-nordeste.webp';
+import amazonia from '../../assets/institutions/banco-da-amazonia.webp';
+import banpara from '../../assets/institutions/banpara.webp';
+import unicred from '../../assets/institutions/unicred.webp';
 import { imageSource } from '../utils/imageSource';
 
 export default {
@@ -35,4 +48,17 @@ export default {
   sicredi: imageSource(logo14),
   sicoob: imageSource(logo15),
   safra: imageSource(logo16),
+  brb: imageSource(brb),
+  banrisul: imageSource(banrisul),
+  bmg: imageSource(bmg),
+  digio: imageSource(digio),
+  'sofisa-direto': imageSource(sofisa),
+  xp: imageSource(xp),
+  recargapay: imageSource(recargapay),
+  daycoval: imageSource(daycoval),
+  banestes: imageSource(banestes),
+  'banco-do-nordeste': imageSource(nordeste),
+  'banco-da-amazonia': imageSource(amazonia),
+  banpara: imageSource(banpara),
+  unicred: imageSource(unicred),
 };

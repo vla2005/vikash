@@ -17,6 +17,18 @@ export const categoryColors = [
   { key: 'purple', label: 'Roxo', background: '#E2D7F3', foreground: '#7754A6' },
   { key: 'cyan', label: 'Ciano', background: '#D4EFF5', foreground: '#367E94' },
   { key: 'sand', label: 'Areia', background: '#EEDFCC', foreground: '#967653' },
+  { key: 'navy', label: 'Azul-marinho', background: '#DCE3F0', foreground: '#31466D' },
+  { key: 'royal', label: 'Azul royal', background: '#DFE5FF', foreground: '#3451C8' },
+  { key: 'sky', label: 'Azul-céu', background: '#E0F1FF', foreground: '#367BA8' },
+  { key: 'teal', label: 'Petróleo', background: '#D4E9EC', foreground: '#28636B' },
+  { key: 'turquoise', label: 'Turquesa', background: '#CCF1ED', foreground: '#247C76' },
+  { key: 'forest', label: 'Verde-floresta', background: '#D6E7D9', foreground: '#356346' },
+  { key: 'mustard', label: 'Mostarda', background: '#F3E2B9', foreground: '#967020' },
+  { key: 'burgundy', label: 'Vinho', background: '#EED8E1', foreground: '#873D59' },
+  { key: 'fuchsia', label: 'Fúcsia', background: '#F5D8F0', foreground: '#A24391' },
+  { key: 'plum', label: 'Ameixa', background: '#E7DCEC', foreground: '#784C87' },
+  { key: 'brown', label: 'Marrom', background: '#E7DBD2', foreground: '#79563D' },
+  { key: 'slate', label: 'Ardósia', background: '#DFE5EB', foreground: '#516375' },
 ];
 export const categoryIcons = [
   ['paw', 'Pets'], ['gift', 'Presente'], ['suitcase', 'Viagem'], ['book', 'Livro'],
@@ -27,5 +39,11 @@ export const categoryIcons = [
   ['wallet', 'Carteira'], ['card', 'Cartão'], ['bank', 'Banco'], ['briefcase', 'Trabalho'], ['graduation', 'Educação'],
   ['phone', 'Celular'], ['laptop', 'Computador'], ['wifi', 'Internet'], ['lightbulb', 'Energia'], ['water', 'Água'],
   ['tools', 'Manutenção'], ['shirt', 'Roupas'], ['baby', 'Bebê'], ['beauty', 'Beleza'],
+  ['receipt', 'Contas e boletos'], ['calendar', 'Assinaturas'], ['shield', 'Seguros'], ['chart', 'Investimentos'],
+  ['piggy', 'Poupança'], ['coins', 'Impostos'], ['stethoscope', 'Consulta médica'], ['pill', 'Remédios'],
+  ['tooth', 'Dentista'], ['glasses', 'Óculos'], ['pizza', 'Pizza'], ['cake', 'Festas'],
+  ['cinema', 'Cinema'], ['camera', 'Fotografia'], ['ball', 'Esportes'], ['beach', 'Praia'],
+  ['delivery', 'Entrega'], ['package', 'Encomendas'], ['scissors', 'Cabeleireiro'], ['sofa', 'Móveis'],
+  ['cleaning', 'Limpeza'], ['building', 'Condomínio'], ['dog', 'Veterinário'], ['palette', 'Arte'],
 ];
 export const normalizeCategoryName = name => name.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');

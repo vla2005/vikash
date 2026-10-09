@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ListSkeleton } from './Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { searchFinancialInstitutions } from '../constants/financialInstitutions';
+import { OTHER_INSTITUTION_NAME, searchFinancialInstitutions } from '../constants/financialInstitutions';
 import useFinancialInstitutions from '../hooks/useFinancialInstitutions';
 import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 import Icon from './Icon';
@@ -14,7 +14,8 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
   const insets = useSafeAreaInsets();
   const { institutions: catalog, loading, error, retry } = useFinancialInstitutions(visible);
   const selected = catalog.find(item => item.id === value) || (selectedInstitution?.id === value ? selectedInstitution : null);
-  const institutions = searchFinancialInstitutions(catalog, query);
+  const otherInstitution = catalog.find(item => item.name === OTHER_INSTITUTION_NAME);
+  const institutions = searchFinancialInstitutions(catalog.filter(item => item !== otherInstitution), query);
 
   function open() {
     Keyboard.dismiss();
@@ -59,7 +60,14 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
               <Text style={styles.optionName}>{item.name}</Text>
               {item.id === value && <Icon name="check" color={colors.primary} size={21} />}
             </Pressable>}
-            ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyTitle}>{catalog.length ? 'Nenhuma instituição encontrada.' : 'Nenhuma instituição disponível.'}</Text><Text style={styles.description}>{catalog.length ? 'Tente outro nome ou continue sem instituição.' : 'Você pode continuar sem instituição.'}</Text></View>} />}
+            ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyTitle}>{catalog.length ? 'Nenhuma instituição encontrada.' : 'Nenhuma instituição disponível.'}</Text><Text style={styles.description}>{otherInstitution ? 'Tente outro nome ou selecione Outra instituição.' : catalog.length ? 'Tente outro nome.' : 'Tente novamente mais tarde.'}</Text></View>} />}
+          {!loading && !error && otherInstitution && <Pressable accessibilityRole="button" accessibilityLabel={OTHER_INSTITUTION_NAME}
+            accessibilityState={{ selected: otherInstitution.id === value }} onPress={() => select(otherInstitution)}
+            style={({ pressed }) => [styles.other, value === otherInstitution.id && styles.selected, pressed && styles.pressed]}>
+            <InstitutionLogo institution={otherInstitution} />
+            <View style={styles.otherInfo}><Text style={styles.otherName}>{OTHER_INSTITUTION_NAME}</Text><Text style={styles.otherDescription}>Não encontrou a sua? Use esta opção.</Text></View>
+            {otherInstitution.id === value && <Icon name="check" color={colors.primary} size={21} />}
+          </Pressable>}
           {!required && <Pressable accessibilityRole="button" onPress={() => select(null)} style={styles.skip}><Text style={styles.skipText}>Continuar sem instituição</Text></Pressable>}
         </View>
       </KeyboardAvoidingView>
@@ -87,6 +95,10 @@ const styles = StyleSheet.create({
   selected: { backgroundColor: colors.primarySoft },
   pressed: { opacity: 0.6 },
   optionName: { flex: 1, fontFamily, color: colors.text, fontSize: 16 },
+  other: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 70, paddingHorizontal: 10, paddingVertical: 12, marginTop: 10, borderTopWidth: 1, borderTopColor: colors.border, borderRadius: 12 },
+  otherInfo: { flex: 1, gap: 3 },
+  otherName: { fontFamily, color: colors.text, fontSize: 16 },
+  otherDescription: { fontFamily, fontSize: 12, lineHeight: 17, color: colors.secondary },
   empty: { paddingVertical: 24, gap: 5 },
   emptyTitle: { fontFamily: fontFamilyMedium, fontSize: 16, color: colors.text, fontWeight: '500' },
   retry: { alignSelf: 'flex-start', paddingVertical: 14, minHeight: 44 },

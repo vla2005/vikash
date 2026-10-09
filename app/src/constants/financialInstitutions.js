@@ -1,3 +1,5 @@
+export const OTHER_INSTITUTION_NAME = 'Outra instituição';
+
 export function searchFinancialInstitutions(institutions, query) {
   const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const terms = normalize(query).split(/\s+/).filter(Boolean);

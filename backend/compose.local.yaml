@@ -1,0 +1,11 @@
+# Use junto do compose.yaml para manter a configuração dos serviços em um só lugar.
+# docker compose -f compose.yaml -f compose.local.yaml up -d --build
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${LOCAL_DB_PORT:-5433}:5432"
+
+  api:
+    ports:
+      # Acesso pelo PC e pelo celular na mesma rede, usando o IP do PC.
+      - "${LOCAL_API_PORT:-8082}:8080"

@@ -162,6 +162,23 @@ class RequestValidationTest {
                 .andExpect(status().is(expectedStatus)).andExpect(content().string(""));
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "pill, burgundy", "calendar, royal", "sofa, brown", "dog, turquoise", "palette, fuchsia"
+    })
+    void acceptsNewCategoryAppearanceOnCreateAndUpdate(String icon, String color) throws Exception {
+        String body = "{\"name\":\" Minha categoria \",\"icon\":\"" + icon + "\",\"color\":\"" + color + "\"}";
+        mvc.perform(post("/api/category/create").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andExpect(content().string(""));
+        verify(categories).create(argThat(request -> request.name().equals("Minha categoria")
+                && request.icon().equals(icon) && request.color().equals(color)));
+
+        mvc.perform(put("/api/category/update/" + UUID).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNoContent()).andExpect(content().string(""));
+        verify(categories).update(eq(java.util.UUID.fromString(UUID)), argThat(request ->
+                request.icon().equals(icon) && request.color().equals(color)));
+    }
+
     static Stream<Arguments> invalidRequests() {
         return Stream.of(
             Arguments.of("POST", "/api/credit-card-invoice/" + UUID + "/pay", "{}", "accountUuid"),

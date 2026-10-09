@@ -21,3 +21,23 @@ WebP 96 × 96 px, qualidade 82. Fontes consultadas em 30/09/2026. Os arquivos s�
 | sicredi.webp | [Fonte](https://apps.apple.com/br/app/sicredi-para-smartphone/id1041468908?uo=4) | 1498 |
 | sicoob.webp | [Fonte](https://www.sicoob.com.br/) | 2344 |
 | safra.webp | [Fonte](https://www.safra.com.br/) | 5030 |
+
+## Instituições adicionadas em 09/10/2026
+
+WebP 96 × 96 px, qualidade 78 e compressão method 6. As 13 logos somam 12.668 bytes. Fontes: aplicativos publicados pelas próprias instituições na App Store.
+
+| Arquivo | Origem | Bytes |
+| --- | --- | ---: |
+| brb.webp | [Fonte](https://apps.apple.com/br/app/banco-brb-ainda-mais-seu/id1005747186?uo=4) | 936 |
+| banrisul.webp | [Fonte](https://apps.apple.com/br/app/banrisul/id1177452393?uo=4) | 868 |
+| bmg.webp | [Fonte](https://apps.apple.com/br/app/banco-bmg-cart%C3%A3o-e-empr%C3%A9stimo/id1396096726?uo=4) | 582 |
+| digio.webp | [Fonte](https://apps.apple.com/br/app/digio-cart%C3%A3o-de-cr%C3%A9dito/id1128793569?uo=4) | 986 |
+| sofisa-direto.webp | [Fonte](https://apps.apple.com/br/app/sofisa-direto-conta-e-cart%C3%A3o/id1047252691?uo=4) | 1308 |
+| xp.webp | [Fonte](https://apps.apple.com/br/app/xp-investimentos/id1300713021?uo=4) | 786 |
+| recargapay.webp | [Fonte](https://apps.apple.com/br/app/recargapay-pix-cart%C3%A3o-tap-e/id815221913?uo=4) | 1196 |
+| daycoval.webp | [Fonte](https://apps.apple.com/br/app/daycoval/id1231632610?uo=4) | 618 |
+| banestes.webp | [Fonte](https://apps.apple.com/br/app/banestes/id978346271?uo=4) | 872 |
+| banco-do-nordeste.webp | [Fonte](https://apps.apple.com/br/app/banco-do-nordeste-mobile/id655083328?uo=4) | 1170 |
+| banco-da-amazonia.webp | [Fonte](https://apps.apple.com/br/app/banco-da-amaz%C3%B4nia/id986930742?uo=4) | 1202 |
+| banpara.webp | [Fonte](https://apps.apple.com/br/app/banpar%C3%A1/id1484074097?uo=4) | 1276 |
+| unicred.webp | [Fonte](https://apps.apple.com/br/app/unicred-conta-cr%C3%A9dito-pix/id955807456?uo=4) | 868 |
