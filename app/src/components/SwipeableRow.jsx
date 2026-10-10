@@ -5,7 +5,7 @@ import useReducedMotion from '../hooks/useReducedMotion';
 import { colors } from '../theme';
 
 const actionWidth = 72;
-export default function SwipeableRow({ children, open, onOpenChange, onPress, onAction, label, actionLabel, style }) {
+export default function SwipeableRow({ children, open, onOpenChange, onPress, onAction, label, actionLabel, style, containerStyle }) {
   const translation = useRef(new Animated.Value(0)).current;
   const position = useRef(0);
   const origin = useRef(0);
@@ -46,7 +46,7 @@ export default function SwipeableRow({ children, open, onOpenChange, onPress, on
     if (open) { onOpenChange(false); return; }
     onPress();
   }
-  return <View style={styles.container}>
+  return <View style={[styles.container, containerStyle]}>
     <Animated.View pointerEvents={open ? 'auto' : 'none'} style={[styles.action, {
       opacity: translation.interpolate({ inputRange: [-actionWidth, -1, 0], outputRange: [1, 1, 0], extrapolate: 'clamp' }),
     }]}>
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   container: { overflow: 'hidden' },
   foreground: { backgroundColor: colors.surface },
   pressed: { backgroundColor: colors.surfaceMuted },
-  action: { position: 'absolute', top: 0, bottom: 0, right: 0, width: actionWidth },
+  action: { position: 'absolute', top: 0, bottom: 0, right: 0, width: actionWidth, paddingLeft: 12, backgroundColor: colors.surface },
   actionButton: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.error },
   actionPressed: { backgroundColor: colors.negative },
 });

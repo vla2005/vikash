@@ -127,6 +127,25 @@ public class CreditCardInvoiceService {
     }
 
     @Transactional
+    public void reversePayment(TransactionEntity payment, Long userId) {
+        var invoice = payment.getCreditCardInvoice();
+        if (invoice == null || !invoice.getCreditCard().getUser().getId().equals(userId)) {
+            throw new InvalidCreditCardInvoiceException("Fatura do pagamento não encontrada.");
+        }
+        lockCard(invoice.getCreditCard().getUuid(), userId);
+        entityManager.refresh(invoice, LockModeType.PESSIMISTIC_WRITE);
+        if (invoice.getStatus() != CreditCardInvoiceStatus.PAID) {
+            throw new InvalidCreditCardInvoiceException("Esta fatura não está marcada como paga.");
+        }
+        var account = accountRepository.findOwnedForUpdate(payment.getAccount().getUuid(), userId)
+                .orElseThrow(() -> new InvalidCreditCardInvoiceException("Conta não encontrada."));
+        entityManager.refresh(account, LockModeType.PESSIMISTIC_WRITE);
+        account.setBalance(account.getBalance().add(payment.getAmount()));
+        invoice.setStatus(CreditCardInvoiceStatus.CLOSED);
+        creditCardInvoiceRepository.save(invoice);
+    }
+
+    @Transactional
     public void payFromVoice(UUID uuid, UUID creditCardUuid, CreditCardInvoicePaymentRequest request,
             BigDecimal expectedAmount, String transcription) {
         registerPayment(uuid, creditCardUuid, request, expectedAmount, transcription);

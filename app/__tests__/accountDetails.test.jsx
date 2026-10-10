@@ -1,3 +1,4 @@
+jest.mock('../src/hooks/useToast', () => () => ({ showToast: jest.fn() }));
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { FlatList } from 'react-native';

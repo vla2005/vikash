@@ -17,6 +17,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CreditCardInstallmentRepository extends JpaRepository<CreditCardInstallmentEntity, Long> {
+    @Query("SELECT i FROM CreditCardInstallmentEntity i JOIN FETCH i.creditCardInvoice WHERE i.purchase.id = :purchaseId")
+    List<CreditCardInstallmentEntity> findByPurchaseId(@Param("purchaseId") Long purchaseId);
+
     @Query("""
         SELECT new com.vikash_api.dtos.responses.TransactionSummaryResponse(
             installment.uuid, purchase.description, installment.amount,

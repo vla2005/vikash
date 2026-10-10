@@ -104,6 +104,31 @@ public class TransactionService {
                         institution.getName(), institution.getLogoUrl()));
     }
 
+    @Transactional
+    public void delete(UUID uuid) {
+        Long userId = authenticatedUserService.getCurrentUser().getId();
+        var transaction = transactionRepository.findOwnedForUpdate(uuid, userId)
+                .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada."));
+        if (transaction.getType() == TransactionType.INVOICE_PAYMENT) {
+            creditCardInvoiceService.reversePayment(transaction, userId);
+        } else {
+            UUID accountUuid = transaction.getAccount().getUuid();
+            var destination = transaction.getDestinationAccount();
+            AccountEntity account;
+            AccountEntity destinationAccount = null;
+            // Usa a mesma ordem do cadastro para bloquear transferências entre duas contas.
+            if (destination != null && destination.getUuid().compareTo(accountUuid) < 0) {
+                destinationAccount = getAccountForUpdate(destination.getUuid(), userId);
+                account = getAccountForUpdate(accountUuid, userId);
+            } else {
+                account = getAccountForUpdate(accountUuid, userId);
+                if (destination != null) { destinationAccount = getAccountForUpdate(destination.getUuid(), userId); }
+            }
+            updateBalances(account, destinationAccount, transaction.getType(), transaction.getAmount().negate());
+        }
+        transactionRepository.delete(transaction);
+    }
+
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void create(TransactionRequest request) {
         Long userId = authenticatedUserService.getCurrentUserId();

@@ -16,6 +16,9 @@ import com.vikash_api.entities.DefaultCategoriesEntity;
 import com.vikash_api.entities.CustomCategoryEntity;
 import com.vikash_api.repositories.CreditCardPurchaseRepository;
 import com.vikash_api.repositories.CreditCardInstallmentRepository;
+import com.vikash_api.repositories.CreditCardRepository;
+import com.vikash_api.enums.CreditCardInvoiceStatus;
+import com.vikash_api.exceptions.InvalidTransactionException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +30,27 @@ public class CreditCardPurchaseService {
     private final CreditCardInstallmentRepository creditCardInstallmentRepository;
     private final CreditCardInvoiceService creditCardInvoiceService;
     private final AuthenticatedUserService authenticatedUserService;
+    private final CreditCardRepository creditCardRepository;
+
+    @Transactional
+    public void delete(UUID uuid) {
+        Long userId = authenticatedUserService.getCurrentUser().getId();
+        var purchase = creditCardPurchaseRepository.findOwnedForUpdate(uuid, userId)
+                .orElseThrow(() -> new TransactionNotFoundException("Compra no crédito não encontrada."));
+        // Pagamentos, distribuição e exclusões do mesmo cartão ficam serializados.
+        creditCardRepository.findOwnedForUpdate(purchase.getCreditCard().getUuid(), userId)
+                .orElseThrow(() -> new TransactionNotFoundException("Cartão não encontrado."));
+        purchase = creditCardPurchaseRepository.findByUuidAndCreditCardUserId(uuid, userId)
+                .orElseThrow(() -> new TransactionNotFoundException("Compra no crédito não encontrada."));
+        var installments = creditCardInstallmentRepository.findByPurchaseId(purchase.getId());
+        if (installments.stream().anyMatch(item -> item.getCreditCardInvoice().getStatus() == CreditCardInvoiceStatus.PAID)) {
+            throw new InvalidTransactionException("Esta compra tem parcelas em faturas pagas. Exclua o pagamento dessas faturas antes de excluir a compra.");
+        }
+        // O limite e os totais são calculados pelas parcelas; os valores iniciais permanecem.
+        creditCardInstallmentRepository.deleteAll(installments);
+        creditCardInstallmentRepository.flush();
+        creditCardPurchaseRepository.delete(purchase);
+    }
 
     @Transactional(readOnly = true)
     public CreditCardPurchaseResponse getByUuid(UUID uuid) {
@@ -69,7 +93,7 @@ public class CreditCardPurchaseService {
         createInstallments(saved, firstInvoice);
     }
 
-    private void createInstallments(CreditCardPurchaseEntity purchase, CreditCardInvoiceEntity firstInvoice) {
+    void createInstallments(CreditCardPurchaseEntity purchase, CreditCardInvoiceEntity firstInvoice) {
         int count = purchase.getInstallmentCount();
         BigDecimal amount = purchase.getAmount().divide(BigDecimal.valueOf(count), 2, RoundingMode.DOWN);
         int remainingCents = purchase.getAmount().subtract(amount.multiply(BigDecimal.valueOf(count)))
@@ -85,6 +109,17 @@ public class CreditCardPurchaseService {
             // Os centavos restantes são distribuídos nas últimas parcelas.
             installment.setAmount(number > count - remainingCents ? amount.add(new BigDecimal("0.01")) : amount);
             creditCardInstallmentRepository.save(installment);
+        }
+    }
+
+    void updateInstallmentAmounts(CreditCardPurchaseEntity purchase, java.util.List<CreditCardInstallmentEntity> installments) {
+        int count = purchase.getInstallmentCount();
+        BigDecimal amount = purchase.getAmount().divide(BigDecimal.valueOf(count), 2, RoundingMode.DOWN);
+        int remainingCents = purchase.getAmount().subtract(amount.multiply(BigDecimal.valueOf(count)))
+                .movePointRight(2).intValueExact();
+        for (var installment : installments) {
+            installment.setAmount(installment.getInstallmentNumber() > count - remainingCents
+                    ? amount.add(new BigDecimal("0.01")) : amount);
         }
     }
 }

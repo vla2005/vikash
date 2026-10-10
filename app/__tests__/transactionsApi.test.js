@@ -1,7 +1,40 @@
-import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCreditCardPurchaseDetails } from '../src/services/transactions';
+import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCreditCardPurchaseDetails, deleteTransaction, deleteCreditCardPurchase, updateTransaction } from '../src/services/transactions';
 import { configureAuth } from '../src/services/apiClient';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
+
+test.each([[false, '/api/transaction'], [true, '/api/credit-card-purchase']])('PUT de edição usa endpoint correto, ambos os headers e aceita 200 vazio (%s)', async (purchase, endpoint) => {
+  const values = { description: 'Corrigido', amount: 75, paymentMethod: 'PIX', accountUuid: 'account', creditCardUuid: null,
+    destinationAccountUuid: null, defaultCategoryName: 'Mercado', customCategoryUuid: null };
+  global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('Resposta vazia'); } }));
+  await expect(updateTransaction('uuid/entry', values, 'token', purchase)).resolves.toBeNull();
+  expect(global.fetch).toHaveBeenCalledWith(`http://api.test${endpoint}/uuid%2Fentry`, expect.objectContaining({
+    method: 'PUT', headers: expect.objectContaining({ access_token: 'token', Authorization: 'Bearer token' }), body: JSON.stringify(values),
+  }));
+});
+
+test('PUT de edição preserva erros por campo retornados pela API', async () => {
+  global.fetch = jest.fn(async () => ({ ok: false, status: 400, json: async () => ({ message: 'Conta inválida.', fieldErrors: { accountUuid: 'Escolha uma conta ativa.' } }) }));
+  await expect(updateTransaction('entry', {}, 'token')).rejects.toMatchObject({ status: 400, fieldErrors: { accountUuid: 'Escolha uma conta ativa.' } });
+});
+
+test.each([
+  [deleteTransaction, '/api/transaction'],
+  [deleteCreditCardPurchase, '/api/credit-card-purchase'],
+])('DELETE %s sends UUID and session without body and accepts 204', async (remove, endpoint) => {
+  global.fetch = jest.fn(async () => ({ ok: true, status: 204, json: async () => { throw new SyntaxError('Empty'); } }));
+  await remove('entry-uuid', 'token');
+  expect(global.fetch).toHaveBeenCalledWith(`http://api.test${endpoint}/entry-uuid`, expect.objectContaining({ method: 'DELETE', body: undefined,
+    headers: expect.objectContaining({ access_token: 'token', Authorization: 'Bearer token' }),
+  }));
+  expect(() => remove(null, 'token')).toThrow('UUID');
+  expect(() => remove('entry-uuid', null)).toThrow('Entre na sua conta');
+});
+
+test('purchase deletion displays API paid-invoice error', async () => {
+  global.fetch = jest.fn(async () => ({ ok: false, status: 400, json: async () => ({ message: 'Exclua o pagamento dessas faturas antes de excluir a compra.' }) }));
+  await expect(deleteCreditCardPurchase('purchase', 'token')).rejects.toThrow('Exclua o pagamento');
+});
 
 test('detalhes fazem GET com UUID na query e token; compra preserva todas as parcelas em ordem', async () => {
   const details = { uuid: 'transaction', description: 'Mercado', amount: '350.00', occurredAt: '2026-10-04T15:07:00' };

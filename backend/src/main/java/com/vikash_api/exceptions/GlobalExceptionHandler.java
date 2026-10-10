@@ -26,6 +26,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InvalidTransactionUpdateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTransactionUpdate(InvalidTransactionUpdateException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Transaction Update", ex.getMessage(),
+                request.getRequestURI(), Map.of(ex.getField(), ex.getMessage()));
+    }
+
     @ExceptionHandler(InvalidCreditCardSetupException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCardSetup(InvalidCreditCardSetupException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Card Setup", ex.getMessage(),

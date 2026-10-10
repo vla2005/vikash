@@ -19,8 +19,8 @@ import { createCreditCard, updateCreditCard, fetchCreditCards, fetchCreditCardDe
 import { fetchFinancialInstitutions } from '../src/services/financialInstitutions';
 jest.mock('../src/services/creditCards', () => ({ createCreditCard: jest.fn(), updateCreditCard: jest.fn(), fetchCreditCards: jest.fn(), fetchCreditCardDetails: jest.fn(), distributeCreditCardInitialInvoices: jest.fn() }));
 jest.mock('../src/services/financialInstitutions', () => ({ fetchFinancialInstitutions: jest.fn() }));
-import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCreditCardPurchaseDetails } from '../src/services/transactions';
-jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn(), fetchTransactions: jest.fn(async () => ({ rows: [], page: 0, hasNext: false })), fetchTransactionDetails: jest.fn(), fetchCreditCardPurchaseDetails: jest.fn() }));
+import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCreditCardPurchaseDetails, deleteTransaction, updateTransaction } from '../src/services/transactions';
+jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn(), updateTransaction: jest.fn(), fetchTransactions: jest.fn(async () => ({ rows: [], page: 0, hasNext: false })), fetchTransactionDetails: jest.fn(), fetchCreditCardPurchaseDetails: jest.fn(), deleteTransaction: jest.fn(), deleteCreditCardPurchase: jest.fn() }));
 import { fetchAccounts, fetchAccountDetails } from '../src/services/accounts';
 jest.mock('../src/services/accounts', () => ({ fetchAccounts: jest.fn(), fetchAccountDetails: jest.fn(), createAccount: jest.fn() }));
 import useToast from '../src/hooks/useToast';
@@ -77,6 +77,7 @@ beforeEach(() => {
   fetchFinancialInstitutions.mockReset();
   fetchFinancialInstitutions.mockResolvedValue([{ id: 42, name: 'Inter', logoUrl: '/images/financial-institutions/inter.webp' }]);
   createTransaction.mockReset();
+  updateTransaction.mockReset().mockResolvedValue(null);
   useToast().showToast.mockClear();
   fetchAccounts.mockReset();
   fetchAccounts.mockResolvedValue([]);
@@ -558,4 +559,53 @@ test('clique na parcela usa UUID da compra e abre a fatura escolhida nos detalhe
   await act(async () => button('Abrir fatura Novembro 2026').props.onPress());
   expect(renderer.root.findAllByType(CreditCardPurchaseDetailsScreen)).toHaveLength(0);
   expect(button('Fatura Nov 2026').props.accessibilityState.selected).toBe(true);
+});
+
+
+test('deleting a transaction detail closes it and refreshes statement, accounts and dashboard', async () => {
+  const row = { id: 'delete-row', uuid: 'delete-row', description: 'Farmácia', amount: 50, type: 'EXPENSE', date: '2026-10-09', payment: 'Pix', account: 'Inter', color: 'mint', icon: 'plus' };
+  fetchTransactions.mockResolvedValue({ rows: [row], page: 0, hasNext: false });
+  fetchTransactionDetails.mockResolvedValue({ ...row, occurredAt: '2026-10-09T12:00:00', paymentMethod: 'PIX', account: { uuid: 'account', description: 'Inter' } });
+  deleteTransaction.mockResolvedValueOnce();
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Extrato').props.onPress());
+  await act(async () => renderer.root.findByType(SwipeableRow).props.onPress());
+  expect(renderer.root.findAllByType(TransactionDetailsScreen)).toHaveLength(1);
+  await act(async () => button('Excluir transação').props.onPress());
+  const confirmation = renderer.root.findByType(TransactionDetailsScreen).findByType(ConfirmationDialog);
+  fetchTransactions.mockResolvedValue({ rows: [], page: 0, hasNext: false });
+  fetchAccounts.mockResolvedValue([{ uuid: 'account', description: 'Inter', balance: 2050, type: 'CARTEIRA' }]);
+  fetchDashboard.mockResolvedValue({ totalBalance: 2050, incomes: 4200, expenses: 2150 });
+  await act(async () => confirmation.props.onConfirm());
+  expect(deleteTransaction).toHaveBeenLastCalledWith('delete-row', 'test-access');
+  expect(renderer.root.findAllByType(TransactionDetailsScreen)).toHaveLength(0);
+  expect(renderer.root.findAllByType(SwipeableRow)).toHaveLength(0);
+  expect(fetchTransactions).toHaveBeenLastCalledWith('test-access', 0, expect.anything());
+  await act(async () => button('Início').props.onPress());
+  expect(fetchDashboard).toHaveBeenCalledTimes(2);
+  await act(async () => button('Contas').props.onPress());
+  expect(labels()).toContain('Inter');
+});
+
+test('editar lançamento abre formulário preenchido, salva e atualiza extrato e dashboard', async () => {
+  const row = { id: 'entry', description: 'Mercado', amount: 50, type: 'EXPENSE', date: '2026-10-09', payment: 'Pix' };
+  fetchTransactions.mockResolvedValue({ rows: [row], page: 0, hasNext: false });
+  fetchTransactionDetails.mockResolvedValue({ ...row, uuid: 'entry', occurredAt: '2026-10-09T12:00:00', paymentMethod: 'PIX', account: { uuid: 'account', description: 'Inter' } });
+  fetchAccounts.mockResolvedValue([{ uuid: 'account', description: 'Inter', balance: 1950, type: 'CARTEIRA' }]);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Extrato').props.onPress());
+  await act(async () => renderer.root.findByType(SwipeableRow).props.onPress());
+  await act(async () => button('Editar transação').props.onPress());
+  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
+  const input = renderer.root.findAll(node => node.props.testID === 'edit-entry-description' && node.props.onChangeText)[0];
+  expect(input.props.value).toBe('Mercado');
+  await act(async () => input.props.onChangeText('Mercado corrigido'));
+  fetchTransactions.mockResolvedValue({ rows: [{ ...row, description: 'Mercado corrigido' }], page: 0, hasNext: false });
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(updateTransaction).toHaveBeenCalledWith('entry', expect.objectContaining({ description: 'Mercado corrigido', accountUuid: 'account', creditCardUuid: null }), 'test-access', false);
+  expect(renderer.root.findAllByType(TransactionDetailsScreen)).toHaveLength(0);
+  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(1);
+  expect(labels()).toContain('Mercado corrigido');
+  await act(async () => button('Início').props.onPress());
+  expect(fetchDashboard).toHaveBeenCalledTimes(2);
 });

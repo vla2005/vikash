@@ -1,4 +1,29 @@
-import { ApiError, authenticatedFetch, postJson } from './apiClient';
+import { ApiError, authenticatedFetch, deleteJson, postJson, putJson } from './apiClient';
+
+export function updateTransaction(uuid, values, accessToken, purchase = false) {
+  if (!accessToken) { throw new Error('Entre na sua conta para editar o lançamento.'); }
+  if (!uuid) { throw new Error('O lançamento não tem UUID. Atualize a lista.'); }
+  const endpoint = purchase ? '/api/credit-card-purchase' : '/api/transaction';
+  return putJson(`${endpoint}/${encodeURIComponent(uuid)}`, values, accessToken, {
+    headers: { access_token: accessToken }, conflictMessage: 'O lançamento mudou. Atualize a tela e tente novamente.',
+  });
+}
+
+export function deleteTransaction(uuid, accessToken) {
+  return deleteEntry('/api/transaction', uuid, accessToken);
+}
+
+export function deleteCreditCardPurchase(uuid, accessToken) {
+  return deleteEntry('/api/credit-card-purchase', uuid, accessToken);
+}
+
+function deleteEntry(endpoint, uuid, accessToken) {
+  if (!accessToken) { throw new Error('Entre na sua conta para excluir o lançamento.'); }
+  if (!uuid) { throw new Error('O lançamento não tem UUID. Atualize a lista.'); }
+  return deleteJson(`${endpoint}/${encodeURIComponent(uuid)}`, accessToken, {
+    headers: { access_token: accessToken }, conflictMessage: 'Não foi possível excluir este lançamento. Atualize a lista e tente novamente.',
+  });
+}
 
 const paymentLabels = { PIX: 'Pix', CREDIT_CARD: 'Crédito', DEBIT_CARD: 'Débito', BANK_SLIP: 'Boleto', CASH: 'Dinheiro', BANK_TRANSFER: 'Transferência', OTHER: 'Outro' };
 export function normalizeTransactionSummaries(items) {

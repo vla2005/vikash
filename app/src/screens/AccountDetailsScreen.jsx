@@ -9,7 +9,7 @@ import { getAccountType } from '../constants/accountTypes';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
 
-export default function AccountDetailsScreen({ uuid, accessToken, onBack, onEdit, revision = 0, onOpenTransaction }) {
+export default function AccountDetailsScreen({ uuid, accessToken, onBack, onEdit, revision = 0, onOpenTransaction, onDeleted }) {
   const { account, loading, error, retry } = useAccountDetails(uuid, accessToken, revision);
   const type = account ? getAccountType(account.type) : null;
   const header = <>
@@ -20,7 +20,7 @@ export default function AccountDetailsScreen({ uuid, accessToken, onBack, onEdit
       <Text accessibilityRole="header" style={s.sectionTitle}>Transações da conta</Text><Text style={s.subtitle}>Histórico de movimentações desta conta</Text>
     </>}
   </>;
-  return account ? <PagedTransactionList key={`${uuid}-${revision}`} accessToken={accessToken} endpoint={`/api/account/${encodeURIComponent(uuid)}/transactions`} header={header} showSigns emptyMessage="Esta conta ainda não tem transações." onOpenTransaction={onOpenTransaction} />
+  return account ? <PagedTransactionList key={`${uuid}-${revision}`} accessToken={accessToken} endpoint={`/api/account/${encodeURIComponent(uuid)}/transactions`} header={header} showSigns emptyMessage="Esta conta ainda não tem transações." onOpenTransaction={onOpenTransaction} onDeleted={onDeleted || retry} />
     : <ScrollView contentContainerStyle={s.content}>{header}{loading ? <DetailsSkeleton label="Carregando detalhes da conta" /> : <View style={s.feedback}><Text accessibilityRole="alert" style={s.muted}>{error}</Text><Pressable accessibilityRole="button" onPress={retry} style={s.action}><Text style={s.link}>Tentar novamente</Text></Pressable></View>}</ScrollView>;
 }
 const s = StyleSheet.create({

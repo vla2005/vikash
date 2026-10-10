@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchTransactions } from '../services/transactions';
 
-export default function useTransactions(accessToken, endpoint = '/api/transaction') {
+export default function useTransactions(accessToken, endpoint = '/api/transaction', revision = 0) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [hasNext, setHasNext] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const state = useRef({ page: -1, hasNext: true, busy: false, error: false, generation: 0 });
   const request = useRef(null);
   const load = useCallback(async (retry = false) => {
@@ -42,6 +43,6 @@ export default function useTransactions(accessToken, endpoint = '/api/transactio
     setRows([]); setHasNext(false); setError('');
     if (accessToken && endpoint) { load(); } else { setLoading(false); }
     return () => { state.current = {}; request.current?.abort(); };
-  }, [accessToken, endpoint, load]);
-  return { rows, loading, error, hasNext, loadMore: () => load(), retry: () => load(true) };
+  }, [accessToken, endpoint, load, revision, attempt]);
+  return { rows, loading, error, hasNext, loadMore: () => load(), retry: () => load(true), reload: () => setAttempt(value => value + 1) };
 }

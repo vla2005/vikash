@@ -30,7 +30,7 @@ export function dateParts(value) {
   return { date: new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }), time: time.slice(0, 5) };
 }
 
-export default function TransactionDetailsLayout({ title, details, loading, error, retry, onBack, subtitle, amountLabel, sign = '', children }) {
+export default function TransactionDetailsLayout({ title, details, loading, error, retry, onBack, subtitle, amountLabel, sign = '', heroAction, children }) {
   const palette = categoryColors.find(item => item.key === details?.category?.color) || categoryColors.find(item => item.key === 'gray');
   const occurred = details ? dateParts(details.occurredAt) : null;
   return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
@@ -41,6 +41,7 @@ export default function TransactionDetailsLayout({ title, details, loading, erro
           <View style={s.hero}>
             <View style={s.identity}><View style={[s.tile, { backgroundColor: palette.background }]}><CategoryIcon name={details.category?.icon || 'wallet'} size={27} color={palette.foreground} /></View>
               <View style={s.identityText}><Text style={s.eyebrow}>{subtitle}</Text><Text accessibilityRole="header" style={s.title}>{details.description}</Text></View>
+              {heroAction}
             </View>
             <View style={s.amountArea}><Text style={s.label}>{amountLabel}</Text><Text style={[s.amount, sign === '+ ' && s.positive]} numberOfLines={1} adjustsFontSizeToFit>{sign}{formatCurrency(details.amount)}</Text></View>
             <View style={s.date}><View style={s.dateDot} /><Text style={s.dateText}>{occurred.date}</Text><Text style={s.dateTime}>{occurred.time}</Text></View>

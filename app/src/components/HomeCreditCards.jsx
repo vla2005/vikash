@@ -6,19 +6,11 @@ import Icon from './Icon';
 import { formatInvoiceDate } from './CreditCardInvoiceDrawer';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { formatCurrency } from '../utils/money';
+import { getInstitutionCardColor } from '../constants/financialInstitutionColors';
 import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 const statusLabels = { OPEN: 'Em aberto', CLOSED: 'Fechada', PAID: 'Paga' };
 const reveal = 46;
-
-function cardColor(card) {
-  const bank = (card.financialInstitution?.name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  if (bank.includes('bradesco') || bank.includes('santander')) { return '#991C42'; }
-  if (bank === 'inter' || bank.includes('banco inter')) { return '#C94B08'; }
-  if (bank.includes('nubank')) { return '#6B23AD'; }
-  if (bank.includes('c6') || bank.includes('btg')) { return '#243044'; }
-  return colors.primary;
-}
 
 function orderedCards(cards, selectedUuid) {
   return [...cards].sort((a, b) => Number(b.uuid === selectedUuid) - Number(a.uuid === selectedUuid));
@@ -102,7 +94,7 @@ export default function HomeCreditCards({ cards, profile, onOpenCard, onViewCard
           return <Animated.View key={card.uuid} style={[s.cardPosition, animatedStyle]}>
             <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${card.description}`}
               accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition}
-              onPress={() => chooseCard(card.uuid)} style={[s.card, { backgroundColor: cardColor(card) }]}>
+              onPress={() => chooseCard(card.uuid)} style={[s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }]}>
               <Svg width="100%" height="100%" viewBox="0 0 320 202" preserveAspectRatio="none" style={StyleSheet.absoluteFill} accessible={false}>
                 <Path d="M-20 180C50 180 72 54 142 96S220 172 340 32V230H-20Z" fill="#FFFFFF" opacity="0.045" />
                 <Path d="M-20 234C86 168 142 204 202 118S286 70 350 136V230Z" fill="#051747" opacity="0.16" />

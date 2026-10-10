@@ -43,6 +43,10 @@ export function patchJson(path, body, accessToken, options = {}) {
   return requestJson('PATCH', path, body, accessToken, options);
 }
 
+export function deleteJson(path, accessToken, options = {}) {
+  return requestJson('DELETE', path, undefined, accessToken, options);
+}
+
 async function requestJson(method, path, body, accessToken, options) {
   let response;
   try {

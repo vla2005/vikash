@@ -168,3 +168,36 @@ limite disponível = limite total - limite utilizado
 O pagamento integral, pelo endpoint existente ou por comando de voz, usa o total completo da fatura. Uma fatura composta apenas pelo valor inicial também pode ser paga depois do fechamento. Pagar a fatura de `800` do exemplo reduz o saldo da conta em `800` e aumenta o limite disponível para `3600`, sem mexer nos `700` ainda não distribuídos.
 
 Os valores iniciais não entram no gráfico de gastos por categoria, pois não representam compras categorizadas registradas no app. O pagamento gera uma única movimentação do tipo `INVOICE_PAYMENT` na conta. Compras novas continuam criando suas parcelas normalmente e consumindo limite adicional.
+
+### Excluir transações e compras
+
+Os endpoints autenticados `DELETE /api/transaction/{uuid}` e `DELETE /api/credit-card-purchase/{uuid}` retornam `204`, sem body. O UUID deve pertencer ao usuário da sessão; lançamentos inexistentes ou de outro usuário retornam `404`.
+
+Excluir uma entrada subtrai seu valor da conta; excluir uma saída devolve seu valor; excluir uma transferência reverte os saldos das duas contas. Excluir um pagamento de fatura devolve o valor à conta e reabre a fatura como `CLOSED`, aguardando pagamento. A reversão e a exclusão são feitas na mesma transação do banco.
+
+Excluir uma compra remove **todas as suas parcelas**, inclusive as de outros meses. Os totais das faturas e o limite disponível são recalculados pelas parcelas restantes. As faturas, outras compras e valores iniciais do cartão são preservados. Se alguma parcela estiver em fatura paga, a API retorna `400`: é necessário excluir o pagamento dessas faturas antes de excluir a compra. Uma segunda exclusão do mesmo UUID retorna `404`, sem repetir a reversão.
+
+### Editar transações e compras
+
+Use `PUT /api/transaction/{uuid}` para transações de conta e `PUT /api/credit-card-purchase/{uuid}` para compras. Ambos exigem autenticação do proprietário e retornam `200`, sem body. Exemplo de uma saída de conta:
+
+```json
+{
+  "description": "Mercado",
+  "amount": 120.50,
+  "paymentMethod": "PIX",
+  "accountUuid": "uuid-da-conta",
+  "creditCardUuid": null,
+  "destinationAccountUuid": null,
+  "defaultCategoryName": "Mercado",
+  "customCategoryUuid": null
+}
+```
+
+Informe apenas uma categoria: `defaultCategoryName` ou `customCategoryUuid`; ambos nulos removem a categoria. Para crédito, envie `paymentMethod: "CREDIT_CARD"`, `creditCardUuid` e `accountUuid: null`. Transferências mantêm seu tipo e exigem duas contas próprias distintas. Entradas e pagamentos de fatura não aceitam crédito.
+
+A edição reverte o efeito anterior e aplica o novo valor na conta escolhida. Uma saída pode virar compra no crédito (uma parcela), ou uma compra pode virar uma única saída de conta pelo valor total, removendo todas as parcelas. Nessas conversões, o UUID, a data do lançamento e a transcrição são mantidos; o registro passa a usar o endpoint de detalhes do novo tipo.
+
+Compras que continuam no crédito preservam a quantidade de parcelas. Alterar o valor recalcula as parcelas, distribuindo os centavos restantes nas últimas. Trocar o cartão refaz as parcelas conforme os ciclos do novo cartão; se a fatura de destino não estiver aberta, a alteração inteira é revertida. Totais e limites são calculados pelas parcelas restantes; valores iniciais e outras compras são preservados.
+
+Se alguma parcela estiver em fatura paga, só descrição e categoria podem mudar. Alterações financeiras exigem desfazer o pagamento primeiro. Pagamentos de fatura podem mudar descrição, conta e forma de pagamento, mantendo o valor integral, a fatura e seu status pago. A conta escolhida deve ter saldo para o pagamento. Recursos de outros usuários não são aceitos. Falhas de validação retornam `400`, com `fieldErrors`; lançamentos inexistentes ou de outros usuários retornam `404`. Todas as mudanças de cada edição são atômicas.

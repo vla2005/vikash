@@ -4,16 +4,19 @@ import TransactionDetailsLayout, { CategoryRow, DetailRow, detailStyles as s } f
 import Icon from '../components/Icon';
 import useTransactionDetails from '../hooks/useTransactionDetails';
 import TranscriptionDisclosure from '../components/TranscriptionDisclosure';
+import DeleteTransactionButton from '../components/DeleteTransactionButton';
+import EditTransactionButton from '../components/EditTransactionButton';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const statuses = { OPEN: 'Em aberto', CLOSED: 'Fechada', PAID: 'Fatura paga' };
-export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onBack, selectedInvoiceUuid, onOpenInvoice }) {
+export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onBack, selectedInvoiceUuid, onOpenInvoice, onDeleted, onEdit }) {
   const state = useTransactionDetails(uuid, accessToken, true);
   const data = state.details;
   const equalInstallments = data?.installments?.length && data.installments.every(item => item.amount === data.installments[0].amount);
-  return <TransactionDetailsLayout {...state} title="Detalhes da compra" onBack={onBack} subtitle="Compra no crédito" amountLabel="Valor total da compra">
+  return <TransactionDetailsLayout {...state} title="Detalhes da compra" onBack={onBack} subtitle="Compra no crédito" amountLabel="Valor total da compra"
+    heroAction={onEdit && <EditTransactionButton purchase onPress={() => onEdit(data)} />}>
     {data && <>
       <Text style={s.section}>Informações da compra</Text>
       <View style={s.group}><CategoryRow category={data.category} /><DetailRow label="Cartão de crédito" value={data.creditCard.description} institution={data.creditCard.financialInstitution} /></View>
@@ -31,6 +34,7 @@ export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onB
       })}</View>
       <View style={local.notice}><Icon name="info" color={colors.primary} size={21} /><Text style={local.noticeText}>O saldo da conta muda ao pagar a fatura.</Text></View>
       <TranscriptionDisclosure key={data.uuid} transcription={data.transcription} />
+      <DeleteTransactionButton details={data} purchase accessToken={accessToken} onDeleted={onDeleted || onBack} />
     </>}
   </TransactionDetailsLayout>;
 }

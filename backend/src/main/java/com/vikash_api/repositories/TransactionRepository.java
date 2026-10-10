@@ -10,6 +10,8 @@ import com.vikash_api.dtos.responses.DailyTransactionTotalsResponse;
 
 import com.vikash_api.dtos.responses.TransactionTotalsResponse;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -23,6 +25,10 @@ import com.vikash_api.entities.TransactionEntity;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM TransactionEntity t WHERE t.uuid = :uuid AND t.user.id = :userId")
+    Optional<TransactionEntity> findOwnedForUpdate(@Param("uuid") UUID uuid, @Param("userId") Long userId);
+
     @Query("""
         SELECT new com.vikash_api.dtos.responses.DailyTransactionTotalsResponse(
             CAST(t.occurredAt AS LocalDate),

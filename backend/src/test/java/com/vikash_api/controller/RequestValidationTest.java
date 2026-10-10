@@ -24,6 +24,7 @@ class RequestValidationTest {
     private final AccountService accounts = mock(AccountService.class);
     private final CategoryService categories = mock(CategoryService.class);
     private final TransactionService transactions = mock(TransactionService.class);
+    private final TransactionEditService transactionEdits = mock(TransactionEditService.class);
     private final CreditCardInvoiceService invoices = mock(CreditCardInvoiceService.class);
     private final CreditCardService cards = mock(CreditCardService.class);
     private final CreditCardPurchaseService purchases = mock(CreditCardPurchaseService.class);
@@ -37,8 +38,8 @@ class RequestValidationTest {
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
         mvc = MockMvcBuilders.standaloneSetup(new AuthController(auth), new AccountController(accounts),
-                        new CategoryController(categories), new TransactionController(transactions),
-                        new CreditCardInvoiceController(invoices), new CreditCardController(cards, invoices), new CreditCardPurchaseController(purchases), new UserController(users))
+                        new CategoryController(categories), new TransactionController(transactions, transactionEdits),
+                        new CreditCardInvoiceController(invoices), new CreditCardController(cards, invoices), new CreditCardPurchaseController(purchases, transactionEdits), new UserController(users))
                 .setValidator(validator).setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 
