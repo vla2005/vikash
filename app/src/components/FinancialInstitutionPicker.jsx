@@ -7,6 +7,7 @@ import useFinancialInstitutions from '../hooks/useFinancialInstitutions';
 import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
+import DrawerPanel from './DrawerPanel';
 
 export default function FinancialInstitutionPicker({ value, selectedInstitution, onChange, required = false, error: fieldError }) {
   const [visible, setVisible] = useState(false);
@@ -37,10 +38,10 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
       <Icon name="chevronDown" size={20} color={colors.secondary} />
     </Pressable>
     {fieldError && <Text accessibilityRole="alert" style={styles.fieldError}>{fieldError}</Text>}
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setVisible(false)}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <Pressable accessibilityRole="button" accessibilityLabel="Fechar seleção de instituição" onPress={() => setVisible(false)} style={StyleSheet.absoluteFill} />
-        <View accessibilityViewIsModal style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <DrawerPanel visible={visible} style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text accessibilityRole="header" style={styles.title}>Sua instituição</Text>
@@ -69,7 +70,7 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
             {otherInstitution.id === value && <Icon name="check" color={colors.primary} size={21} />}
           </Pressable>}
           {!required && <Pressable accessibilityRole="button" onPress={() => select(null)} style={styles.skip}><Text style={styles.skipText}>Continuar sem instituição</Text></Pressable>}
-        </View>
+        </DrawerPanel>
       </KeyboardAvoidingView>
     </Modal>
   </View>;

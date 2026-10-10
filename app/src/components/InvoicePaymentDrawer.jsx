@@ -5,6 +5,7 @@ import useAccounts from '../hooks/useAccounts';
 import useToast from '../hooks/useToast';
 import { payCreditCardInvoice } from '../services/creditCards';
 import InstitutionLogo from './InstitutionLogo';
+import DrawerPanel from './DrawerPanel';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
 import { initialPaymentDate, maskPaymentDate, maskPaymentTime, parsePaymentDate } from '../utils/paymentDate';
@@ -34,9 +35,9 @@ export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, on
       showToast({ type: 'error', message: cause.message });
     } finally { busy.current = false; setSaving(false); }
   }
-  return <Modal visible transparent animationType="slide" onRequestClose={() => { if (!busy.current) { onClose(); } }}>
+  return <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => { if (!busy.current) { onClose(); } }}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}><Pressable accessibilityRole="button" accessibilityLabel="Fechar pagamento" style={StyleSheet.absoluteFill} disabled={saving} onPress={onClose} />
-      <View style={s.drawer}><View style={s.handle} /><Text style={s.title}>Marcar fatura como paga</Text><Text style={s.amount}>{formatCurrency(invoice.total)}</Text>
+      <DrawerPanel style={s.drawer}><View style={s.handle} /><Text style={s.title}>Marcar fatura como paga</Text><Text style={s.amount}>{formatCurrency(invoice.total)}</Text>
         <Text style={s.note}>Escolha a conta de onde saiu o dinheiro. O pagamento será registrado no extrato e liberará este valor do limite.</Text>
         <ScrollView keyboardShouldPersistTaps="handled"><Text style={s.label}>Conta do pagamento</Text>
           {loading ? <ListSkeleton label="Carregando contas para pagamento" count={3} showAmount={false} /> : error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><Pressable onPress={retry}><Text style={s.link}>Tentar novamente</Text></Pressable></> : accounts.length === 0 ? <Text style={s.note}>Cadastre uma conta antes de pagar a fatura.</Text> : accounts.map(account => <Pressable key={account.uuid} accessibilityRole="button" accessibilityLabel={`Pagar com ${account.description}`} accessibilityState={{ selected: accountUuid === account.uuid }} disabled={saving} onPress={() => setAccountUuid(account.uuid)} style={[s.account, accountUuid === account.uuid && s.selected]}><InstitutionLogo institution={account.financialInstitution} fallbackIcon={account.type === 'CARTEIRA' ? 'wallet' : 'bank'} size={36} /><View style={s.info}><Text style={s.name}>{account.description}</Text><Text style={s.note}>Saldo: {formatCurrency(account.balance)}</Text></View><Text style={s.link}>{accountUuid === account.uuid ? '✓' : ''}</Text></Pressable>)}
@@ -47,13 +48,13 @@ export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, on
         </ScrollView>
         <Pressable accessibilityRole="button" accessibilityLabel="Confirmar pagamento da fatura" accessibilityState={{ busy: saving }} disabled={saving || loading || !!error || !selected} onPress={confirm} style={[s.confirm, (saving || loading || !!error || !selected) && s.disabled]}><Text style={s.confirmText}>{saving ? 'Confirmando pagamento…' : 'Confirmar pagamento'}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={saving} onPress={onClose} style={s.cancel}><Text style={s.note}>Cancelar</Text></Pressable>
-      </View>
+      </DrawerPanel>
     </KeyboardAvoidingView>
   </Modal>;
 }
 const s = StyleSheet.create({
   dateFields: { flexDirection: 'row', gap: 12 }, dateField: { flex: 2 }, timeField: { flex: 1 }, input: { fontFamily, fontSize: 16, backgroundColor: '#FFF', color: colors.text, borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E4', padding: 14, marginTop: 6 },
-  overlay: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: colors.dialogBackdrop, justifyContent: 'flex-end' },
   drawer: { maxHeight: '85%', backgroundColor: colors.background, padding: 22, paddingBottom: 30, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
   handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: '#CFD0D3', alignSelf: 'center', marginBottom: 20 },
   title: { fontFamily: fontFamilyBold, fontSize: 25, fontWeight: '700', color: colors.text }, amount: { fontFamily: fontFamilyBold, fontSize: 34, fontWeight: '700', color: colors.text, marginVertical: 10 },

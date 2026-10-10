@@ -25,7 +25,6 @@ export default function ResetPasswordScreen({ token, onBack, onRequestLink }) {
     },
     onSaved: () => { form.change('token', ''); form.change('newPassword', ''); form.change('confirmPassword', ''); setComplete(true); },
     successMessage: 'Senha redefinida. Entre novamente com sua nova senha.',
-    errorMessage: 'Não foi possível redefinir sua senha. Confira os campos ou tente novamente.',
   });
   async function openApp() {
     try { await Linking.openURL('vikash://login'); }

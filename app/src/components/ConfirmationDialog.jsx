@@ -48,7 +48,7 @@ export default function ConfirmationDialog({ visible, title, message, confirmTex
 }
 const styles = StyleSheet.create({
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.dialogBackdrop },
-  backdrop: { ...StyleSheet.absoluteFillObject },
+  backdrop: { ...StyleSheet.absoluteFill },
   card: { width: '100%', maxWidth: 360, maxHeight: '90%', borderRadius: 28, backgroundColor: colors.surface, overflow: 'hidden' },
   content: { padding: 24 },
   heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },

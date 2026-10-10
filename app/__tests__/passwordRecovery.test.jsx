@@ -162,6 +162,10 @@ test('reset bloqueia envio duplicado, preserva campos em erro de conexão e perm
   await act(async () => { fail(new TypeError('Network failed')); await pending; });
   expect(input('Nova senha').props.value).toBe('NovaSenha123!');
   expect(clearSession).not.toHaveBeenCalled();
+  expect(texts()).toContain('Não foi possível conectar à API. Confira sua conexão e tente novamente.');
+  expect(useToast().showToast).toHaveBeenLastCalledWith(expect.objectContaining({
+    type: 'error', message: 'Não foi possível conectar à API. Confira sua conexão e tente novamente.',
+  }));
   await act(async () => button('Redefinir senha').props.onPress());
   expect(texts()).toContain('Senha redefinida.');
 });

@@ -105,7 +105,7 @@ const s = StyleSheet.create({
   tabs: { width: 150 }, subtitle: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary, marginTop: 3 },
   body: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 16 }, stacked: { flexDirection: 'column', alignItems: 'stretch' },
   chart: { width: '45%', maxWidth: 210, aspectRatio: 1 }, centerChart: { width: 190, alignSelf: 'center' },
-  center: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  center: { ...StyleSheet.absoluteFill, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   total: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, color: colors.text },
   smallTotal: { fontSize: 15 },
   legend: { flex: 1, gap: 13 }, legendRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },

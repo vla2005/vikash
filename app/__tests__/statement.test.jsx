@@ -79,7 +79,7 @@ test('camada escura cobre toda a tela e permite fechar o drawer', async () => {
   const backdrop = button('Fechar filtros');
   expect(StyleSheet.flatten(backdrop.props.style)).toMatchObject({
     position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
-    backgroundColor: 'rgba(16, 29, 62, 0.64)',
+    backgroundColor: 'rgba(7, 14, 30, 0.78)',
   });
   await act(async () => backdrop.props.onPress());
   expect(button('Fechar filtros')).toBeUndefined();

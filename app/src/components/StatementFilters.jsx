@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
+import DrawerPanel from './DrawerPanel';
 import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
 
 export const emptyFilters = () => ({ accounts: [], categories: [], payments: [], min: '', max: '', transfers: true });
@@ -22,9 +23,9 @@ export default function StatementFilters({ visible, initial, accounts, categorie
     }
     onApply(draft);
   }
-  return <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+  return <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
     <View style={s.overlay}><Pressable accessibilityLabel="Fechar filtros" onPress={onClose} style={s.backdrop} />
-      <View accessibilityViewIsModal style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 16), maxHeight: '90%' }]}>
+      <DrawerPanel visible={visible} style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 16), maxHeight: '90%' }]}>
         <View style={s.handle} /><View style={s.heading}><Text style={s.title}>Filtrar extrato</Text><Pressable accessibilityRole="button" accessibilityLabel="Cancelar filtros" onPress={onClose} style={s.close}><Icon name="close" size={24} /></Pressable></View>
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={s.label}>Contas</Text><Text style={s.hint}>Selecione uma ou mais</Text>
@@ -37,12 +38,12 @@ export default function StatementFilters({ visible, initial, accounts, categorie
           {!!error && <Text accessibilityRole="alert" style={s.error}>{error}</Text>}
         </ScrollView>
         <Text style={s.count}>{countFilters(draft)} filtros selecionados</Text><Pressable accessibilityRole="button" accessibilityLabel="Aplicar filtros" onPress={apply} style={s.primary}><Text style={s.primaryText}>Aplicar filtros</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Limpar filtros" onPress={() => { setDraft(emptyFilters()); setError(''); }} style={s.clear}><Text style={s.blue}>Limpar filtros</Text></Pressable>
-      </View>
+      </DrawerPanel>
     </View>
   </Modal>;
 }
 const s = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' }, backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.backdrop },
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' }, backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.dialogBackdrop },
   sheet: { width: '100%', maxWidth: 460, backgroundColor: '#FFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22 }, handle: { width: 40, height: 4, borderRadius: 4, backgroundColor: '#B6BAC3', alignSelf: 'center', marginBottom: 14 },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontFamily: fontFamilyBold, fontSize: 25, fontWeight: '700', color: colors.text }, close: { padding: 10 },
   label: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 17, marginTop: 18, marginBottom: 8, color: colors.text }, hint: { fontFamily, fontSize: 12, color: colors.secondary, marginBottom: 6 },
