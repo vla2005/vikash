@@ -70,6 +70,36 @@ npm run ios
 - `src/utils`: validação e formatação monetária.
 - `src/web`: entrada e adaptações usadas somente pela prévia.
 
+## Atualizações OTA em builds próprias
+
+O app inclui `expo-updates` para receber JavaScript e assets pelo EAS Update.
+Cada pessoa deve criar seu próprio projeto em [Expo](https://expo.dev) e fornecer
+o UUID em `EAS_PROJECT_ID` no ambiente de build e de publicação. Sem essa variável,
+OTA fica desativado: quem clona este repositório não recebe atualizações de um
+projeto pessoal. A URL da API continua sendo configurada em `EXPO_PUBLIC_API_URL`.
+
+`app.config.js` configura o canal `production` e a verificação na abertura. A
+atualização é baixada em segundo plano e usada na próxima abertura completa do
+app, sem reiniciar uma gravação ou formulário em andamento. É necessário instalar
+uma build Release com essa configuração primeiro; Expo Go e a prévia Vite não
+validam esse comportamento.
+
+O runtime usa a política `fingerprint`. Os workflows devem recriar o projeto
+nativo com `expo prebuild` antes de compilar. `fingerprint.config.js` exclui as
+pastas nativas geradas e os números de versão da build do cálculo; configuração
+Expo, plugins e dependências nativas continuam determinando a compatibilidade.
+Alterações nativas exigem outro APK/IPA. Não edite as pastas nativas manualmente
+para essas builds: represente alterações nativas na configuração/plugins.
+
+Na publicação, use `eas update --channel production --environment production`.
+O ambiente **production** do EAS deve conter `EXPO_PUBLIC_API_URL` com visibilidade
+**Sensitive** ou **Plain text**, pois variáveis do tipo **Secret** não ficam
+disponíveis no EAS Update. A URL deve ser a mesma usada na build. Não coloque
+senhas ou tokens do backend em variáveis `EXPO_PUBLIC_*`, que são embutidas no app.
+
+Referências: [EAS Update](https://docs.expo.dev/eas-update/getting-started/) e
+[variáveis de ambiente](https://docs.expo.dev/eas/environment-variables/usage/).
+
 ## Verificações
 
 ```sh
