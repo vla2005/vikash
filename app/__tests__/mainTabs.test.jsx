@@ -2,6 +2,8 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { RefreshControl, Text } from 'react-native';
 import MainTabs from '../src/navigation/MainTabs';
+jest.mock('../src/hooks/useCreditDashboard', () => () => ({ data: null, loading: false, error: '', retry: jest.fn() }));
+jest.mock('../src/components/DashboardInsights', () => 'DashboardInsights');
 import AppHeader from '../src/components/AppHeader';
 import BrandLogo from '../src/components/BrandLogo';
 import { fetchDashboard } from '../src/services/dashboard';
@@ -340,7 +342,7 @@ test('cartoes consultam dados reais, nao somam limite ao saldo e abrem os detalh
   expect(fetchCreditCards).toHaveBeenCalledTimes(3);
 });
 
-test('cartao da Home abre a fatura do dashboard na tela de detalhes', async () => {
+test('cartao da pilha da Home abre sua fatura selecionada', async () => {
   fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 0, expenses: 0, creditCards: [{ uuid: 'card', description: 'Itaú da Home', creditLimit: 5000, availableLimit: 4000, currentInvoice: { uuid: 'november', total: 800, dueDate: '2026-11-10', status: 'OPEN' } }] });
   fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', description: 'Itaú da Home', creditLimit: 5000, availableLimit: 4000, closingDay: 3, dueDay: 10, currentInvoiceUuid: 'october', invoices: [
     { uuid: 'october', referenceMonth: '2026-10', total: 200, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' },

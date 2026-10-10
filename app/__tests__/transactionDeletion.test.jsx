@@ -100,17 +100,15 @@ test('invoice swipe deletes the purchase UUID, resets pagination and never prese
   expect(onDeleted).toHaveBeenCalledTimes(1);
 });
 
-test('only one recent movement reveals trash; confirmation refreshes dashboard after success', async () => {
-  deleteTransaction.mockResolvedValueOnce();
-  const onDeleted = jest.fn();
-  await act(async () => { renderer = TestRenderer.create(<RecentTransactions rows={[item, { ...item, id: 'second', uuid: 'second' }]} accessToken="token" onDeleted={onDeleted} />); });
-  await act(async () => rows()[0].props.onOpenChange(true));
-  await act(async () => rows()[1].props.onOpenChange(true));
-  expect(rows()[0].props.open).toBe(false);
-  expect(rows()[1].props.open).toBe(true);
-  await act(async () => rows()[1].props.onAction());
-  expect(onDeleted).not.toHaveBeenCalled();
-  await act(async () => dialog().props.onConfirm());
-  expect(deleteTransaction).toHaveBeenCalledWith('second', 'token');
-  expect(onDeleted).toHaveBeenCalledTimes(1);
+test('recent movements open details and statement without offering deletion', async () => {
+  const onOpenTransaction = jest.fn();
+  const onViewStatement = jest.fn();
+  await act(async () => { renderer = TestRenderer.create(<RecentTransactions rows={[item]} onOpenTransaction={onOpenTransaction} onViewStatement={onViewStatement} />); });
+  expect(rows()).toHaveLength(0);
+  expect(renderer.root.findAllByType(ConfirmationDialog)).toHaveLength(0);
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Abrir lançamento Farmácia' && typeof node.props.onPress === 'function')[0].props.onPress());
+  expect(onOpenTransaction).toHaveBeenCalledWith(item);
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Ver extrato' && typeof node.props.onPress === 'function')[0].props.onPress());
+  expect(onViewStatement).toHaveBeenCalledTimes(1);
+  expect(deleteTransaction).not.toHaveBeenCalled();
 });

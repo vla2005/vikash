@@ -6,6 +6,7 @@ import Icon from './Icon';
 import { formatInvoiceDate } from './CreditCardInvoiceDrawer';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { formatCurrency } from '../utils/money';
+import { hiddenAmount } from '../utils/dashboard';
 import { getInstitutionCardColor } from '../constants/financialInstitutionColors';
 import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
@@ -16,7 +17,7 @@ function orderedCards(cards, selectedUuid) {
   return [...cards].sort((a, b) => Number(b.uuid === selectedUuid) - Number(a.uuid === selectedUuid));
 }
 
-export default function HomeCreditCards({ cards, profile, onOpenCard, onViewCards, title = 'Meus cartões', compactHeading = false }) {
+export default function HomeCreditCards({ cards, profile, hidden = false, onOpenCard, onViewCards, title = 'Meus cartões', compactHeading = false }) {
   const [selectedUuid, setSelectedUuid] = useState(cards[0]?.uuid);
   const [transition, setTransition] = useState(null);
   const [width, setWidth] = useState(320);
@@ -31,6 +32,8 @@ export default function HomeCreditCards({ cards, profile, onOpenCard, onViewCard
   const frontY = rearCount * reveal;
   const currentOrder = orderedCards(cards, selectedId);
   const nextOrder = orderedCards(cards, transition ?? selectedId);
+  const outgoingRank = nextOrder.findIndex(card => card.uuid === selectedId);
+  const layerChange = outgoingRank > 1 ? 1 / Math.min(outgoingRank, 3) : 0.5;
 
   useEffect(() => {
     // A refreshed dashboard can remove a card or replace the entire list.
@@ -43,11 +46,12 @@ export default function HomeCreditCards({ cards, profile, onOpenCard, onViewCard
 
   function chooseCard(uuid) {
     if (switching.current || uuid === selectedId) { return; }
+    if (reducedMotion) { setSelectedUuid(uuid); return; }
     switching.current = true;
     progress.setValue(0);
     setTransition(uuid);
     animation.current = Animated.timing(progress, {
-      toValue: 1, duration: reducedMotion ? 180 : 680, easing: Easing.inOut(Easing.sin), useNativeDriver: true,
+      toValue: 1, duration: 1050, easing: Easing.inOut(Easing.cubic), useNativeDriver: true,
     });
     animation.current.start(({ finished }) => {
       if (!finished) { return; }
@@ -85,16 +89,21 @@ export default function HomeCreditCards({ cards, profile, onOpenCard, onViewCard
           const newScale = 1 - Math.min(newRank, 3) * 0.045;
           const moving = !!transition;
           const transform = moving && !reducedMotion ? [
-            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [oldY, newY] }) },
+            { translateX: progress.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0, incoming ? 18 : 0, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 0.25, 1], outputRange: [oldY, incoming ? oldY - 12 : oldY + (newY - oldY) * 0.25, newY] }) },
             { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [oldScale, newScale] }) },
+            { rotate: progress.interpolate({ inputRange: [0, 0.45, 1], outputRange: ['0deg', incoming ? '2deg' : '0deg', '0deg'] }) },
           ] : [{ translateY: moving ? newY : oldY }, { scale: moving ? newScale : oldScale }];
-          const opacity = moving && incoming ? progress.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] })
+          const opacity = moving && incoming ? progress.interpolate({ inputRange: [0, 0.4, 0.85, 1], outputRange: [0, 0.35, 1, 1] })
             : moving && newRank >= 3 ? progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) : 1;
-          const animatedStyle = { height: cardHeight, zIndex: incoming ? 10 : 4 - oldRank, transform, opacity };
-          return <Animated.View key={card.uuid} style={[s.cardPosition, animatedStyle]}>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${card.description}`}
-              accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition}
-              onPress={() => chooseCard(card.uuid)} style={[s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }]}>
+          // Change layers at the crossing, so the receding card cannot cover the middle card.
+          const zIndex = incoming ? 10 : moving ? progress.interpolate({
+            inputRange: [0, layerChange, layerChange, 1],
+            outputRange: [4 - oldRank, 4 - oldRank, 4 - newRank, 4 - newRank],
+          }) : 4 - oldRank;
+          const animatedStyle = { height: cardHeight, zIndex, transform, opacity };
+          const cardStyle = [s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }];
+          const cardContent = <>
               <Svg width="100%" height="100%" viewBox="0 0 320 202" preserveAspectRatio="none" style={StyleSheet.absoluteFill} accessible={false}>
                 <Path d="M-20 180C50 180 72 54 142 96S220 172 340 32V230H-20Z" fill="#FFFFFF" opacity="0.045" />
                 <Path d="M-20 234C86 168 142 204 202 118S286 70 350 136V230Z" fill="#051747" opacity="0.16" />
@@ -102,8 +111,23 @@ export default function HomeCreditCards({ cards, profile, onOpenCard, onViewCard
               <View style={s.bankRow}><InstitutionLogo institution={card.financialInstitution} size={26} /><Text numberOfLines={1} style={s.bankName}>{card.financialInstitution?.name ?? 'Cartão de crédito'}</Text><Contactless /></View>
               <Text numberOfLines={2} style={s.cardName}>{card.description}</Text>
               <View style={s.cardFooter}><Text numberOfLines={1} style={s.holder}>{profile?.name ?? ''}</Text><Text style={s.credit}>Crédito</Text></View>
+          </>;
+          return <React.Fragment key={card.uuid}>
+            {/* Keep the rear card visible while its moving copy comes to the front. */}
+            {moving && incoming && oldRank < 3 && <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+              style={[s.cardPosition, { height: cardHeight, zIndex: 4 - oldRank,
+                transform: [{ translateY: oldY }, { scale: oldScale }],
+                opacity: progress.interpolate({ inputRange: [0, 0.65, 1], outputRange: [1, 1, 0] }) }]}>
+              <View style={cardStyle}>{cardContent}</View>
+            </Animated.View>}
+            <Animated.View style={[s.cardPosition, animatedStyle]}>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${card.description}`}
+              accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition}
+              onPress={() => chooseCard(card.uuid)} style={cardStyle}>
+              {cardContent}
             </Pressable>
-          </Animated.View>;
+            </Animated.View>
+          </React.Fragment>;
         })}
       </View>
       {cards.length > 1 && <>
@@ -120,12 +144,12 @@ export default function HomeCreditCards({ cards, profile, onOpenCard, onViewCard
           {!!invoice?.status && <Text style={[s.badge, invoice.status === 'CLOSED' && s.closedBadge, invoice.status === 'PAID' && s.paidBadge]}>{statusLabels[invoice.status] ?? invoice.status}</Text>}
         </View>
         <View style={s.metrics}>
-          <View style={s.metric}><Text style={s.label}>Fatura atual</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.value, width < 340 && s.compactValue]}>{formatCurrency(invoice?.total ?? 0)}</Text></View>
-          <View style={[s.metric, s.divider]}><Text style={s.label}>Limite disponível</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.value, width < 340 && s.compactValue, selected.availableLimit < 0 && s.negative]}>{formatCurrency(selected.availableLimit)}</Text></View>
+          <View style={s.metric}><Text style={s.label}>Fatura atual</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.value, width < 340 && s.compactValue]}>{hidden ? hiddenAmount : formatCurrency(invoice?.total ?? 0)}</Text></View>
+          <View style={[s.metric, s.divider]}><Text style={s.label}>Limite disponível</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.value, width < 340 && s.compactValue, !hidden && selected.availableLimit < 0 && s.negative]}>{hidden ? hiddenAmount : formatCurrency(selected.availableLimit)}</Text></View>
         </View>
-        <View style={s.usage}><View accessibilityRole="progressbar" accessibilityLabel={`Limite utilizado de ${selected.description}`} accessibilityValue={{ min: 0, max: 100, now: Math.min(100, Math.round(usedPercentage)) }} style={s.track}>
-          <View style={[s.progress, { width: `${Math.min(100, usedPercentage)}%` }, selected.availableLimit < 0 && s.overLimit]} />
-        </View><Text style={s.usageLabel}>{`${Math.round(usedPercentage)}% utilizado`}</Text></View>
+        <View style={s.usage}><View accessibilityRole={hidden ? undefined : 'progressbar'} accessibilityLabel={hidden ? 'Limite utilizado. Valores ocultos.' : `Limite utilizado de ${selected.description}`} accessibilityValue={hidden ? undefined : { min: 0, max: 100, now: Math.min(100, Math.round(usedPercentage)) }} style={s.track}>
+          {!hidden && <View style={[s.progress, { width: `${Math.min(100, usedPercentage)}%` }, selected.availableLimit < 0 && s.overLimit]} />}
+        </View><Text style={s.usageLabel}>{hidden ? hiddenAmount : `${Math.round(usedPercentage)}% utilizado`}</Text></View>
         <View style={s.invoiceFooter}><View style={s.due}><Text style={s.caption}>{invoice ? `Vencimento em ${formatInvoiceDate(invoice.dueDate)}` : 'Nenhuma fatura em aberto'}</Text></View>
           {!!onOpenCard && <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${invoice ? 'fatura' : 'detalhes'} de ${selected.description}`} disabled={!!transition} onPress={() => onOpenCard(selected.uuid, invoice?.uuid)} style={({ pressed }) => [s.invoiceButton, pressed && s.pressed]}>
             <Text style={s.link}>{invoice ? 'Ver fatura' : 'Ver cartão'}</Text><Icon name="chevron" size={16} color={colors.primary} />

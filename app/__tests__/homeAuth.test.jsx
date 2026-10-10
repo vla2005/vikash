@@ -4,6 +4,8 @@ import { Text } from 'react-native';
 import { OnboardingProvider, useOnboarding } from '../src/contexts/OnboardingContext';
 import AppNavigator from '../src/navigation/AppNavigator.web';
 import HomeScreen from '../src/screens/HomeScreen';
+jest.mock('../src/hooks/useCreditDashboard', () => () => ({ data: null, loading: false, error: '', retry: jest.fn() }));
+jest.mock('../src/components/DashboardInsights', () => 'DashboardInsights');
 import ProtectedScreen from '../src/navigation/ProtectedScreen';
 import ConfirmationDialog from '../src/components/ConfirmationDialog';
 jest.mock('../src/hooks/useToast', () => ({ __esModule: true, default: () => ({ showToast: jest.fn() }) }));

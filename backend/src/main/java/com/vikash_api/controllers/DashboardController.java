@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vikash_api.dtos.responses.DashboardResponse;
 import com.vikash_api.services.DashboardService;
+import com.vikash_api.services.CreditDashboardService;
+import com.vikash_api.dtos.responses.CreditDashboardResponse;
+import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,6 +22,15 @@ import lombok.RequiredArgsConstructor;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final CreditDashboardService creditDashboardService;
+
+    @GetMapping("/credit")
+    public ResponseEntity<CreditDashboardResponse> getCreditDashboard(
+            @RequestParam @Min(1) @Max(12) int month,
+            @RequestParam @Min(1900) @Max(9999) int year,
+            @RequestParam(required = false) UUID creditCardUuid) {
+        return ResponseEntity.ok(creditDashboardService.get(month, year, creditCardUuid));
+    }
 
     @GetMapping
     public ResponseEntity<DashboardResponse> getDashboard(@RequestParam @Min(1) @Max(12) int month, @RequestParam int year){

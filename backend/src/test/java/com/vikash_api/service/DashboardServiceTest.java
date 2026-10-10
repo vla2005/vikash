@@ -27,7 +27,7 @@ import com.vikash_api.enums.AccountType;
 import com.vikash_api.enums.PaymentMethod;
 import com.vikash_api.enums.TransactionType;
 import com.vikash_api.repositories.AccountRepository;
-import com.vikash_api.repositories.CreditCardInstallmentRepository;
+import com.vikash_api.dtos.responses.CategoryExpenseResponse;
 import com.vikash_api.repositories.TransactionRepository;
 import com.vikash_api.services.AuthenticatedUserService;
 import com.vikash_api.services.AccountService;
@@ -44,7 +44,6 @@ class DashboardServiceTest {
     @Mock TransactionRepository transactionRepository;
     @Mock CreditCardService creditCardService;
     @Mock AccountService accountService;
-    @Mock CreditCardInstallmentRepository creditCardInstallmentRepository;
     @InjectMocks DashboardService service;
     UserEntity user;
 
@@ -105,6 +104,23 @@ class DashboardServiceTest {
         var response = service.getDashboard(period.getMonthValue(), period.getYear());
         assertThat(response.creditCards().creditCards()).containsExactly(card);
         assertThat(response.creditCards().creditCards().getFirst().unallocatedUsedLimit()).isEqualByComparingTo("2200");
+    }
+
+    @Test
+    void categoriesContainOnlyAccountExpensesForSelectedPeriod() {
+        YearMonth period = YearMonth.now().minusMonths(2);
+        stubTotals(period, "100", "50", "0", "0");
+        var small = new CategoryExpenseResponse(1L, null, "Mercado", "ochre", "basket", new BigDecimal("10"));
+        var large = new CategoryExpenseResponse(null, UUID.randomUUID(), "Transporte", "royal", "car", new BigDecimal("40"));
+        var start = period.atDay(1).atStartOfDay();
+        var end = period.plusMonths(1).atDay(1).atStartOfDay();
+        when(transactionRepository.sumExpensesByCategory(user.getId(), start, end)).thenReturn(List.of(small, large));
+
+        var response = service.getDashboard(period.getMonthValue(), period.getYear());
+
+        assertThat(response.expensesPerCategory()).containsExactly(large, small);
+        assertThat(response.expensesPerCategory()).extracting(CategoryExpenseResponse::total)
+                .containsExactly(new BigDecimal("40"), new BigDecimal("10"));
     }
 
     @Test

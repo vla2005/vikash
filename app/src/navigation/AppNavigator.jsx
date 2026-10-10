@@ -15,6 +15,7 @@ import MainTabs from './MainTabs';
 import ProtectedScreen from './ProtectedScreen';
 import SessionRetry from '../components/SessionRetry';
 import { AppSkeleton } from '../components/Skeleton';
+import useReducedMotion from '../hooks/useReducedMotion';
 
 const Stack = createNativeStackNavigator();
 const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.background, primary: colors.primary, text: colors.text, card: colors.background } };
@@ -27,10 +28,11 @@ function ProtectedAccounts(props) { return <ProtectedScreen component={AccountsS
 
 export default function AppNavigator({ initialRouteName = 'Home' }) {
   const { ready, restoreError, retryRestore } = useOnboarding();
+  const reducedMotion = useReducedMotion();
   if (!ready) { return <AppSkeleton />; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   return <NavigationContainer theme={theme}>
-    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: 'slide_from_right' }}>
+    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: reducedMotion ? 'none' : 'slide_from_right', animationDuration: 360 }}>
       <Stack.Screen name="Home" component={ProtectedHome} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />

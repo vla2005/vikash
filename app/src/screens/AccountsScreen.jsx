@@ -4,12 +4,13 @@ import Skeleton, { CreditCardSkeleton, ListSkeleton } from '../components/Skelet
 import Icon from '../components/Icon';
 import InstitutionLogo from '../components/InstitutionLogo';
 import CreditCardSummary from '../components/CreditCardSummary';
+import HomeCreditCards from '../components/HomeCreditCards';
 import SegmentedControl from '../components/SegmentedControl';
 import { getAccountType } from '../constants/accountTypes';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, colors, fontFamily, fontFamilyBold } from '../theme';
 
-export default function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, cards = [], cardsLoading = false, cardsError = '', onRetryCards, onCreateCard, onOpenCard }) {
+export default function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, cards = [], cardsLoading = false, cardsError = '', onRetryCards, onCreateCard, onOpenCard, profile }) {
   const [section, setSection] = useState('accounts');
   const [refreshing, setRefreshing] = useState(false);
   const refreshStarted = useRef(false);
@@ -40,7 +41,9 @@ export default function AccountsScreen({ accounts, loading, error, onRetry, onCr
       <View style={s.sectionHeader}><View style={s.sectionCopy}><Text accessibilityRole="header" style={s.sectionTitle}>Cartões de crédito</Text><Text style={s.caption}>Suas faturas e limites</Text></View>
         <Pressable accessibilityRole="button" accessibilityLabel="Novo cartão" onPress={onCreateCard} style={({ pressed }) => [s.add, pressed && s.pressed]}><Icon name="plus" size={21} color={colors.primary} /><Text style={s.link}>Novo cartão</Text></Pressable>
       </View>
-      {cardsLoading ? <CreditCardSkeleton /> : cardsError || !cards.length ? feedback(cardsError, onRetryCards, 'Tentar carregar cartões novamente', 'Seu primeiro cartão começa aqui', 'Organize suas faturas e seu limite de crédito.') : cards.map(card => <CreditCardSummary key={card.uuid} card={card} onInvoice={() => onOpenCard?.(card.uuid)} />)}
+      {cardsLoading ? <CreditCardSkeleton /> : cardsError || !cards.length ? feedback(cardsError, onRetryCards, 'Tentar carregar cartões novamente', 'Seu primeiro cartão começa aqui', 'Organize suas faturas e seu limite de crédito.')
+        : section === 'cards' ? <HomeCreditCards cards={cards} profile={profile} onOpenCard={onOpenCard} title="Meus cartões" compactHeading />
+          : cards.map(card => <CreditCardSummary key={card.uuid} card={card} onInvoice={() => onOpenCard?.(card.uuid)} />)}
     </View>;
   }
   return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" />}>

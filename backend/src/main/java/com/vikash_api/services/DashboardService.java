@@ -3,7 +3,6 @@ package com.vikash_api.services;
 import com.vikash_api.dtos.responses.*;
 import com.vikash_api.entities.UserEntity;
 import com.vikash_api.repositories.AccountRepository;
-import com.vikash_api.repositories.CreditCardInstallmentRepository;
 import com.vikash_api.repositories.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -28,7 +27,6 @@ public class DashboardService {
     private final TransactionRepository transactionRepository;
     private final CreditCardService creditCardService;
     private final AccountService accountService;
-    private final CreditCardInstallmentRepository creditCardInstallmentRepository;
 
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard(int month, int year){
@@ -100,49 +98,7 @@ public class DashboardService {
         LocalDateTime start = period.atDay(1).atStartOfDay();
         LocalDateTime end = period.plusMonths(1).atDay(1).atStartOfDay();
 
-        List<CategoryExpenseResponse> accountExpenses =
-                transactionRepository.sumExpensesByCategory(
-                        currentUser.getId(), start, end
-                );
-
-        List<CategoryExpenseResponse> creditExpenses =
-                creditCardInstallmentRepository.sumExpensesByCategory(
-                        currentUser.getId(), period.toString()
-                );
-
-        List<CategoryExpenseResponse> allExpenses = new ArrayList<>(accountExpenses);
-        allExpenses.addAll(creditExpenses);
-
-        Map<String, CategoryExpenseResponse> groupedExpenses = new HashMap<>();
-
-        for (CategoryExpenseResponse expense : allExpenses) {
-            String key;
-
-            if (expense.customCategoryUuid() != null) {
-                key = "custom:" + expense.customCategoryUuid();
-            } else if (expense.defaultCategoryId() != null) {
-                key = "default:" + expense.defaultCategoryId();
-            } else {
-                key = "uncategorized";
-            }
-
-            CategoryExpenseResponse existing = groupedExpenses.get(key);
-
-            if (existing == null) {
-                groupedExpenses.put(key, expense);
-            } else {
-                groupedExpenses.put(key, new CategoryExpenseResponse(
-                        expense.defaultCategoryId(),
-                        expense.customCategoryUuid(),
-                        expense.name(),
-                        expense.color(),
-                        expense.icon(),
-                        existing.total().add(expense.total())
-                ));
-            }
-        }
-
-        return groupedExpenses.values().stream()
+        return transactionRepository.sumExpensesByCategory(currentUser.getId(), start, end).stream()
                 .sorted(Comparator.comparing(CategoryExpenseResponse::total).reversed())
                 .toList();
     }

@@ -44,10 +44,11 @@ export function DetailsSkeleton({ label = 'Carregando detalhes', card = false })
 
 export function DashboardSkeleton() {
   return <SkeletonGroup label="Carregando resumo" style={s.dashboard}>
-    <View style={s.metrics}>{[0, 1].map(index => <View key={index} style={s.comparison}><Skeleton width="85%" height={15} /><Skeleton width="65%" height={11} /></View>)}</View>
-    <View style={s.panel}><Skeleton width="55%" height={18} /><Skeleton width="30%" height={11} /><Skeleton height={140} radius={12} /></View>
-    <View style={s.panel}><Skeleton width="65%" height={18} /><View style={s.center}><Skeleton width={160} height={160} radius={80} /></View><ListSkeleton count={3} label="Carregando gastos por categoria" /></View>
-    <View style={s.panel}><Skeleton width="70%" height={21} /><ListSkeleton count={2} label="Carregando contas" /><CreditCardSkeleton /></View>
+    <View style={s.panel}><View style={s.metrics}><Skeleton width="45%" height={24} /><Skeleton width="35%" height={40} /></View><View style={s.metrics}><Skeleton width="45%" height={164} radius={82} /><View style={s.copy}><Skeleton height={32} /><Skeleton height={32} /><Skeleton height={32} /></View></View></View>
+    <View style={s.panel}><Skeleton width="55%" height={24} /><Skeleton width="35%" height={20} /><Skeleton height={158} /></View>
+    <View style={s.panel}><Skeleton width="55%" height={18} /><Skeleton width="70%" height={24} /><View style={s.metrics}><Skeleton width="45%" height={48} /><Skeleton width="45%" height={48} /></View></View>
+    <View style={s.panel}><Skeleton width="50%" height={20} /><ListSkeleton count={3} label="Carregando faturas" /></View>
+    <View style={s.panel}><Skeleton width="70%" height={21} /><ListSkeleton count={4} label="Carregando contas e cartões" /></View>
     <View style={s.panel}><Skeleton width="65%" height={18} /><ListSkeleton count={3} label="Carregando movimentações recentes" /></View>
   </SkeletonGroup>;
 }
@@ -55,6 +56,7 @@ export function DashboardSkeleton() {
 export function AppSkeleton() {
   return <View style={s.app}><SkeletonGroup label="Carregando aplicativo" style={s.appHeader}><Skeleton width={126} height={36} /><Skeleton width={40} height={40} radius={20} /></SkeletonGroup><Skeleton width="45%" height={23} /><Skeleton width="75%" height={42} /><DashboardSkeleton /></View>;
 }
+
 
 const s = StyleSheet.create({
   block: { backgroundColor: colors.border },

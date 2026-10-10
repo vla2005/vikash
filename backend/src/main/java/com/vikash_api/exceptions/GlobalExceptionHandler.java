@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -152,6 +153,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTokenCompromised(TokenCompromisedException ex, HttpServletRequest request) {
         log.warn("Security compromise detected at URI: {}", request.getRequestURI());
         return buildErrorResponse(HttpStatus.FORBIDDEN, "Security Compromise Detected", ex.getMessage(), request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleParameterValidation(
+            HandlerMethodValidationException ex, HttpServletRequest request) {
+        if (ex.isForReturnValue()) {
+            return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",
+                    "Não foi possível concluir a solicitação.", request.getRequestURI(), null);
+        }
+        Map<String, String> errors = new HashMap<>();
+        for (var result : ex.getParameterValidationResults()) {
+            String field = result.getMethodParameter().getParameterName();
+            errors.put(field == null ? "parameter" : field, result.getResolvableErrors().getFirst().getDefaultMessage());
+        }
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Validation Error",
+                "Confira os parâmetros informados.", request.getRequestURI(), errors);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

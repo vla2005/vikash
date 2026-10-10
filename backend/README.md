@@ -169,6 +169,25 @@ O pagamento integral, pelo endpoint existente ou por comando de voz, usa o total
 
 Os valores iniciais não entram no gráfico de gastos por categoria, pois não representam compras categorizadas registradas no app. O pagamento gera uma única movimentação do tipo `INVOICE_PAYMENT` na conta. Compras novas continuam criando suas parcelas normalmente e consumindo limite adicional.
 
+### Resumo de crédito no dashboard
+
+`GET /api/dashboard/credit?year=2026&month=10` retorna o resumo de crédito do usuário autenticado.
+O parâmetro opcional `creditCardUuid` filtra apenas este resumo por um cartão do próprio usuário.
+O endpoint principal `GET /api/dashboard` mantém os dados e o contrato existentes.
+
+- `purchasesTotal` e `purchaseCount`: valor integral e quantidade das compras realizadas no mês, pela data da compra.
+- `invoicesTotal`: parcelas e valores iniciais das faturas com esse mês de referência, incluindo faturas pagas.
+- `monthlyPurchases`: seis meses até o período selecionado, com total e quantidade de compras; meses sem compras retornam zero.
+- `expensesPerCategory`: categorias das compras realizadas no período, pelo valor integral. Categorias personalizadas e padrão são agrupadas separadamente.
+- `upcomingInvoices`: até seis faturas pendentes com valor positivo, ordenadas pelo vencimento, incluindo atrasadas. São pendências atuais e não dependem do mês histórico selecionado.
+- `recentPurchases`: as últimas cinco compras, independentemente do mês selecionado, ordenadas pela data e pelo ID. Cada compra aparece uma vez, com valor total, cartão, categoria e quantidade de parcelas.
+
+No `GET /api/dashboard`, `expensesPerCategory` contém apenas gastos das contas no mês selecionado. As categorias de crédito vêm do endpoint de crédito acima. As movimentações recentes do app usam abas separadas: até cinco transações de contas e até cinco compras no crédito, ambas independentemente do período.
+
+Uma compra de `1200` em 12 parcelas entra como `1200` em compras no mês em que ocorreu e como `100` em cada fatura correspondente. O valor comprometido ainda não distribuído não entra nos totais de faturas.
+Esses dados não são somados às saídas de contas, evitando contar a compra e o pagamento da fatura duas vezes.
+Cartões de outro usuário retornam `404`; períodos e parâmetros inválidos retornam `400`. Nenhuma alteração de schema é necessária.
+
 ### Excluir transações e compras
 
 Os endpoints autenticados `DELETE /api/transaction/{uuid}` e `DELETE /api/credit-card-purchase/{uuid}` retornam `204`, sem body. O UUID deve pertencer ao usuário da sessão; lançamentos inexistentes ou de outro usuário retornam `404`.

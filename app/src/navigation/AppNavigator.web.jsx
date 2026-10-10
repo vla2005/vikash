@@ -11,6 +11,7 @@ import ProtectedScreen from './ProtectedScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import SessionRetry from '../components/SessionRetry';
 import { AppSkeleton } from '../components/Skeleton';
+import ScreenTransition from '../components/ScreenTransition';
 
 const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, ForgotPassword: ForgotPasswordScreen, CreateAccount: CreateAccountScreen, AddFinancialItem: AddFinancialItemScreen, CreateCreditCard: CreateCreditCardScreen, Accounts: AccountsSummaryScreen };
 
@@ -29,7 +30,9 @@ export default function AppNavigator({ initialRouteName = 'Home' }) {
   if (!ready) { return <AppSkeleton />; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   const key = `${route.name}-${route.params?.accountUuid || ''}`;
-  return ['Home', 'CreateAccount', 'AddFinancialItem', 'CreateCreditCard', 'Accounts'].includes(route.name)
+  return <ScreenTransition sceneKey={`${stack.length}:${key}`} depth={stack.length - 1} fade={route.name === 'Login' || route.name === 'Home'}>
+    {['Home', 'CreateAccount', 'AddFinancialItem', 'CreateCreditCard', 'Accounts'].includes(route.name)
     ? <ProtectedScreen key={key} component={Screen} route={route} navigation={navigation} />
-    : <Screen key={key} route={route} navigation={navigation} />;
+    : <Screen key={key} route={route} navigation={navigation} />}
+  </ScreenTransition>;
 }

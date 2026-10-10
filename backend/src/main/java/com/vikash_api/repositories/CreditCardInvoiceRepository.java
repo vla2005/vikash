@@ -14,9 +14,50 @@ import org.springframework.stereotype.Repository;
 
 import com.vikash_api.entities.CreditCardInvoiceEntity;
 import com.vikash_api.repositories.projections.InvoiceAmountProjection;
+import com.vikash_api.repositories.projections.CreditDashboardInvoiceProjection;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInvoiceEntity, Long> {
+    @Query("""
+        SELECT new com.vikash_api.repositories.projections.CreditDashboardInvoiceProjection(
+            invoice.uuid, invoice.referenceMonth, invoice.initialAmount + COALESCE(SUM(part.amount), 0),
+            invoice.dueDate, invoice.status, card.uuid, card.description,
+            institution.id, institution.name, institution.logoUrl)
+        FROM CreditCardInvoiceEntity invoice
+        JOIN invoice.creditCard card
+        JOIN card.financialInstitution institution
+        LEFT JOIN CreditCardInstallmentEntity part ON part.creditCardInvoice = invoice
+        WHERE card.user.id = :userId AND invoice.referenceMonth = :referenceMonth
+            AND (:cardUuid IS NULL OR card.uuid = :cardUuid)
+        GROUP BY invoice.id, invoice.uuid, invoice.referenceMonth, invoice.initialAmount,
+            invoice.dueDate, invoice.status, card.uuid, card.description,
+            institution.id, institution.name, institution.logoUrl
+    """)
+    List<CreditDashboardInvoiceProjection> findDashboardMonthInvoices(
+            @Param("userId") Long userId, @Param("cardUuid") UUID cardUuid,
+            @Param("referenceMonth") String referenceMonth);
+
+    @Query("""
+        SELECT new com.vikash_api.repositories.projections.CreditDashboardInvoiceProjection(
+            invoice.uuid, invoice.referenceMonth, invoice.initialAmount + COALESCE(SUM(part.amount), 0),
+            invoice.dueDate, invoice.status, card.uuid, card.description,
+            institution.id, institution.name, institution.logoUrl)
+        FROM CreditCardInvoiceEntity invoice
+        JOIN invoice.creditCard card
+        JOIN card.financialInstitution institution
+        LEFT JOIN CreditCardInstallmentEntity part ON part.creditCardInvoice = invoice
+        WHERE card.user.id = :userId AND invoice.status <> com.vikash_api.enums.CreditCardInvoiceStatus.PAID
+            AND (:cardUuid IS NULL OR card.uuid = :cardUuid)
+        GROUP BY invoice.id, invoice.uuid, invoice.referenceMonth, invoice.initialAmount,
+            invoice.dueDate, invoice.status, card.uuid, card.description,
+            institution.id, institution.name, institution.logoUrl
+        HAVING invoice.initialAmount + COALESCE(SUM(part.amount), 0) > 0
+        ORDER BY invoice.dueDate, invoice.id
+    """)
+    List<CreditDashboardInvoiceProjection> findDashboardPendingInvoices(
+            @Param("userId") Long userId, @Param("cardUuid") UUID cardUuid, Pageable pageable);
+
     @Query("""
         SELECT new com.vikash_api.dtos.responses.CreditCardInvoiceAnalysisContext(
             invoice.uuid, card.uuid, invoice.referenceMonth, invoice.closingDate, invoice.dueDate, invoice.status)
