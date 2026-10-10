@@ -43,12 +43,37 @@ class CreditCardInitialBalanceIntegrationTest {
     @Autowired InstitutionRepository institutions;
     @Autowired UserRepository users;
     @Autowired PlatformTransactionManager transactionManager;
+    @Autowired tools.jackson.databind.ObjectMapper json;
     @MockitoBean AuthenticatedUserService authenticatedUserService;
     CreditCardEntity card;
     UserEntity user;
     TransactionTemplate transaction;
     YearMonth past = YearMonth.now().minusMonths(1);
     YearMonth future = YearMonth.now().plusMonths(1);
+
+    @Test
+    void preservesLegacyCardAndItsReservedLimitWhenFinalIsProvided() {
+        card.setLastFourDigits(null);
+        cards.saveAndFlush(card);
+        assertThat(cardService.getByUuid(card.getUuid()).lastFourDigits()).isNull();
+        cardService.update(card.getUuid(), new CreditCardRequest(card.getFinancialInstitution().getId(),
+                32, card.getCreditLimit(), card.getClosingDay(), card.getDueDay()));
+        var updated = cardService.getByUuid(card.getUuid());
+        assertThat(updated.lastFourDigits()).isEqualTo(32);
+        assertThat(updated.availableLimit()).isEqualByComparingTo("2800");
+        assertThat(updated.unallocatedUsedLimit()).isEqualByComparingTo("2200");
+    }
+
+    @Test
+    void rejectsFractionalCardFinalInsteadOfTruncatingIt() {
+        String body = """
+                {"financialInstitutionId":1,"lastFourDigits":32.5,"creditLimit":5000,"closingDay":3,"dueDay":10}
+                """;
+        assertThatThrownBy(() -> json.readValue(body, CreditCardCreateRequest.class))
+                .isInstanceOf(tools.jackson.core.JacksonException.class);
+        assertThatThrownBy(() -> json.readValue(body, CreditCardRequest.class))
+                .isInstanceOf(tools.jackson.core.JacksonException.class);
+    }
 
     @BeforeEach
     void setUp() {
@@ -59,7 +84,7 @@ class CreditCardInitialBalanceIntegrationTest {
         ReflectionTestUtils.setField(bank, "name", "Inter");
         ReflectionTestUtils.setField(bank, "logoUrl", "/images/financial-institutions/inter.webp");
         bank = institutions.save(bank);
-        cardService.create(new CreditCardCreateRequest(bank.getId(), "Meu cartão", new BigDecimal("5000"),
+        cardService.create(new CreditCardCreateRequest(bank.getId(), 32, new BigDecimal("5000"),
                 3, 10, new BigDecimal("2800")));
         card = cards.findByUserIdAndActiveTrue(user.getId()).getFirst();
     }

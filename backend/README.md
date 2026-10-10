@@ -169,6 +169,21 @@ O pagamento integral, pelo endpoint existente ou por comando de voz, usa o total
 
 Os valores iniciais não entram no gráfico de gastos por categoria, pois não representam compras categorizadas registradas no app. O pagamento gera uma única movimentação do tipo `INVOICE_PAYMENT` na conta. Compras novas continuam criando suas parcelas normalmente e consumindo limite adicional.
 
+### Identificação dos cartões pelo final
+
+O cadastro e a edição de cartões usam `lastFourDigits` no lugar de `description`.
+O campo é um inteiro de `0` a `9999`: envie `32` para o final `0032`.
+O app exige quatro dígitos no formulário e completa os zeros à esquerda na exibição.
+As respostas dos cartões e referências de cartão em compras e dashboards usam o mesmo campo.
+Nas respostas de faturas, o campo é `creditCardLastFourDigits`.
+
+Para um banco existente, pare a API e execute `migrations/2026-10-10-credit-card-last-four-digits.sql`
+antes de iniciar a nova versão. Não remova o volume do banco.
+O script preserva o nome antigo em `legacy_description` e aproveita finais como `Cartão final 3732`.
+Cartões sem final identificável continuam cadastrados com `lastFourDigits: null`;
+o app solicita os quatro dígitos ao editá-los. Novos cadastros e edições exigem esse campo.
+Limites, saldos, compras e faturas são preservados. A migração pode ser executada novamente.
+
 ### Resumo de crédito no dashboard
 
 `GET /api/dashboard/credit?year=2026&month=10` retorna o resumo de crédito do usuário autenticado.

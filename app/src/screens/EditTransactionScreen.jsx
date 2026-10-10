@@ -15,6 +15,7 @@ import useCategories from '../hooks/useCategories';
 import useToast from '../hooks/useToast';
 import { updateTransaction } from '../services/transactions';
 import { categoryColors } from '../data/categories';
+import { creditCardLabel } from '../utils/creditCards';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
 import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
@@ -26,7 +27,7 @@ const methods = [
 const categoryKey = category => !category ? 'none' : category.uuid ? `custom:${category.uuid}` : `default:${category.name}`;
 function resourceOptions(items, current) {
   const all = current && !items.some(item => item.uuid === current.uuid) ? [current, ...items] : items;
-  return all.map(item => ({ value: item.uuid, label: item.description, institution: item.financialInstitution }));
+  return all.map(item => ({ value: item.uuid, label: 'lastFourDigits' in item ? creditCardLabel(item) : item.description, institution: item.financialInstitution }));
 }
 
 export default function EditTransactionScreen({ details, purchase = false, accessToken, onBack, onSaved, onSavingChange }) {

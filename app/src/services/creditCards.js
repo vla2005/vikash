@@ -1,4 +1,5 @@
 import { ApiError, authenticatedFetch, patchJson, postJson, putJson } from './apiClient';
+import { isValidLastFourDigits } from '../utils/creditCards';
 
 function initialAmount(value) {
   const amount = Number(value ?? 0);
@@ -27,7 +28,7 @@ export async function fetchCreditCardDetails(uuid, accessToken, signal) {
   }, accessToken);
   if (!response.ok) { throw new ApiError('Não foi possível carregar os detalhes do cartão. Tente novamente.', response.status); }
   const card = await response.json();
-  if (card?.uuid !== uuid || !Array.isArray(card.invoices) || typeof card.description !== 'string'
+  if (card?.uuid !== uuid || !Array.isArray(card.invoices) || !isValidLastFourDigits(card.lastFourDigits)
       || card.creditLimit == null || !Number.isFinite(Number(card.creditLimit))
       || card.availableLimit == null || !Number.isFinite(Number(card.availableLimit))
       || card.invoices.some(invoice => typeof invoice.uuid !== 'string' || invoice.total == null || !Number.isFinite(Number(invoice.total))
@@ -55,7 +56,7 @@ export function normalizeCreditCards(cards) {
   if (!Array.isArray(cards)) { throw new Error('A API retornou a lista de cartões em formato inesperado.'); }
   return cards.map(card => {
     const invoice = card?.currentInvoice;
-    if (!card || typeof card.uuid !== 'string' || !card.uuid.trim() || typeof card.description !== 'string'
+    if (!card || typeof card.uuid !== 'string' || !card.uuid.trim() || !isValidLastFourDigits(card.lastFourDigits)
         || card.creditLimit == null || !Number.isFinite(Number(card.creditLimit))
         || card.availableLimit == null || !Number.isFinite(Number(card.availableLimit))
         || (invoice != null && (typeof invoice.uuid !== 'string' || invoice.total == null || !Number.isFinite(Number(invoice.total))
@@ -73,7 +74,7 @@ export function createCreditCard(values, accessToken) {
   if (!accessToken) { throw new Error('Entre na sua conta antes de adicionar um cartão.'); }
   return postJson('/api/credit-card', {
     financialInstitutionId: values.financialInstitutionId,
-    description: values.description.trim(),
+    lastFourDigits: values.lastFourDigits,
     creditLimit: values.creditLimit,
     availableLimit: values.availableLimit,
     closingDay: values.closingDay,
@@ -87,7 +88,7 @@ export function createCreditCard(values, accessToken) {
 export function updateCreditCard(uuid, values, accessToken) {
   if (!accessToken) { throw new Error('Entre na sua conta antes de editar um cartão.'); }
   return putJson(`/api/credit-card/update/${encodeURIComponent(uuid)}`, {
-    financialInstitutionId: values.financialInstitutionId, description: values.description.trim(),
+    financialInstitutionId: values.financialInstitutionId, lastFourDigits: values.lastFourDigits,
     creditLimit: values.creditLimit, closingDay: values.closingDay, dueDay: values.dueDay,
   }, accessToken, { headers: { access_token: accessToken } });
 }

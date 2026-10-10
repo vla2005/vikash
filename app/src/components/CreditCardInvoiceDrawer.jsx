@@ -1,3 +1,4 @@
+import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +24,7 @@ export default function CreditCardInvoiceDrawer({ card, onClose }) {
         <View style={styles.handle} />
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.header}><Text accessibilityRole="header" style={styles.title}>Fatura do cartão</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar detalhes da fatura" onPress={onClose} hitSlop={12}><Icon name="close" /></Pressable></View>
-          <View style={styles.bank}><InstitutionLogo institution={card?.financialInstitution} size={44} /><View style={styles.info}><Text style={styles.name}>{card?.description}</Text><Text style={styles.label}>{invoice?.referenceMonth?.split('-').reverse().join('/')}</Text></View><Text style={styles.badge}>{statusLabels[invoice?.status] || invoice?.status}</Text></View>
+          <View style={styles.bank}><InstitutionLogo institution={card?.financialInstitution} size={44} /><View style={styles.info}><Text style={styles.name}>{creditCardLabel(card)}</Text><Text style={styles.label}>{invoice?.referenceMonth?.split('-').reverse().join('/')}</Text></View><Text style={styles.badge}>{statusLabels[invoice?.status] || invoice?.status}</Text></View>
           <Text style={styles.label}>Total da fatura</Text><Text style={styles.amount}>{invoice && formatCurrency(invoice.total)}</Text>
           {[['Fechamento', formatInvoiceDate(invoice?.closingDate)], ['Vencimento', formatInvoiceDate(invoice?.dueDate)], ['Limite total', card ? formatCurrency(card.creditLimit) : '—'], ['Limite disponível', card ? formatCurrency(card.availableLimit) : '—']].map(([label, value]) => <View key={label} style={styles.row}><Text style={styles.label}>{label}</Text><Text style={styles.value}>{value}</Text></View>)}
         </ScrollView>

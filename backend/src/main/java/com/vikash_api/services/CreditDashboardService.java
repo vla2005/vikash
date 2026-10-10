@@ -89,7 +89,7 @@ public class CreditDashboardService {
         return creditCardInvoiceRepository.findDashboardPendingInvoices(userId, cardUuid, PageRequest.of(0, 6))
                 .stream().map(invoice -> new CreditDashboardInvoiceResponse(
                         invoice.uuid(), invoice.referenceMonth(), invoice.total(), invoice.dueDate(), invoice.status(),
-                        new CreditCardReferenceResponse(invoice.creditCardUuid(), invoice.creditCardDescription(),
+                        new CreditCardReferenceResponse(invoice.creditCardUuid(), invoice.creditCardLastFourDigits(),
                                 new FinancialInstitutionResponse(invoice.institutionId(), invoice.institutionName(),
                                         invoice.institutionLogoUrl())))).toList();
     }
@@ -114,7 +114,7 @@ public class CreditDashboardService {
 
     private CreditCardReferenceResponse toCardReference(CreditCardEntity card) {
         var institution = card.getFinancialInstitution();
-        return new CreditCardReferenceResponse(card.getUuid(), card.getDescription(),
+        return new CreditCardReferenceResponse(card.getUuid(), card.getLastFourDigits(),
                 new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()));
     }
 }

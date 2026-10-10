@@ -60,7 +60,7 @@ public class CreditCardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         var current = pending.stream().min(Comparator.comparing(InvoiceAmountProjection::dueDate));
         var institution = card.getFinancialInstitution();
-        return new CreditCardDetailsResponse(card.getUuid(), card.getDescription(),
+        return new CreditCardDetailsResponse(card.getUuid(), card.getLastFourDigits(),
                 card.getCreditLimit(), card.getCreditLimit().subtract(used), card.getClosingDay(), card.getDueDay(),
                 new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()),
                 current.map(InvoiceAmountProjection::uuid).orElse(null), invoices.stream().map(invoice ->
@@ -100,7 +100,7 @@ public class CreditCardService {
                     current.referenceMonth(), current.total(), current.closingDate(), current.dueDate(), current.status(),
                     current.initialAmount());
             var used = usedLimits.getOrDefault(card.getId(), BigDecimal.ZERO).add(card.getUnallocatedUsedLimit());
-            return new CreditCardSummaryResponse(card.getUuid(), card.getDescription(), card.getCreditLimit(),
+            return new CreditCardSummaryResponse(card.getUuid(), card.getLastFourDigits(), card.getCreditLimit(),
                     card.getCreditLimit().subtract(used),
                     card.getClosingDay(), card.getDueDay(),
                     new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()),
@@ -115,7 +115,7 @@ public class CreditCardService {
                 .orElseThrow(() -> new CreditCardInvoiceNotFoundException("Cartão não encontrado."));
         var institution = institutionRepository.findById(request.financialInstitutionId())
                 .orElseThrow(() -> new InvalidCreditCardInvoiceException("Instituição financeira não encontrada."));
-        card.setDescription(request.description());
+        card.setLastFourDigits(request.lastFourDigits());
         card.setCreditLimit(request.creditLimit());
         card.setClosingDay(request.closingDay());
         card.setDueDay(request.dueDay());
@@ -137,7 +137,7 @@ public class CreditCardService {
         CreditCardEntity creditCard = new CreditCardEntity();
         creditCard.setUser(currentUser);
         creditCard.setFinancialInstitution(institution);
-        creditCard.setDescription(request.description());
+        creditCard.setLastFourDigits(request.lastFourDigits());
         creditCard.setCreditLimit(request.creditLimit());
         creditCard.setUnallocatedUsedLimit(request.creditLimit().subtract(availableLimit));
         creditCard.setClosingDay(request.closingDay());

@@ -10,6 +10,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import useToast from '../hooks/useToast';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { createCreditCard, updateCreditCard } from '../services/creditCards';
+import { formatLastFourDigits } from '../utils/creditCards';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
 import { colors, fontFamily, fontFamilyBold, typography } from '../theme';
 
@@ -19,7 +20,7 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
   const { session } = useOnboarding();
   const [institution, setInstitution] = useState(existingCard?.financialInstitution?.id ?? null);
   const [selectedInstitution, setSelectedInstitution] = useState(existingCard?.financialInstitution ?? null);
-  const [description, setDescription] = useState(existingCard?.description ?? '');
+  const [lastFourDigits, setLastFourDigits] = useState(formatLastFourDigits(existingCard?.lastFourDigits));
   const [limit, setLimit] = useState(formatCurrency(existingCard?.creditLimit ?? 0));
   const [availableLimit, setAvailableLimit] = useState(formatCurrency(0));
   const [availableEdited, setAvailableEdited] = useState(false);
@@ -34,7 +35,7 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
     if (submitting.current) { return; }
     const next = {};
     if (!institution) { next.institution = 'Selecione a instituição do cartão.'; }
-    if (description.trim().length < 2) { next.description = 'Informe uma descrição para seu cartão.'; }
+    if (!/^\d{4}$/.test(lastFourDigits)) { next.lastFourDigits = 'Informe os quatro últimos dígitos do cartão.'; }
     if (parseCurrency(limit) <= 0 || parseCurrency(limit) > 9999999999999.99) { next.limit = 'Informe um limite válido maior que zero.'; }
     if (!editing && (parseCurrency(availableLimit) < 0 || parseCurrency(availableLimit) > parseCurrency(limit))) { next.availableLimit = 'O disponível deve estar entre zero e o limite total.'; }
     if (!/^\d{1,2}$/.test(closingDay) || Number(closingDay) < 1 || Number(closingDay) > 31) { next.closingDay = 'Informe um dia entre 1 e 31.'; }
@@ -45,7 +46,7 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
     setLoading(true);
     setRequestError('');
     try {
-      const values = { financialInstitutionId: institution, description, creditLimit: parseCurrency(limit), closingDay: Number(closingDay), dueDay: Number(dueDay) };
+      const values = { financialInstitutionId: institution, lastFourDigits: Number(lastFourDigits), creditLimit: parseCurrency(limit), closingDay: Number(closingDay), dueDay: Number(dueDay) };
       if (editing) { await updateCreditCard(existingCard.uuid, values, session?.accessToken); }
       else { await createCreditCard({ ...values, availableLimit: parseCurrency(availableLimit) }, session?.accessToken); }
       showToast({ type: 'success', title: editing ? 'Cartão atualizado!' : 'Cartão criado!', message: 'Seu cartão de crédito foi salvo com sucesso.' });
@@ -53,7 +54,7 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
       else { navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); }
     } catch (cause) {
       setRequestError(cause.message);
-      setErrors({ description: cause.fieldErrors?.description, institution: cause.fieldErrors?.financialInstitutionId, limit: cause.fieldErrors?.creditLimit, availableLimit: cause.fieldErrors?.availableLimit, closingDay: cause.fieldErrors?.closingDay, dueDay: cause.fieldErrors?.dueDay });
+      setErrors({ lastFourDigits: cause.fieldErrors?.lastFourDigits, institution: cause.fieldErrors?.financialInstitutionId, limit: cause.fieldErrors?.creditLimit, availableLimit: cause.fieldErrors?.availableLimit, closingDay: cause.fieldErrors?.closingDay, dueDay: cause.fieldErrors?.dueDay });
       showToast({ type: 'error', title: editing ? 'Não foi possível atualizar o cartão' : 'Não foi possível criar o cartão', message: cause.message });
     } finally { submitting.current = false; setLoading(false); }
   }
@@ -62,7 +63,9 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
     <View style={styles.heading}><Text accessibilityRole="header" style={typography.title}>{editing ? 'Editar seu cartão.' : 'Seu cartão de crédito.'}</Text><Text style={typography.body}>{editing ? 'Atualize os dados do seu cartão.' : 'Organize suas faturas e compras parceladas.'}</Text></View>
     <View style={styles.form}>
       <FinancialInstitutionPicker required value={institution} selectedInstitution={selectedInstitution} onChange={(id, bank) => { setInstitution(id); setSelectedInstitution(bank); setErrors(previous => ({ ...previous, institution: undefined })); }} error={errors.institution} />
-      <FormField label="Descrição" placeholder="Ex.: Meu cartão Inter" value={description} onChangeText={setDescription} maxLength={100} error={errors.description} testID="card-description" />
+      <FormField label="Últimos 4 dígitos" placeholder="Ex.: 0032" value={lastFourDigits}
+        onChangeText={value => { setLastFourDigits(value.replace(/\D/g, '').slice(0, 4)); setErrors(previous => ({ ...previous, lastFourDigits: undefined })); }}
+        keyboardType="number-pad" maxLength={4} error={errors.lastFourDigits} hint="Informe apenas o final, nunca o número completo do cartão." testID="card-last-four-digits" />
       <FormField label="Limite de crédito" value={limit} onChangeText={value => { const formatted = maskCurrency(value); setLimit(formatted); if (!availableEdited) { setAvailableLimit(formatted); } setErrors(previous => ({ ...previous, limit: undefined, availableLimit: undefined })); }} large keyboardType="number-pad" maxLength={25} error={errors.limit} testID="card-limit" />
       {!editing && <>
         <FormField label="Limite disponível hoje" value={availableLimit} onChangeText={value => { setAvailableEdited(true); setAvailableLimit(maskCurrency(value)); setErrors(previous => ({ ...previous, availableLimit: undefined })); }} keyboardType="number-pad" maxLength={25} error={errors.availableLimit} hint="Confira no app do seu banco. Pode ser menor que o limite total." testID="card-available-limit" />

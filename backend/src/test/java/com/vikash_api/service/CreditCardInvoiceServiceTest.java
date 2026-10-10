@@ -48,7 +48,7 @@ class CreditCardInvoiceServiceTest {
         card = new CreditCardEntity();
         card.setId(10L);
         card.setUuid(UUID.randomUUID());
-        card.setDescription("Meu cartão");
+        card.setLastFourDigits(32);
         invoice = new CreditCardInvoiceEntity();
         invoice.setUuid(UUID.randomUUID());
         invoice.setCreditCard(card);

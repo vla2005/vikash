@@ -1,4 +1,5 @@
 import { ApiError, authenticatedFetch } from './apiClient';
+import { isValidLastFourDigits } from '../utils/creditCards';
 
 const invalid = () => new Error('A API retornou o resumo de crédito em formato inesperado.');
 function number(value, integer = false) {
@@ -12,7 +13,7 @@ function list(value) {
   return value;
 }
 function card(value) {
-  if (!value || typeof value.uuid !== 'string' || !value.uuid || typeof value.description !== 'string') { throw invalid(); }
+  if (!value || typeof value.uuid !== 'string' || !value.uuid || !isValidLastFourDigits(value.lastFourDigits)) { throw invalid(); }
   return value;
 }
 function date(value) {

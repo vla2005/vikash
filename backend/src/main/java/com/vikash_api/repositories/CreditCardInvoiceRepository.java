@@ -22,7 +22,7 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
     @Query("""
         SELECT new com.vikash_api.repositories.projections.CreditDashboardInvoiceProjection(
             invoice.uuid, invoice.referenceMonth, invoice.initialAmount + COALESCE(SUM(part.amount), 0),
-            invoice.dueDate, invoice.status, card.uuid, card.description,
+            invoice.dueDate, invoice.status, card.uuid, card.lastFourDigits,
             institution.id, institution.name, institution.logoUrl)
         FROM CreditCardInvoiceEntity invoice
         JOIN invoice.creditCard card
@@ -31,7 +31,7 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
         WHERE card.user.id = :userId AND invoice.referenceMonth = :referenceMonth
             AND (:cardUuid IS NULL OR card.uuid = :cardUuid)
         GROUP BY invoice.id, invoice.uuid, invoice.referenceMonth, invoice.initialAmount,
-            invoice.dueDate, invoice.status, card.uuid, card.description,
+            invoice.dueDate, invoice.status, card.uuid, card.lastFourDigits,
             institution.id, institution.name, institution.logoUrl
     """)
     List<CreditDashboardInvoiceProjection> findDashboardMonthInvoices(
@@ -41,7 +41,7 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
     @Query("""
         SELECT new com.vikash_api.repositories.projections.CreditDashboardInvoiceProjection(
             invoice.uuid, invoice.referenceMonth, invoice.initialAmount + COALESCE(SUM(part.amount), 0),
-            invoice.dueDate, invoice.status, card.uuid, card.description,
+            invoice.dueDate, invoice.status, card.uuid, card.lastFourDigits,
             institution.id, institution.name, institution.logoUrl)
         FROM CreditCardInvoiceEntity invoice
         JOIN invoice.creditCard card
@@ -50,7 +50,7 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
         WHERE card.user.id = :userId AND invoice.status <> com.vikash_api.enums.CreditCardInvoiceStatus.PAID
             AND (:cardUuid IS NULL OR card.uuid = :cardUuid)
         GROUP BY invoice.id, invoice.uuid, invoice.referenceMonth, invoice.initialAmount,
-            invoice.dueDate, invoice.status, card.uuid, card.description,
+            invoice.dueDate, invoice.status, card.uuid, card.lastFourDigits,
             institution.id, institution.name, institution.logoUrl
         HAVING invoice.initialAmount + COALESCE(SUM(part.amount), 0) > 0
         ORDER BY invoice.dueDate, invoice.id

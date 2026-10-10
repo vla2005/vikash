@@ -44,14 +44,14 @@ jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition:
 let renderer;
 
 test('detalhes abrem distribuição e recarregam cartão após PATCH bem sucedido', async () => {
-  const card = { uuid: 'card', description: 'Meu cartão', creditLimit: 5000, availableLimit: 2800,
+  const card = { uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 2800,
     unallocatedUsedLimit: 2200, initialCommittedAmount: 2200, closingDay: 3, dueDay: 10,
     financialInstitution: { id: 42, name: 'Inter' }, currentInvoiceUuid: null, invoices: [] };
   fetchCreditCards.mockResolvedValue([card]);
   fetchCreditCardDetails.mockResolvedValue(card);
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
-  await act(async () => button('Abrir cartão Meu cartão').props.onPress());
+  await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   await act(async () => button('Distribuir valores iniciais nas faturas').props.onPress());
   expect(button('Continuar depois')).toBeTruthy();
   await act(async () => button('Adicionar fatura').props.onPress());
@@ -226,13 +226,13 @@ test('a home mantém navegação para extrato, contas e registro por voz na barr
 
 test('alternar para cartoes esconde contas sem repetir consultas e permite voltar', async () => {
   fetchAccounts.mockResolvedValue([{ uuid: 'cash', description: 'Dinheiro', type: 'CARTEIRA', balance: 50 }]);
-  fetchCreditCards.mockResolvedValue([{ uuid: 'card', description: 'Meu cartão Inter', creditLimit: 5000, availableLimit: 4400 }]);
+  fetchCreditCards.mockResolvedValue([{ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4400 }]);
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
   expect(labels()).toContain('Dinheiro');
   await act(async () => button('Mostrar cartões').props.onPress());
   expect(labels()).not.toContain('Dinheiro');
-  expect(labels()).toContain('Meu cartão Inter');
+  expect(labels()).toContain('Cartão final 0032');
   expect(button('Mostrar cartões').props['aria-selected']).toBe(true);
   expect(button('Contas').props.accessibilityState.selected).toBe(true);
   expect(fetchAccounts).toHaveBeenCalledTimes(1);
@@ -285,9 +285,9 @@ test('cartao valida dias, envia ID real e preserva dados na falha antes de volta
     await act(async () => button('Novo cartão').props.onPress());
     expect(labels()).toContain('Seu cartão de crédito.');
     await act(async () => button('Criar cartão').props.onPress());
-    expect(labels()).toContain('Informe uma descrição para seu cartão.');
+    expect(labels()).toContain('Informe os quatro últimos dígitos do cartão.');
     const input = label => renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onChangeText === 'function')[0];
-    await act(async () => input('Descrição').props.onChangeText('Meu cartão Inter'));
+    await act(async () => input('Últimos 4 dígitos').props.onChangeText('0032'));
     await act(async () => input('Limite de crédito').props.onChangeText('500000'));
     await act(async () => button('Selecionar instituição financeira').props.onPress());
     await act(async () => button('Inter').props.onPress());
@@ -301,9 +301,9 @@ test('cartao valida dias, envia ID real e preserva dados na falha antes de volta
     await act(async () => input('Vencimento').props.onChangeText('31'));
     createCreditCard.mockRejectedValueOnce(new Error('Falha de conexão'));
     await act(async () => button('Criar cartão').props.onPress());
-    expect(createCreditCard).toHaveBeenCalledWith({ financialInstitutionId: 42, description: 'Meu cartão Inter', creditLimit: 5000, availableLimit: 5000, closingDay: 1, dueDay: 31 }, 'test-access');
+    expect(createCreditCard).toHaveBeenCalledWith({ financialInstitutionId: 42, lastFourDigits: 32, creditLimit: 5000, availableLimit: 5000, closingDay: 1, dueDay: 31 }, 'test-access');
     expect(labels()).toContain('Falha de conexão');
-    expect(input('Descrição').props.value).toBe('Meu cartão Inter');
+    expect(input('Últimos 4 dígitos').props.value).toBe('0032');
     expect(requests).not.toHaveBeenCalled();
     createCreditCard.mockResolvedValueOnce({ uuid: 'saved-card' });
     await act(async () => button('Criar cartão').props.onPress());
@@ -324,7 +324,7 @@ test('contas permite tentar novamente apos erro e mostra vazio sem mocks', async
 
 test('cartoes consultam dados reais, nao somam limite ao saldo e abrem os detalhes da fatura', async () => {
   fetchAccounts.mockResolvedValue([{ uuid: 'account', description: 'Minha conta', type: 'CONTA_CORRENTE', balance: 2000, financialInstitution: null }]);
-  fetchCreditCards.mockResolvedValue([{ uuid: 'card', description: 'Meu cartão Inter', creditLimit: 5000, availableLimit: 4400, financialInstitution: { name: 'Inter', logoUrl: '/images/financial-institutions/inter.webp' }, currentInvoice: { uuid: 'invoice', referenceMonth: '2026-10', closingDate: '2026-10-03', dueDate: '2026-10-10', status: 'OPEN', total: 600 } }]);
+  fetchCreditCards.mockResolvedValue([{ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4400, financialInstitution: { name: 'Inter', logoUrl: '/images/financial-institutions/inter.webp' }, currentInvoice: { uuid: 'invoice', referenceMonth: '2026-10', closingDate: '2026-10-03', dueDate: '2026-10-10', status: 'OPEN', total: 600 } }]);
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   expect(fetchCreditCards).not.toHaveBeenCalled();
   await act(async () => button('Contas').props.onPress());
@@ -332,8 +332,8 @@ test('cartoes consultam dados reais, nao somam limite ao saldo e abrem os detalh
   expect(labels()).toContain('Contas e cartões');
   const total = renderer.root.findAll(node => node.props.accessibilityLabel === 'Saldo total em contas')[0];
   expect(total.props.children.replace(/\s/g, '')).toBe('R$2.000,00');
-  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', description: 'Meu cartão Inter', creditLimit: 5000, availableLimit: 4400, closingDay: 3, dueDay: 10, financialInstitution: { name: 'Inter' }, currentInvoiceUuid: 'invoice', invoices: [{ uuid: 'invoice', referenceMonth: '2026-10', total: 600, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' }] });
-  await act(async () => button('Abrir cartão Meu cartão Inter').props.onPress());
+  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4400, closingDay: 3, dueDay: 10, financialInstitution: { name: 'Inter' }, currentInvoiceUuid: 'invoice', invoices: [{ uuid: 'invoice', referenceMonth: '2026-10', total: 600, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' }] });
+  await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   expect(fetchCreditCardDetails).toHaveBeenCalledWith('card', 'test-access', expect.anything());
   expect(labels()).toContain('Detalhes do cartão');
   expect(labels()).toContain('Compras da fatura');
@@ -343,14 +343,14 @@ test('cartoes consultam dados reais, nao somam limite ao saldo e abrem os detalh
 });
 
 test('cartao da pilha da Home abre sua fatura selecionada', async () => {
-  fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 0, expenses: 0, creditCards: [{ uuid: 'card', description: 'Itaú da Home', creditLimit: 5000, availableLimit: 4000, currentInvoice: { uuid: 'november', total: 800, dueDate: '2026-11-10', status: 'OPEN' } }] });
-  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', description: 'Itaú da Home', creditLimit: 5000, availableLimit: 4000, closingDay: 3, dueDay: 10, currentInvoiceUuid: 'october', invoices: [
+  fetchDashboard.mockResolvedValue({ totalBalance: 2000, incomes: 0, expenses: 0, creditCards: [{ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4000, currentInvoice: { uuid: 'november', total: 800, dueDate: '2026-11-10', status: 'OPEN' } }] });
+  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4000, closingDay: 3, dueDay: 10, currentInvoiceUuid: 'october', invoices: [
     { uuid: 'october', referenceMonth: '2026-10', total: 200, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' },
     { uuid: 'november', referenceMonth: '2026-11', total: 800, status: 'OPEN', closingDate: '2026-11-03', dueDate: '2026-11-10' },
   ] });
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   expect(fetchCreditCards).not.toHaveBeenCalled();
-  await act(async () => button('Ver fatura de Itaú da Home').props.onPress());
+  await act(async () => button('Ver fatura de Cartão final 0032').props.onPress());
   expect(fetchCreditCardDetails).toHaveBeenCalledWith('card', 'test-access', expect.anything());
   expect(button('Fatura Nov 2026').props.accessibilityState.selected).toBe(true);
   await act(async () => button('Voltar para contas e cartões').props.onPress());
@@ -392,29 +392,29 @@ test('movimentacao recente abre detalhes e retorna para Home sem recarregar o da
 });
 
 test('lapis abre cartao preenchido e atualiza sem criar outro cartao', async () => {
-  const card = { uuid: 'card', description: 'Meu cartão Inter', creditLimit: 5000, availableLimit: 5000, closingDay: 3, dueDay: 10, financialInstitution: { id: 42, name: 'Inter' }, currentInvoice: null, invoices: [] };
+  const card = { uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 5000, closingDay: 3, dueDay: 10, financialInstitution: { id: 42, name: 'Inter' }, currentInvoice: null, invoices: [] };
   fetchCreditCards.mockResolvedValue([card]);
   fetchCreditCardDetails.mockResolvedValue(card);
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
-  await act(async () => button('Abrir cartão Meu cartão Inter').props.onPress());
+  await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   await act(async () => button('Editar cartão').props.onPress());
   expect(labels()).toContain('Editar seu cartão.');
   const input = label => renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onChangeText === 'function')[0];
-  expect(input('Descrição').props.value).toBe('Meu cartão Inter');
+  expect(input('Últimos 4 dígitos').props.value).toBe('0032');
   expect(input('Fechamento').props.value).toBe('3');
   expect(input('Vencimento').props.value).toBe('10');
-  await act(async () => input('Descrição').props.onChangeText('Inter principal'));
+  await act(async () => input('Últimos 4 dígitos').props.onChangeText('1234'));
   updateCreditCard.mockRejectedValueOnce(new Error('Falha ao atualizar'));
   await act(async () => button('Salvar alterações').props.onPress());
-  expect(input('Descrição').props.value).toBe('Inter principal');
-  updateCreditCard.mockResolvedValueOnce({ ...card, description: 'Inter principal' });
-  fetchCreditCardDetails.mockResolvedValue({ ...card, description: 'Inter principal' });
+  expect(input('Últimos 4 dígitos').props.value).toBe('1234');
+  updateCreditCard.mockResolvedValueOnce({ ...card, lastFourDigits: 1234 });
+  fetchCreditCardDetails.mockResolvedValue({ ...card, lastFourDigits: 1234 });
   await act(async () => button('Salvar alterações').props.onPress());
-  expect(updateCreditCard).toHaveBeenLastCalledWith('card', { description: 'Inter principal', financialInstitutionId: 42, creditLimit: 5000, closingDay: 3, dueDay: 10 }, 'test-access');
+  expect(updateCreditCard).toHaveBeenLastCalledWith('card', { lastFourDigits: 1234, financialInstitutionId: 42, creditLimit: 5000, closingDay: 3, dueDay: 10 }, 'test-access');
   expect(createCreditCard).not.toHaveBeenCalled();
   expect(labels()).toContain('Detalhes do cartão');
-  expect(labels()).toContain('Inter principal');
+  expect(labels()).toContain('Cartão final 1234');
 });
 
 test('tocar conta abre o mesmo formulario preenchido usando dados do GET', async () => {
@@ -541,19 +541,19 @@ test('clique no extrato consulta detalhes por UUID e voltar preserva a lista sem
 });
 
 test('clique na parcela usa UUID da compra e abre a fatura escolhida nos detalhes', async () => {
-  fetchCreditCards.mockResolvedValue([{ uuid: 'card', description: 'Meu cartão', creditLimit: 5000, availableLimit: 4000 }]);
-  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', description: 'Meu cartão', creditLimit: 5000, availableLimit: 4000, closingDay: 3, dueDay: 10, currentInvoiceUuid: 'october', invoices: [
+  fetchCreditCards.mockResolvedValue([{ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4000 }]);
+  fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4000, closingDay: 3, dueDay: 10, currentInvoiceUuid: 'october', invoices: [
     { uuid: 'october', referenceMonth: '2026-10', total: 500, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' },
     { uuid: 'november', referenceMonth: '2026-11', total: 500, status: 'OPEN', closingDate: '2026-11-03', dueDate: '2026-11-10' },
   ] });
   fetchTransactions.mockResolvedValue({ rows: [{ id: 'installment', purchaseUuid: 'purchase', description: 'Televisão', amount: 500, date: '2026-10-04', type: 'EXPENSE', payment: 'Crédito', installmentCount: 2, installmentNumber: 1 }], page: 0, hasNext: false });
-  fetchCreditCardPurchaseDetails.mockResolvedValue({ uuid: 'purchase', description: 'Televisão', amount: 1000, occurredAt: '2026-10-04T19:30:00', creditCard: { uuid: 'card', description: 'Meu cartão' }, installmentCount: 2, installments: [
+  fetchCreditCardPurchaseDetails.mockResolvedValue({ uuid: 'purchase', description: 'Televisão', amount: 1000, occurredAt: '2026-10-04T19:30:00', creditCard: { uuid: 'card', lastFourDigits: 32 }, installmentCount: 2, installments: [
     { uuid: 'first', installmentNumber: 1, amount: 500, creditCardInvoiceUuid: 'october', referenceMonth: '2026-10', status: 'OPEN' },
     { uuid: 'second', installmentNumber: 2, amount: 500, creditCardInvoiceUuid: 'november', referenceMonth: '2026-11', status: 'OPEN' },
   ] });
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
-  await act(async () => button('Abrir cartão Meu cartão').props.onPress());
+  await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   expect(fetchCreditCardPurchaseDetails).not.toHaveBeenCalled();
   await act(async () => button('Abrir lançamento Televisão').props.onPress());
   expect(renderer.root.findByType(CreditCardPurchaseDetailsScreen).props.uuid).toBe('purchase');

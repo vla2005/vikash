@@ -266,7 +266,7 @@ class EntryEditingIntegrationTest {
     private CreditCardEntity card(int closingDay) {
         var institution = new FinancialInstitutionEntity(); ReflectionTestUtils.setField(institution, "name", "Banco " + UUID.randomUUID());
         ReflectionTestUtils.setField(institution, "logoUrl", "/images/financial-institutions/inter.webp"); institution = institutions.save(institution);
-        cardService.create(new CreditCardCreateRequest(institution.getId(), "Cartão", new BigDecimal("5000"), closingDay, 10, new BigDecimal("4500")));
+        cardService.create(new CreditCardCreateRequest(institution.getId(), 32, new BigDecimal("5000"), closingDay, 10, new BigDecimal("4500")));
         Long institutionId = institution.getId();
         return cards.findByUserIdAndActiveTrue(user.getId()).stream().filter(item -> item.getFinancialInstitution().getId().equals(institutionId)).findFirst().orElseThrow();
     }

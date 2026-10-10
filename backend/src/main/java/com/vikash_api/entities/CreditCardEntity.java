@@ -45,8 +45,11 @@ public class CreditCardEntity {
     @JoinColumn(nullable = false, name = "financial_institution_id")
     private FinancialInstitutionEntity financialInstitution;
 
-    @Column(nullable = false, length = 100)
-    private String description;
+    // Pode ficar nulo apenas para cartões antigos que ainda não informaram o final.
+    @Min(0)
+    @Max(9999)
+    @Column(name = "last_four_digits")
+    private Integer lastFourDigits;
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal creditLimit;

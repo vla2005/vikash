@@ -86,7 +86,7 @@ public class TransactionService {
         if (invoice != null) {
             var card = invoice.getCreditCard();
             var institution = card.getFinancialInstitution();
-            creditCard = new CreditCardReferenceResponse(card.getUuid(), card.getDescription(),
+            creditCard = new CreditCardReferenceResponse(card.getUuid(), card.getLastFourDigits(),
                     new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()));
         }
         return new TransactionResponse(transaction.getUuid(), transaction.getDescription(), transaction.getAmount(),
@@ -159,7 +159,7 @@ public class TransactionService {
         List<CreditCardAnalysisContext> analysisCards = creditCardRepository.findByUserIdAndActiveTrue(currentUser.getId())
                 .stream().map(card -> {
                     var institution = card.getFinancialInstitution();
-                    return new CreditCardAnalysisContext(card.getUuid(), card.getDescription(),
+                    return new CreditCardAnalysisContext(card.getUuid(), card.getLastFourDigits(),
                             new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()));
                 }).toList();
         AiAnalysisContext context = new AiAnalysisContext(

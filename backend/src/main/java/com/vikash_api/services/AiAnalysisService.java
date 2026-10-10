@@ -205,7 +205,8 @@ public class AiAnalysisService {
                 - Pagamento de fatura sem forma de pagamento informada: paymentMethod OTHER. Não suponha Pix ou boleto.
                 - Para INVOICE_PAYMENT, installmentCount 1, categorias null e destinationAccountUuid null.
                 - Para outros tipos, creditCardInvoiceUuid deve ser null.
-                - Para compras no crédito, escolha o cartão exclusivamente entre creditCards, pela descrição e instituição.
+                - Para compras no crédito, escolha o cartão exclusivamente entre creditCards, pelos últimos quatro dígitos (lastFourDigits) e instituição.
+                - lastFourDigits é numérico: 32 representa o final 0032. Um final null significa que o cartão antigo ainda não informou esse dado.
                 - Para compras no crédito, retorne o UUID em creditCardUuid; accountUuid e destinationAccountUuid devem ser null.
                 - Mesmo que haja uma conta do mesmo banco, uma compra no crédito usa o cartão, não a conta.
                 - Se o cartão não estiver cadastrado ou houver ambiguidade, creditCardUuid deve ser null

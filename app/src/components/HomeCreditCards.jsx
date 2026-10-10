@@ -1,3 +1,4 @@
+import { creditCardLabel, formatLastFourDigits } from '../utils/creditCards';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -109,7 +110,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
                 <Path d="M-20 234C86 168 142 204 202 118S286 70 350 136V230Z" fill="#051747" opacity="0.16" />
               </Svg>
               <View style={s.bankRow}><InstitutionLogo institution={card.financialInstitution} size={26} /><Text numberOfLines={1} style={s.bankName}>{card.financialInstitution?.name ?? 'Cartão de crédito'}</Text><Contactless /></View>
-              <Text numberOfLines={2} style={s.cardName}>{card.description}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={s.cardNumber}>{`•••• •••• •••• ${formatLastFourDigits(card.lastFourDigits) || '----'}`}</Text>
               <View style={s.cardFooter}><Text numberOfLines={1} style={s.holder}>{profile?.name ?? ''}</Text><Text style={s.credit}>Crédito</Text></View>
           </>;
           return <React.Fragment key={card.uuid}>
@@ -121,7 +122,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
               <View style={cardStyle}>{cardContent}</View>
             </Animated.View>}
             <Animated.View style={[s.cardPosition, animatedStyle]}>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${card.description}`}
+            <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${creditCardLabel(card)}`}
               accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition}
               onPress={() => chooseCard(card.uuid)} style={cardStyle}>
               {cardContent}
@@ -132,7 +133,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
       </View>
       {cards.length > 1 && <>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.dots}>
-          {cards.map(card => <Pressable key={card.uuid} accessibilityRole="button" accessibilityLabel={`Mostrar cartão ${card.description}`}
+          {cards.map(card => <Pressable key={card.uuid} accessibilityRole="button" accessibilityLabel={`Mostrar cartão ${creditCardLabel(card)}`}
             accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition} onPress={() => chooseCard(card.uuid)} style={s.dotButton}>
             <View style={[s.dot, card.uuid === (transition ?? selectedId) && s.selectedDot]} />
           </Pressable>)}
@@ -140,18 +141,18 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
         <Text style={s.hint}>Toque em um cartão para selecionar</Text>
       </>}
       <View accessibilityLiveRegion="polite" style={[s.details, cards.length === 1 && s.singleDetails]}>
-        <View style={s.detailsHeading}><Text numberOfLines={2} style={s.detailsName}>{selected.description}</Text>
+        <View style={s.detailsHeading}><Text numberOfLines={2} style={s.detailsName}>{creditCardLabel(selected)}</Text>
           {!!invoice?.status && <Text style={[s.badge, invoice.status === 'CLOSED' && s.closedBadge, invoice.status === 'PAID' && s.paidBadge]}>{statusLabels[invoice.status] ?? invoice.status}</Text>}
         </View>
         <View style={s.metrics}>
           <View style={s.metric}><Text style={s.label}>Fatura atual</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.value, width < 340 && s.compactValue]}>{hidden ? hiddenAmount : formatCurrency(invoice?.total ?? 0)}</Text></View>
           <View style={[s.metric, s.divider]}><Text style={s.label}>Limite disponível</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.value, width < 340 && s.compactValue, !hidden && selected.availableLimit < 0 && s.negative]}>{hidden ? hiddenAmount : formatCurrency(selected.availableLimit)}</Text></View>
         </View>
-        <View style={s.usage}><View accessibilityRole={hidden ? undefined : 'progressbar'} accessibilityLabel={hidden ? 'Limite utilizado. Valores ocultos.' : `Limite utilizado de ${selected.description}`} accessibilityValue={hidden ? undefined : { min: 0, max: 100, now: Math.min(100, Math.round(usedPercentage)) }} style={s.track}>
+        <View style={s.usage}><View accessibilityRole={hidden ? undefined : 'progressbar'} accessibilityLabel={hidden ? 'Limite utilizado. Valores ocultos.' : `Limite utilizado de ${creditCardLabel(selected)}`} accessibilityValue={hidden ? undefined : { min: 0, max: 100, now: Math.min(100, Math.round(usedPercentage)) }} style={s.track}>
           {!hidden && <View style={[s.progress, { width: `${Math.min(100, usedPercentage)}%` }, selected.availableLimit < 0 && s.overLimit]} />}
         </View><Text style={s.usageLabel}>{hidden ? hiddenAmount : `${Math.round(usedPercentage)}% utilizado`}</Text></View>
         <View style={s.invoiceFooter}><View style={s.due}><Text style={s.caption}>{invoice ? `Vencimento em ${formatInvoiceDate(invoice.dueDate)}` : 'Nenhuma fatura em aberto'}</Text></View>
-          {!!onOpenCard && <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${invoice ? 'fatura' : 'detalhes'} de ${selected.description}`} disabled={!!transition} onPress={() => onOpenCard(selected.uuid, invoice?.uuid)} style={({ pressed }) => [s.invoiceButton, pressed && s.pressed]}>
+          {!!onOpenCard && <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${invoice ? 'fatura' : 'detalhes'} de ${creditCardLabel(selected)}`} disabled={!!transition} onPress={() => onOpenCard(selected.uuid, invoice?.uuid)} style={({ pressed }) => [s.invoiceButton, pressed && s.pressed]}>
             <Text style={s.link}>{invoice ? 'Ver fatura' : 'Ver cartão'}</Text><Icon name="chevron" size={16} color={colors.primary} />
           </Pressable>}
         </View>
@@ -174,7 +175,7 @@ const s = StyleSheet.create({
   stack: { position: 'relative', marginTop: 6, overflow: 'visible' }, cardPosition: { position: 'absolute', top: 0, left: 0, right: 0 },
   card: { flex: 1, borderRadius: 20, padding: 14, overflow: 'hidden', justifyContent: 'space-between', boxShadow: '0px 6px 14px rgba(21,36,74,0.16)' },
   bankRow: { flexDirection: 'row', gap: 9, alignItems: 'center' }, bankName: { flex: 1, fontFamily: fontFamilyMedium, color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
-  cardName: { fontFamily: fontFamilyBold, fontSize: 23, lineHeight: 30, fontWeight: '700', letterSpacing: -0.7, color: '#FFFFFF', marginVertical: 12 },
+  cardNumber: { fontFamily: fontFamilyMedium, fontSize: 23, lineHeight: 30, fontWeight: '600', letterSpacing: 1.2, fontVariant: ['tabular-nums'], color: '#FFFFFF', marginVertical: 12 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 12 }, holder: { flex: 1, fontFamily: fontFamilyMedium, fontSize: 12, color: '#FFFFFF' }, credit: { fontFamily, fontSize: 11, color: '#FFFFFF' },
   dots: { flexGrow: 1, justifyContent: 'center', paddingTop: 3 }, dotButton: { width: 30, height: 36, justifyContent: 'center', alignItems: 'center' },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#CCD5E4' }, selectedDot: { width: 18, backgroundColor: colors.primary }, hint: { fontFamily, color: colors.secondary, fontSize: 11, textAlign: 'center', marginBottom: 14 },

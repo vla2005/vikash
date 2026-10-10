@@ -4,6 +4,7 @@ import { Animated, StyleSheet, Text } from 'react-native';
 import HomeScreen from '../src/screens/HomeScreen';
 import CategoryExpensesChart from '../src/components/CategoryExpensesChart';
 import BalanceEvolutionChart from '../src/components/BalanceEvolutionChart';
+import DashboardInsights from '../src/components/DashboardInsights';
 import HomeCreditCards from '../src/components/HomeCreditCards';
 import AccountsScreen from '../src/screens/AccountsScreen';
 import useReducedMotion from '../src/hooks/useReducedMotion';
@@ -55,6 +56,9 @@ test('loads month, credit and previous month with authentication and displays th
   expect(text()).toContain('5.673,00');
   expect(text()).toContain('Fatura vence em breve');
   expect(text()).toContain('85% utilizado');
+  expect(renderer.root.findByType(DashboardInsights).findAllByType(Text).some(node =>
+    Array.isArray(node.props.children) && node.props.children[0] === 'Cartão final 0032'
+      && node.props.children.includes('85% utilizado'))).toBe(true);
   for (const removed of ['Seu crédito', 'Últimas compras no crédito', 'Onde você comprou']) { expect(text()).not.toContain(removed); }
   expect(text()).toContain('Resumo do mês');
   expect(text()).toContain('Este período vale para entradas, saídas e o gráfico de gastos abaixo.');
@@ -125,7 +129,7 @@ test('recent tabs keep accounts and credit separate and open purchases, transact
   await act(async () => button('Mostrar transações recentes das contas').props.onPress());
   await act(async () => button('Abrir lançamento Farmácia').props.onPress());
   expect(onOpenTransaction).toHaveBeenCalledWith(expect.objectContaining({ id: 'expense', purchaseUuid: null }));
-  await act(async () => button('Abrir fatura de Meu cartão Itaú, vencimento 2026-10-12').props.onPress());
+  await act(async () => button('Abrir fatura de Cartão final 0032, vencimento 2026-10-12').props.onPress());
   expect(onOpenCard).toHaveBeenCalledWith('card', 'invoice');
   await act(async () => button('Abrir conta Conta principal').props.onPress());
   expect(onOpenAccount).toHaveBeenCalledWith('account');
@@ -145,7 +149,7 @@ test('spending pace covers leap year, completed months and future months without
 test('recent credit rows preserve purchase identity and integral amount for opening details', () => {
   const rows = toRecentPurchaseRows(credit.recentPurchases);
   expect(rows).toEqual([expect.objectContaining({ id: 'purchase', purchaseUuid: 'purchase', type: 'CREDIT_PURCHASE',
-    amount: 1200, installmentCount: 5, payment: 'Crédito', account: 'Meu cartão Itaú' })]);
+    amount: 1200, installmentCount: 5, payment: 'Crédito', account: 'Cartão final 0032' })]);
   expect(toRecentPurchaseRows()).toEqual([]);
 });
 
@@ -237,14 +241,14 @@ test('reduced motion skips donut and balance drawing; normal motion cleans up an
 });
 
 test('Accounts tab also displays the card stack and reduced motion selects the new card immediately', async () => {
-  const cards = [...dashboard.creditCards, { ...dashboard.creditCards[0], uuid: 'second', description: 'Meu outro cartão' }];
+  const cards = [...dashboard.creditCards, { ...dashboard.creditCards[0], uuid: 'second', lastFourDigits: 7070 }];
   await act(async () => { renderer = TestRenderer.create(<AccountsScreen accounts={[]} cards={cards} onOpenCard={jest.fn()} />); });
   expect(renderer.root.findAllByType(HomeCreditCards)).toHaveLength(0);
   await act(async () => button('Mostrar cartões').props.onPress());
   expect(renderer.root.findAllByType(HomeCreditCards)).toHaveLength(1);
   const timing = jest.spyOn(Animated, 'timing');
-  await act(async () => button('Selecionar cartão Meu outro cartão').props.onPress());
-  expect(button('Selecionar cartão Meu outro cartão').props.accessibilityState.selected).toBe(true);
+  await act(async () => button('Selecionar cartão Cartão final 7070').props.onPress());
+  expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState.selected).toBe(true);
   expect(timing).not.toHaveBeenCalled();
 });
 
@@ -252,19 +256,19 @@ test('animated card selection prevents overlapping switches and opens the new in
   useReducedMotion.mockReturnValue(false);
   let finish;
   const timing = jest.spyOn(Animated, 'timing').mockReturnValue({ start: callback => { finish = callback; }, stop: jest.fn() });
-  const cards = [...dashboard.creditCards, { ...dashboard.creditCards[0], uuid: 'second', description: 'Meu outro cartão',
+  const cards = [...dashboard.creditCards, { ...dashboard.creditCards[0], uuid: 'second', lastFourDigits: 7070,
     currentInvoice: { uuid: 'new-invoice', total: 900, dueDate: '2026-10-20', status: 'OPEN' } }];
   const onOpenCard = jest.fn();
   await act(async () => { renderer = TestRenderer.create(<HomeCreditCards cards={cards} onOpenCard={onOpenCard} />); });
-  await act(async () => button('Selecionar cartão Meu outro cartão').props.onPress());
+  await act(async () => button('Selecionar cartão Cartão final 7070').props.onPress());
   expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 1050, useNativeDriver: true }));
-  expect(button('Selecionar cartão Meu outro cartão').props.accessibilityState).toEqual({ selected: false, disabled: true });
-  expect(button('Ver detalhes de Meu cartão Itaú').props.disabled).toBe(true);
-  await act(async () => button('Selecionar cartão Meu cartão Itaú').props.onPress());
+  expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: false, disabled: true });
+  expect(button('Ver detalhes de Cartão final 0032').props.disabled).toBe(true);
+  await act(async () => button('Selecionar cartão Cartão final 0032').props.onPress());
   expect(timing).toHaveBeenCalledTimes(1);
   await act(async () => finish({ finished: true }));
-  expect(button('Selecionar cartão Meu outro cartão').props.accessibilityState).toEqual({ selected: true, disabled: false });
-  await act(async () => button('Ver fatura de Meu outro cartão').props.onPress());
+  expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: true, disabled: false });
+  await act(async () => button('Ver fatura de Cartão final 7070').props.onPress());
   expect(onOpenCard).toHaveBeenCalledWith('second', 'new-invoice');
 });
 
@@ -275,29 +279,31 @@ test('switching to the farthest card puts the receding card behind the middle ca
     progress = value;
     return { start: callback => { finish = callback; }, stop: jest.fn() };
   });
-  const cards = ['Vermelho', 'Laranja', 'Azul'].map(description => ({ ...dashboard.creditCards[0], uuid: description, description }));
+  const digits = { Vermelho: 1111, Laranja: 2222, Azul: 3333 };
+  const select = color => button(`Selecionar cartão Cartão final ${digits[color]}`);
+  const cards = Object.entries(digits).map(([uuid, lastFourDigits]) => ({ ...dashboard.creditCards[0], uuid, lastFourDigits }));
   await act(async () => { renderer = TestRenderer.create(<HomeCreditCards cards={cards} />); });
-  await act(async () => button('Selecionar cartão Laranja').props.onPress());
+  await act(async () => select('Laranja').props.onPress());
   await act(async () => { progress.setValue(1); finish({ finished: true }); });
-  const layerOf = description => {
-    let node = button(`Selecionar cartão ${description}`).parent;
+  const layerOf = color => {
+    let node = select(color).parent;
     while (node && StyleSheet.flatten(node.props.style)?.zIndex == null) { node = node.parent; }
     const layer = StyleSheet.flatten(node.props.style).zIndex;
     return typeof layer === 'number' ? layer : layer.__getValue();
   };
-  await act(async () => button('Selecionar cartão Azul').props.onPress());
+  await act(async () => select('Azul').props.onPress());
   expect(layerOf('Laranja')).toBeGreaterThan(layerOf('Vermelho'));
   await act(async () => progress.setValue(0.75));
   expect(layerOf('Laranja')).toBeLessThan(layerOf('Vermelho'));
-  expect(button('Selecionar cartão Azul').props.disabled).toBe(true);
+  expect(select('Azul').props.disabled).toBe(true);
   const rearLayers = [layerOf('Laranja'), layerOf('Vermelho')];
   await act(async () => { progress.setValue(1); finish({ finished: true }); });
   expect([layerOf('Laranja'), layerOf('Vermelho')]).toEqual(rearLayers);
-  expect(button('Selecionar cartão Azul').props.accessibilityState.selected).toBe(true);
+  expect(select('Azul').props.accessibilityState.selected).toBe(true);
 });
 
 test('Home card selection updates details and keeps financial data hidden until the eye is enabled', async () => {
-  const second = { ...dashboard.creditCards[0], uuid: 'second', description: 'Meu outro cartão', availableLimit: 3100,
+  const second = { ...dashboard.creditCards[0], uuid: 'second', lastFourDigits: 7070, availableLimit: 3100,
     currentInvoice: { uuid: 'second-invoice', total: 900, status: 'OPEN', referenceMonth: '2026-10', closingDate: '2026-10-13', dueDate: '2026-10-20' } };
   request.mockImplementation(async url => ({ ok: true, status: 200, json: async () => url.includes('/dashboard/credit')
     ? credit : { ...dashboard, creditCards: [...dashboard.creditCards, second] } }));
@@ -305,12 +311,12 @@ test('Home card selection updates details and keeps financial data hidden until 
   await home({ profile: { name: 'Viktor Lima' }, onOpenCard });
   expect(text()).toContain('Viktor Lima');
   await act(async () => button('Ocultar valores').props.onPress());
-  await act(async () => button('Selecionar cartão Meu outro cartão').props.onPress());
-  expect(button('Selecionar cartão Meu outro cartão').props.accessibilityState.selected).toBe(true);
+  await act(async () => button('Selecionar cartão Cartão final 7070').props.onPress());
+  expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState.selected).toBe(true);
   expect(text()).not.toContain('R$');
   expect(text()).not.toContain('% utilizado');
   expect(renderer.root.findAll(node => node.props.accessibilityRole === 'progressbar')).toHaveLength(0);
-  await act(async () => button('Ver fatura de Meu outro cartão').props.onPress());
+  await act(async () => button('Ver fatura de Cartão final 7070').props.onPress());
   expect(onOpenCard).toHaveBeenCalledWith('second', 'second-invoice');
   await act(async () => button('Mostrar valores').props.onPress());
   expect(text()).toContain('3.100,00');

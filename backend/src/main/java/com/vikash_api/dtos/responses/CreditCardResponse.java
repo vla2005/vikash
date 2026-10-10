@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record CreditCardResponse(
     UUID uuid,
-    String description,
+    Integer lastFourDigits,
     BigDecimal creditLimit,
     Integer closingDay,
     Integer dueDay,

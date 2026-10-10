@@ -14,7 +14,7 @@ jest.mock('react-native-svg', () => {
   return { __esModule: true, default: Shape, Path: Shape, Rect: Shape, Circle: Shape, Line: Shape, Polyline: Shape };
 });
 const invoices = ['2026-10', '2026-09'].map((referenceMonth, index) => ({ uuid: `invoice-${index}`, referenceMonth, total: 600, closingDate: `${referenceMonth}-03`, dueDate: `${referenceMonth}-10`, status: index ? 'PAID' : 'OPEN' }));
-const card = { uuid: 'card', description: 'Meu Inter', creditLimit: 5000, availableLimit: 4400, closingDay: 3, dueDay: 10, financialInstitution: { name: 'Inter' }, currentInvoiceUuid: 'invoice-0', invoices };
+const card = { uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4400, closingDay: 3, dueDay: 10, financialInstitution: { name: 'Inter' }, currentInvoiceUuid: 'invoice-0', invoices };
 const row = id => ({ id, description: `Compra ${id}`, amount: 50, date: '2026-10-02', type: 'EXPENSE', category: 'Saúde', color: 'sage', icon: 'health', payment: 'Crédito' });
 let renderer;
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }

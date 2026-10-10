@@ -193,7 +193,10 @@ public class CreditCardInvoiceService {
         payment.setCreditCardInvoice(invoice);
         payment.setType(TransactionType.INVOICE_PAYMENT);
         payment.setPaymentMethod(request.paymentMethod());
-        payment.setDescription("Pagamento da fatura " + invoice.getReferenceMonth() + " · " + invoice.getCreditCard().getDescription());
+        Integer lastFourDigits = invoice.getCreditCard().getLastFourDigits();
+        String cardLabel = lastFourDigits == null ? "Cartão sem final informado"
+                : String.format("Cartão final %04d", lastFourDigits);
+        payment.setDescription("Pagamento da fatura " + invoice.getReferenceMonth() + " · " + cardLabel);
         payment.setAmount(total);
         payment.setOccurredAt(request.occurredAt());
         payment.setTranscription(transcription);
@@ -368,7 +371,7 @@ public class CreditCardInvoiceService {
 
     private CreditCardInvoiceResponse toResponse(CreditCardInvoiceEntity invoice, BigDecimal total) {
         CreditCardEntity card = invoice.getCreditCard();
-        return new CreditCardInvoiceResponse(invoice.getUuid(), card.getUuid(), card.getDescription(),
+        return new CreditCardInvoiceResponse(invoice.getUuid(), card.getUuid(), card.getLastFourDigits(),
                 invoice.getReferenceMonth(), invoice.getClosingDate(), invoice.getDueDate(), invoice.getStatus(),
                 invoice.getCreatedAt(), invoice.getUpdatedAt(), invoice.getInitialAmount(), total);
     }

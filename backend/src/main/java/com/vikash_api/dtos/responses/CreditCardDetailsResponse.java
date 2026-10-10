@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-public record CreditCardDetailsResponse(UUID uuid, String description, BigDecimal creditLimit,
+public record CreditCardDetailsResponse(UUID uuid, Integer lastFourDigits, BigDecimal creditLimit,
         BigDecimal availableLimit, Integer closingDay, Integer dueDay,
         FinancialInstitutionResponse financialInstitution, UUID currentInvoiceUuid,
         List<CreditCardInvoiceSummaryResponse> invoices, BigDecimal usedLimit,

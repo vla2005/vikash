@@ -72,7 +72,7 @@ class VoiceCreditCardIntegrationTest {
         bank = institutionRepository.save(bank);
         card = new CreditCardEntity();
         card.setUser(user);
-        card.setDescription("Meu cartão Inter");
+        card.setLastFourDigits(32);
         card.setFinancialInstitution(bank);
         card.setCreditLimit(new BigDecimal("5000"));
         card.setClosingDay(3);
@@ -531,11 +531,11 @@ class VoiceCreditCardIntegrationTest {
         var closing = invoice.getClosingDate();
         var due = invoice.getDueDate();
         var request = new com.vikash_api.dtos.requests.CreditCardRequest(card.getFinancialInstitution().getId(),
-                "Inter principal", new BigDecimal("6000"), 5, 15);
+                1234, new BigDecimal("6000"), 5, 15);
         creditCardService.update(card.getUuid(), request);
         var updated = creditCardService.getByUuid(card.getUuid());
         assertThat(updated.uuid()).isEqualTo(card.getUuid());
-        assertThat(updated.description()).isEqualTo("Inter principal");
+        assertThat(updated.lastFourDigits()).isEqualTo(1234);
         assertThat(updated.creditLimit()).isEqualByComparingTo("6000");
         assertThat(invoice.getClosingDate()).isEqualTo(closing);
         assertThat(invoice.getDueDate()).isEqualTo(due);

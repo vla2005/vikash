@@ -1,3 +1,5 @@
+import { creditCardLabel } from './creditCards';
+
 export const hiddenAmount = '••••••';
 
 export function previousPeriod({ year, month }) {
@@ -25,7 +27,7 @@ export function toRecentPurchaseRows(purchases = []) {
   return purchases.map(purchase => ({
     id: purchase.uuid, purchaseUuid: purchase.uuid, description: purchase.description,
     amount: purchase.amount, type: 'CREDIT_PURCHASE', date: purchase.occurredAt.slice(0, 10),
-    occurredAt: purchase.occurredAt, payment: 'Crédito', account: purchase.creditCard.description,
+    occurredAt: purchase.occurredAt, payment: 'Crédito', account: creditCardLabel(purchase.creditCard),
     color: purchase.category?.color, icon: purchase.category?.icon || 'creditCard',
     installmentCount: purchase.installmentCount,
   }));

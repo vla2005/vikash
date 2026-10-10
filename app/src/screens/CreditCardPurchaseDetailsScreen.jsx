@@ -1,3 +1,4 @@
+import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import TransactionDetailsLayout, { CategoryRow, DetailRow, detailStyles as s } from '../components/TransactionDetailsLayout';
@@ -19,7 +20,7 @@ export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onB
     heroAction={onEdit && <EditTransactionButton purchase onPress={() => onEdit(data)} />}>
     {data && <>
       <Text style={s.section}>Informações da compra</Text>
-      <View style={s.group}><CategoryRow category={data.category} /><DetailRow label="Cartão de crédito" value={data.creditCard.description} institution={data.creditCard.financialInstitution} /></View>
+      <View style={s.group}><CategoryRow category={data.category} /><DetailRow label="Cartão de crédito" value={creditCardLabel(data.creditCard)} institution={data.creditCard.financialInstitution} /></View>
       <View style={local.heading}><Text style={local.section}>Parcelamento</Text><View style={local.count}><Text style={local.countText}>{equalInstallments ? `${data.installmentCount}x de ${formatCurrency(data.installments[0].amount)}` : `${data.installmentCount} parcelas`}</Text></View></View>
       <Text style={local.hint}>Toque em uma parcela para ver a fatura.</Text>
       <View style={local.installments}>{data.installments.map(item => {

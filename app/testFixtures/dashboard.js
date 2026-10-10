@@ -3,7 +3,7 @@ export const dashboard = {
   totalBalance: 14850, incomes: 4200, expenses: 1830,
   incomesPercentageChange: 20, expensesPercentageChange: -12,
   balanceEvolution: Array.from({ length: 7 }, (_, index) => ({ date: `2026-10-${String(index + 4).padStart(2, '0')}`, balance: 14000 + index * 100 })),
-  creditCards: [{ uuid: 'card', description: 'Meu cartão Itaú', creditLimit: 5000, availableLimit: 750,
+  creditCards: [{ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 750,
     financialInstitution: { name: 'Itaú' }, currentInvoice: null }],
   accounts: [{ uuid: 'account', description: 'Conta principal', type: 'CONTA_CORRENTE', balance: 2400, financialInstitution: { name: 'Inter' } }],
   expensesPerCategory: [

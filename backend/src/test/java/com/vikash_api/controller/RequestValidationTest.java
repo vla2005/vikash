@@ -49,7 +49,7 @@ class RequestValidationTest {
     @Test
     void createsCardWithAvailableLimitAndDistributesInvoicesWithEmptyResponses() throws Exception {
         mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content("""
-                {"financialInstitutionId":1,"description":"Meu cartão","creditLimit":5000,
+                {"financialInstitutionId":1,"lastFourDigits":32,"creditLimit":5000,
                  "closingDay":3,"dueDay":10,"availableLimit":0}
                 """))
                 .andExpect(status().isCreated()).andExpect(content().string(""));
@@ -68,11 +68,38 @@ class RequestValidationTest {
     @org.junit.jupiter.params.provider.ValueSource(strings = {"-1", "0.001", "10000000000000"})
     void rejectsInvalidAvailableLimitBeforeCallingService(String amount) throws Exception {
         mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content("""
-                {"financialInstitutionId":1,"description":"Meu cartão","creditLimit":5000,
+                {"financialInstitutionId":1,"lastFourDigits":32,"creditLimit":5000,
                  "closingDay":3,"dueDay":10,"availableLimit":%s}
                 """.formatted(amount)))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.availableLimit").isString());
         verifyNoInteractions(cards);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"null", "-1", "10000"})
+    void rejectsInvalidCardFinalOnCreateAndUpdate(String digits) throws Exception {
+        String body = """
+                {"financialInstitutionId":1,"lastFourDigits":%s,"creditLimit":5000,"closingDay":3,"dueDay":10}
+                """.formatted(digits);
+        mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.lastFourDigits").isString());
+        mvc.perform(put("/api/credit-card/update/" + UUID).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.lastFourDigits").isString());
+        verifyNoInteractions(cards);
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 32, 9999})
+    void acceptsCardFinalIncludingLeadingZeros(int digits) throws Exception {
+        String body = """
+                {"financialInstitutionId":1,"lastFourDigits":%d,"creditLimit":5000,"closingDay":3,"dueDay":10}
+                """.formatted(digits);
+        mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated());
+        mvc.perform(put("/api/credit-card/update/" + UUID).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNoContent());
+        verify(cards).create(argThat(request -> request.lastFourDigits().equals(digits)));
+        verify(cards).update(eq(java.util.UUID.fromString(UUID)), argThat(request -> request.lastFourDigits().equals(digits)));
     }
 
     @ParameterizedTest
@@ -93,7 +120,7 @@ class RequestValidationTest {
         doThrow(new com.vikash_api.exceptions.InvalidCreditCardSetupException("availableLimit", "Limite inválido."))
                 .when(cards).create(any());
         mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content("""
-                {"financialInstitutionId":1,"description":"Meu cartão","creditLimit":5000,
+                {"financialInstitutionId":1,"lastFourDigits":32,"creditLimit":5000,
                  "closingDay":3,"dueDay":10,"availableLimit":6000}
                 """))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.availableLimit").value("Limite inválido."));
@@ -199,7 +226,7 @@ class RequestValidationTest {
 
     static Stream<Arguments> emptyResponses() {
         String category = "{\"name\":\"Pets\",\"icon\":\"paw\",\"color\":\"sage\"}";
-        String card = "{\"financialInstitutionId\":1,\"description\":\"Meu cartão\",\"creditLimit\":5000,\"closingDay\":3,\"dueDay\":10}";
+        String card = "{\"financialInstitutionId\":1,\"lastFourDigits\":32,\"creditLimit\":5000,\"closingDay\":3,\"dueDay\":10}";
         String payment = "{\"accountUuid\":\"" + UUID + "\",\"paymentMethod\":\"PIX\",\"occurredAt\":\"2026-01-01T12:00:00\"}";
         return Stream.of(
                 Arguments.of("POST", "/api/category/create", category, 201),

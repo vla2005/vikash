@@ -97,7 +97,7 @@ class DashboardServiceTest {
     void includesCardInitialBalanceFieldsInDashboard() {
         YearMonth period = YearMonth.now().minusMonths(2);
         stubTotals(period, "100", "50", "0", "0");
-        var card = new com.vikash_api.dtos.responses.CreditCardSummaryResponse(UUID.randomUUID(), "Meu cartão",
+        var card = new com.vikash_api.dtos.responses.CreditCardSummaryResponse(UUID.randomUUID(), 32,
                 new BigDecimal("5000"), new BigDecimal("2800"), 3, 10, null, null,
                 new BigDecimal("2200"), new BigDecimal("2200"));
         when(creditCardService.get()).thenReturn(new AllCreditCardsResponse(List.of(card)));

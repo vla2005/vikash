@@ -1,3 +1,4 @@
+import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import InstitutionLogo from './InstitutionLogo';
@@ -22,10 +23,10 @@ export default function PendingInvoices({ invoices = [], loading, error, onRetry
       {invoices.length ? invoices.slice(0, 3).map((invoice, index) => {
         const overdue = invoice.dueDate < todayKey;
         const dueDate = new Date(invoice.dueDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
-        return <Pressable key={invoice.uuid} accessibilityRole="button" accessibilityLabel={`Abrir fatura de ${invoice.creditCard.description}, vencimento ${invoice.dueDate}`}
+        return <Pressable key={invoice.uuid} accessibilityRole="button" accessibilityLabel={`Abrir fatura de ${creditCardLabel(invoice.creditCard)}, vencimento ${invoice.dueDate}`}
           onPress={() => onOpenCard?.(invoice.creditCard.uuid, invoice.uuid)} style={({ pressed }) => [s.row, index > 0 && s.divider, pressed && s.pressed]}>
           <InstitutionLogo institution={invoice.creditCard.financialInstitution} size={36} />
-          <View style={s.copy}><Text numberOfLines={2} style={s.name}>{invoice.creditCard.description}</Text>
+          <View style={s.copy}><Text numberOfLines={2} style={s.name}>{creditCardLabel(invoice.creditCard)}</Text>
             <Text style={[s.caption, overdue && s.overdue]}>{overdue ? 'Atrasada · ' : invoice.dueDate === todayKey ? 'Vence hoje · ' : 'Vence '}{dueDate}</Text></View>
           <Text style={s.amount}>{hidden ? hiddenAmount : formatCurrency(invoice.total)}</Text>
           <Icon name="chevron" size={16} color={colors.secondary} />

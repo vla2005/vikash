@@ -25,7 +25,7 @@ jest.mock('react-native-svg', () => {
   return { __esModule: true, default: Shape, Path: Shape, Rect: Shape, Circle: Shape, Line: Shape, Polyline: Shape };
 });
 
-const card = { uuid: 'card', description: 'Meu cartão Inter', financialInstitution: { id: 42, name: 'Inter' },
+const card = { uuid: 'card', lastFourDigits: 32, financialInstitution: { id: 42, name: 'Inter' },
   creditLimit: 5000, availableLimit: 2800, unallocatedUsedLimit: 2200, initialCommittedAmount: 2200,
   closingDay: 3, dueDay: 10, invoices: [] };
 const onBack = jest.fn(); const onSaved = jest.fn();
@@ -46,7 +46,7 @@ async function createForm() {
   await act(async () => { renderer = TestRenderer.create(<CreateCreditCardScreen onCreated={onSaved} onCancel={onBack} />); });
   await act(async () => {
     renderer.root.findByType(FinancialInstitutionPicker).props.onChange(42, card.financialInstitution);
-    input('card-description').props.onChangeText('Meu Inter');
+    input('card-last-four-digits').props.onChangeText('0032');
     input('card-limit').props.onChangeText('500000');
     input('card-closing-day').props.onChangeText('3');
     input('card-due-day').props.onChangeText('10');
@@ -82,7 +82,34 @@ test('edição não altera o disponível ou o saldo inicial reservado', async ()
   await act(async () => { renderer = TestRenderer.create(<CreateCreditCardScreen card={card} onCreated={onSaved} onCancel={onBack} />); });
   expect(input('card-available-limit')).toBeUndefined();
   await act(async () => button('Salvar alterações').props.onPress());
-  expect(updateCreditCard).toHaveBeenCalledWith('card', { financialInstitutionId: 42, description: card.description, creditLimit: 5000, closingDay: 3, dueDay: 10 }, 'token');
+  expect(updateCreditCard).toHaveBeenCalledWith('card', { financialInstitutionId: 42, lastFourDigits: card.lastFourDigits, creditLimit: 5000, closingDay: 3, dueDay: 10 }, 'token');
+});
+
+test('cadastro exige quatro dígitos e envia 0032 como número, sem a descrição antiga', async () => {
+  await createForm();
+  await act(async () => input('card-last-four-digits').props.onChangeText('032'));
+  await act(async () => button('Criar cartão').props.onPress());
+  expect(createCreditCard).not.toHaveBeenCalled();
+  expect(text()).toContain('Informe os quatro últimos dígitos do cartão.');
+  await act(async () => input('card-last-four-digits').props.onChangeText('ab0032xyz9999'));
+  expect(input('card-last-four-digits').props.value).toBe('0032');
+  await act(async () => button('Criar cartão').props.onPress());
+  expect(createCreditCard.mock.calls[0][0].lastFourDigits).toBe(32);
+  expect(createCreditCard.mock.calls[0][0]).not.toHaveProperty('description');
+});
+
+test('cartão antigo continua editável, mas exige o final antes de salvar', async () => {
+  await act(async () => { renderer = TestRenderer.create(<CreateCreditCardScreen card={{ ...card, lastFourDigits: null }} onCreated={onSaved} />); });
+  expect(input('card-last-four-digits').props.value).toBe('');
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(updateCreditCard).not.toHaveBeenCalled();
+  await act(async () => input('card-last-four-digits').props.onChangeText('0000'));
+  updateCreditCard.mockRejectedValueOnce({ message: 'Confira os campos.', fieldErrors: { lastFourDigits: 'Final inválido.' } });
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(updateCreditCard).toHaveBeenCalledWith('card', expect.objectContaining({ lastFourDigits: 0 }), 'token');
+  expect(text()).toContain('Final inválido.');
+  expect(input('card-last-four-digits').props.value).toBe('0000');
+  expect(onSaved).not.toHaveBeenCalled();
 });
 
 test('distribuição parcial envia datas e valor absoluto; continuar depois não envia nada', async () => {

@@ -59,7 +59,7 @@ public class CreditCardPurchaseService {
                 .orElseThrow(() -> new TransactionNotFoundException("Compra no crédito não encontrada."));
         var card = purchase.getCreditCard();
         var institution = card.getFinancialInstitution();
-        var cardResponse = new CreditCardReferenceResponse(card.getUuid(), card.getDescription(),
+        var cardResponse = new CreditCardReferenceResponse(card.getUuid(), card.getLastFourDigits(),
                 new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()));
         CategoryResponse category = null;
         if (purchase.getCustomCategory() != null) {

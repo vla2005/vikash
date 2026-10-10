@@ -69,7 +69,7 @@ class EntryDeletionIntegrationTest {
         ReflectionTestUtils.setField(institution, "name", "Banco " + UUID.randomUUID());
         ReflectionTestUtils.setField(institution, "logoUrl", "/images/financial-institutions/inter.webp");
         institution = institutions.save(institution);
-        cardService.create(new CreditCardCreateRequest(institution.getId(), "Cartão", new BigDecimal("5000"),
+        cardService.create(new CreditCardCreateRequest(institution.getId(), 32, new BigDecimal("5000"),
                 3, 10, new BigDecimal("4500")));
         card = cards.findByUserIdAndActiveTrue(user.getId()).getFirst();
         invoiceService.distributeInitialAmounts(card.getUuid(), new CreditCardInitialInvoicesRequest(List.of(

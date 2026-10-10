@@ -10,7 +10,7 @@ import com.vikash_api.enums.CreditCardInvoiceStatus;
 public record CreditCardInvoiceResponse(
     UUID uuid,
     UUID creditCardUuid,
-    String creditCardDescription,
+    Integer creditCardLastFourDigits,
     String referenceMonth,
     LocalDate closingDate,
     LocalDate dueDate,

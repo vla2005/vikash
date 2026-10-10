@@ -33,7 +33,7 @@ test('transaction queries its UUID and shows real account, category and transcri
 });
 
 test('purchase opens invoice of selected installment and toggles original transcription', async () => {
-  fetchCreditCardPurchaseDetails.mockResolvedValue({ ...transaction, uuid: 'purchase', amount: 1500, creditCard: { uuid: 'card', description: 'Meu cartão Itaú' }, installmentCount: 3,
+  fetchCreditCardPurchaseDetails.mockResolvedValue({ ...transaction, uuid: 'purchase', amount: 1500, creditCard: { uuid: 'card', lastFourDigits: 32 }, installmentCount: 3,
     installments: [1, 2, 3].map(number => ({ uuid: `part-${number}`, installmentNumber: number, amount: 500, creditCardInvoiceUuid: `invoice-${number}`, referenceMonth: `2026-${number + 9}`, status: 'OPEN' })) });
   const onOpenInvoice = jest.fn();
   await act(async () => { renderer = TestRenderer.create(<CreditCardPurchaseDetailsScreen uuid="purchase" accessToken="token" selectedInvoiceUuid="invoice-1" onOpenInvoice={onOpenInvoice} />); });

@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public record CreditCardReferenceResponse(
     UUID uuid,
-    String description,
+    Integer lastFourDigits,
     FinancialInstitutionResponse financialInstitution
 ) {
 }

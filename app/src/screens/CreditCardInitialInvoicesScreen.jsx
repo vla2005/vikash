@@ -1,3 +1,4 @@
+import { creditCardLabel } from '../utils/creditCards';
 import React, { useEffect, useRef, useState } from 'react';
 import { BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
@@ -104,7 +105,7 @@ function DistributionForm({ card, accessToken, saving, setSaving, onBack, onSave
     } finally { busy.current = false; setSaving(false); }
   }
   return <>
-    <View style={s.identity}><InstitutionLogo institution={card.financialInstitution} size={42} /><View style={s.identityText}><Text style={s.cardName}>{card.description}</Text><Text style={s.note}>{card.financialInstitution?.name}</Text></View></View>
+    <View style={s.identity}><InstitutionLogo institution={card.financialInstitution} size={42} /><View style={s.identityText}><Text style={s.cardName}>{creditCardLabel(card)}</Text><Text style={s.note}>{card.financialInstitution?.name}</Text></View></View>
     <View style={s.heading}><Text accessibilityRole="header" style={s.title}>Organize o que já estava no cartão.</Text><Text style={s.note}>Distribua o valor anterior ao cadastro entre as faturas. Você pode salvar uma parte e continuar depois.</Text></View>
     <View style={s.summary}><Text style={s.note}>Valor inicial comprometido</Text><Text style={s.total}>{formatCurrency(totalInitial)}</Text><View style={s.summaryColumns}><View style={s.metric}><Text style={s.note}>Em faturas{paid > 0 ? ' (inclui pagas)' : ''}</Text><Text style={s.metricValue}>{formatCurrency((pending + paid) / 100)}</Text></View><View style={s.metric}><Text style={s.note}>Falta distribuir</Text><Text accessibilityLiveRegion="polite" style={[s.metricValue, remaining < 0 && s.error]}>{formatCurrency(remaining)}</Text></View></View><View style={s.limitNote}><Icon name="info" size={17} color={colors.primary} /><Text style={s.limitText}>Seu limite disponível continua em {formatCurrency(card.availableLimit)}.</Text></View></View>
     <View style={s.section}><Text accessibilityRole="header" style={s.sectionTitle}>Distribuição por fatura</Text><Text style={s.note}>{rows.length} / 120</Text></View>

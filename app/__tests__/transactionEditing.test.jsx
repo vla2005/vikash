@@ -23,7 +23,7 @@ jest.mock('react-native-svg', () => {
 });
 
 const account = { uuid: 'account', description: 'Carteira' };
-const card = { uuid: 'card', description: 'Meu cartão', financialInstitution: { id: 1, name: 'Inter' } };
+const card = { uuid: 'card', lastFourDigits: 32, financialInstitution: { id: 1, name: 'Inter' } };
 const details = { uuid: 'entry', description: 'Mercado', amount: 50, paymentMethod: 'PIX', type: 'EXPENSE', account,
   category: { name: 'Mercado', icon: 'basket', color: 'ochre' } };
 const purchase = { ...details, account: null, creditCard: card, installmentCount: 3,
@@ -41,7 +41,7 @@ async function open(data = details, isPurchase = false) {
 beforeEach(() => {
   jest.clearAllMocks(); onSaved = jest.fn(); onBack = jest.fn();
   fetchAccounts.mockResolvedValue([account, { uuid: 'next', description: 'Outra conta' }]);
-  fetchCreditCards.mockResolvedValue([card, { ...card, uuid: 'next-card', description: 'Outro cartão' }]);
+  fetchCreditCards.mockResolvedValue([card, { ...card, uuid: 'next-card', lastFourDigits: 4444 }]);
   fetchCategories.mockResolvedValue({ defaultCategories: [details.category], customCategories: [{ uuid: 'custom', name: 'Pets', icon: 'paw', color: 'blue' }] });
   updateTransaction.mockResolvedValue(null);
 });

@@ -43,7 +43,7 @@ class CreditCardServiceTest {
     }
 
     CreditCardCreateRequest request(BigDecimal available) {
-        return new CreditCardCreateRequest(1L, " Meu cartão ", new BigDecimal("5000"), 3, 10, available);
+        return new CreditCardCreateRequest(1L, 32, new BigDecimal("5000"), 3, 10, available);
     }
 
     @Test
@@ -53,7 +53,7 @@ class CreditCardServiceTest {
         var captor = ArgumentCaptor.forClass(CreditCardEntity.class);
         verify(creditCardRepository).save(captor.capture());
         assertThat(captor.getValue().getUnallocatedUsedLimit()).isEqualByComparingTo("2200");
-        assertThat(captor.getValue().getDescription()).isEqualTo("Meu cartão");
+        assertThat(captor.getValue().getLastFourDigits()).isEqualTo(32);
         verifyNoInteractions(creditCardInvoiceRepository, creditCardInstallmentRepository);
     }
 
@@ -87,7 +87,7 @@ class CreditCardServiceTest {
         card.setUnallocatedUsedLimit(new BigDecimal("2200"));
         when(creditCardRepository.findOwnedForUpdate(card.getUuid(), 7L)).thenReturn(Optional.of(card));
         when(institutionRepository.findById(1L)).thenReturn(Optional.of(new FinancialInstitutionEntity()));
-        service.update(card.getUuid(), new CreditCardRequest(1L, "Outro nome", new BigDecimal("6000"), 4, 11));
+        service.update(card.getUuid(), new CreditCardRequest(1L, 32, new BigDecimal("6000"), 4, 11));
         assertThat(card.getUnallocatedUsedLimit()).isEqualByComparingTo("2200");
     }
 }

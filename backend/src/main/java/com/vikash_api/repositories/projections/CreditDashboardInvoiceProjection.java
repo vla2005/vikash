@@ -7,6 +7,6 @@ import com.vikash_api.enums.CreditCardInvoiceStatus;
 
 public record CreditDashboardInvoiceProjection(
         UUID uuid, String referenceMonth, BigDecimal total, LocalDate dueDate, CreditCardInvoiceStatus status,
-        UUID creditCardUuid, String creditCardDescription,
+        UUID creditCardUuid, Integer creditCardLastFourDigits,
         Long institutionId, String institutionName, String institutionLogoUrl
 ) {}

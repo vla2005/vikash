@@ -205,7 +205,7 @@ class CreditDashboardIntegrationTest {
         ReflectionTestUtils.setField(institution, "logoUrl", "/images/financial-institutions/itau.webp");
         institutions.save(institution);
         var result = new CreditCardEntity();
-        result.setUser(owner); result.setFinancialInstitution(institution); result.setDescription("Meu cartão");
+        result.setUser(owner); result.setFinancialInstitution(institution); result.setLastFourDigits(32);
         result.setCreditLimit(new BigDecimal("5000")); result.setUnallocatedUsedLimit(new BigDecimal("50"));
         result.setClosingDay(3); result.setDueDay(10); result.setActive(true);
         return cards.save(result);
