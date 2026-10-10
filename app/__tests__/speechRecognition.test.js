@@ -6,6 +6,7 @@ import { requireOptionalNativeModule } from 'expo';
 jest.mock('expo', () => ({ requireOptionalNativeModule: jest.fn() }));
 jest.mock('expo-speech-recognition', () => ({ ExpoSpeechRecognitionModule: {
   addListener: jest.fn(), requestPermissionsAsync: jest.fn(), isRecognitionAvailable: jest.fn(() => true),
+  getSpeechRecognitionServices: jest.fn(), getDefaultRecognitionService: jest.fn(),
   start: jest.fn(), stop: jest.fn(), abort: jest.fn(),
 } }));
 let events;
@@ -16,6 +17,9 @@ beforeEach(() => {
   requireOptionalNativeModule.mockReturnValue(native);
   native.addListener.mockImplementation((name, handler) => { events[name] = handler; const remove = jest.fn(); removed.push(remove); return { remove }; });
   native.requestPermissionsAsync.mockResolvedValue({ granted: true });
+  native.isRecognitionAvailable.mockReturnValue(true);
+  native.getSpeechRecognitionServices.mockReturnValue(['com.google.android.tts']);
+  native.getDefaultRecognitionService.mockReturnValue({ packageName: 'com.google.android.tts' });
 });
 afterEach(() => { delete global.window; jest.restoreAllMocks(); });
 
@@ -72,5 +76,51 @@ test('permissao negada nao inicia reconhecimento', async () => {
   await service.start();
   expect(native.start).not.toHaveBeenCalled();
   expect(handlers.onError).toHaveBeenCalledWith('not-allowed');
+  service.dispose();
+});
+
+test('Android captura pelo serviço padrão sem exigir fluxo de áudio contínuo ou modelo offline', async () => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  native.getSpeechRecognitionServices.mockReturnValue(['com.samsung.android.bixby.agent', 'com.google.android.tts']);
+  native.getDefaultRecognitionService.mockReturnValue({ packageName: 'com.samsung.android.bixby.agent' });
+  const service = createNativeRecognition(callbacks());
+  await service.start();
+  expect(native.start).toHaveBeenCalledWith(expect.objectContaining({
+    continuous: false, addsPunctuation: false,
+    androidRecognitionServicePackage: 'com.samsung.android.bixby.agent',
+  }));
+  expect(native.start.mock.calls[0][0].requiresOnDeviceRecognition).toBeUndefined();
+  service.dispose();
+});
+
+test('Android usa serviço Google disponível quando o padrão não está instalado', async () => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  native.getDefaultRecognitionService.mockReturnValue({ packageName: 'servico.desativado' });
+  native.isRecognitionAvailable.mockReturnValue(false);
+  const handlers = callbacks(); const service = createNativeRecognition(handlers);
+  await service.start();
+  expect(native.start).toHaveBeenCalledWith(expect.objectContaining({ androidRecognitionServicePackage: 'com.google.android.tts' }));
+  expect(handlers.onError).not.toHaveBeenCalled();
+  service.dispose();
+});
+
+test('Android sem nenhum serviço de voz mostra indisponibilidade mesmo com microfone permitido', async () => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  native.getSpeechRecognitionServices.mockReturnValue([]);
+  native.isRecognitionAvailable.mockReturnValue(false);
+  const handlers = callbacks(); const service = createNativeRecognition(handlers);
+  await service.start();
+  expect(native.start).not.toHaveBeenCalled();
+  expect(handlers.onError).toHaveBeenCalledWith('service-not-allowed');
+  service.dispose();
+});
+
+test('iOS mantém reconhecimento contínuo e pontuação sem consultar serviços Android', async () => {
+  jest.replaceProperty(Platform, 'OS', 'ios');
+  const service = createNativeRecognition(callbacks());
+  await service.start();
+  expect(native.start).toHaveBeenCalledWith(expect.objectContaining({ continuous: true, addsPunctuation: true }));
+  expect(native.getSpeechRecognitionServices).not.toHaveBeenCalled();
+  expect(native.getDefaultRecognitionService).not.toHaveBeenCalled();
   service.dispose();
 });

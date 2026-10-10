@@ -19,7 +19,13 @@
         "expo-speech-recognition",
         {
           "microphonePermission": "Permita que o Vikash use o microfone para transcrever seus lançamentos.",
-          "speechRecognitionPermission": "Permita que o Vikash transforme sua fala em texto para você revisar."
+          "speechRecognitionPermission": "Permita que o Vikash transforme sua fala em texto para você revisar.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.tts",
+            "com.google.android.as",
+            "com.samsung.android.bixby.agent"
+          ]
         }
       ],
       [

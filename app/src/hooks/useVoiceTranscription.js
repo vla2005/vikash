@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createSpeechRecognition } from '../services/speechRecognition';
 
 const messages = {
   'not-allowed': 'Permita o acesso ao microfone e ao reconhecimento de voz para transcrever.',
-  'service-not-allowed': 'O reconhecimento de voz não está disponível neste dispositivo.',
+  'service-not-allowed': Platform.OS === 'android'
+    ? 'O serviço de voz não está disponível. Ative ou atualize o app Google ou Reconhecimento e síntese de fala nas configurações do celular.'
+    : 'O reconhecimento de voz não está disponível neste dispositivo.',
   'audio-capture': 'Não foi possível acessar o microfone. Confira se outro app está usando ele.',
   'no-speech': 'Não ouvimos nenhuma fala. Tente gravar novamente.',
   network: 'A transcrição perdeu a conexão. Confira a internet e tente novamente.',

@@ -1,5 +1,13 @@
 import { Platform } from 'react-native';
 
+function androidRecognitionService(module) {
+  const services = module.getSpeechRecognitionServices();
+  const defaultService = module.getDefaultRecognitionService().packageName;
+  if (services.includes(defaultService)) { return defaultService; }
+  const googleServices = ['com.google.android.tts', 'com.google.android.googlequicksearchbox'];
+  return googleServices.find(service => services.includes(service)) || services[0];
+}
+
 export function createSpeechRecognition(callbacks) {
   // Não importar o pacote antes desta verificação: ele exige o módulo ao carregar.
   const { requireOptionalNativeModule } = require('expo');
@@ -25,8 +33,17 @@ export function createSpeechRecognition(callbacks) {
       const permission = await module.requestPermissionsAsync();
       if (cancelled) { return; }
       if (!permission.granted) { callbacks.onError('not-allowed'); return; }
-      if (!module.isRecognitionAvailable()) { callbacks.onError('service-not-allowed'); return; }
-      module.start({ lang: 'pt-BR', interimResults: true, continuous: true, maxAlternatives: 1, addsPunctuation: true, recordingOptions: { persist: false } });
+      const android = Platform.OS === 'android';
+      const service = android ? androidRecognitionService(module) : undefined;
+      if (!service && !module.isRecognitionAvailable()) { callbacks.onError('service-not-allowed'); return; }
+      module.start({
+        lang: 'pt-BR', interimResults: true, maxAlternatives: 1,
+        // No Android, o serviço captura o microfone diretamente e finaliza após a fala.
+        // O modo contínuo usa um fluxo de áudio que nem todos os serviços aceitam.
+        continuous: !android, addsPunctuation: !android,
+        recordingOptions: { persist: false },
+        ...(service ? { androidRecognitionServicePackage: service } : {}),
+      });
     },
     stop() { module.stop(); },
     dispose() { cancelled = true; listeners.forEach(listener => listener.remove()); module.abort(); },

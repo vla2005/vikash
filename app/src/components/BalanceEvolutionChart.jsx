@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, ClipPath, Defs, G, LinearGradient, Line, Path, Polygon, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, G, LinearGradient, Line, Path, Polygon, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { colors, fontFamily, fontFamilyBold } from '../theme';
 import { formatCurrency } from '../utils/money';
 import useReducedMotion from '../hooks/useReducedMotion';
@@ -12,7 +12,7 @@ const right = 344;
 const top = 30;
 const bottom = 132;
 const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedG = Animated.createAnimatedComponent(G);
 
 function dateLabel(date) {
@@ -22,7 +22,7 @@ function dateLabel(date) {
 
 export default function BalanceEvolutionChart({ points, hidden = false }) {
   const reducedMotion = useReducedMotion();
-  const animation = useRef(new Animated.Value(0)).current;
+  const animation = useRef(new Animated.Value(1)).current;
   const chartId = `balance${useId().replace(/:/g, '')}`;
   useEffect(() => {
     if (!points?.length || hidden || reducedMotion) { animation.setValue(1); return; }
@@ -44,8 +44,12 @@ export default function BalanceEvolutionChart({ points, hidden = false }) {
   const upper = Math.max(lower + step, Math.ceil(maximum / step) * step);
   const ticks = Array.from({ length: Math.round((upper - lower) / step) + 1 }, (_, index) => lower + index * step);
   const y = value => bottom - (value - lower) / (upper - lower) * (bottom - top);
-  const plotted = points.map((point, index) => ({ ...point, x: left + index / (points.length - 1) * (right - left), y: y(point.balance) }));
+  const plotted = points.map((point, index) => ({ ...point, x: left + index / Math.max(points.length - 1, 1) * (right - left), y: y(point.balance) }));
   const line = plotted.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
+  const lineLength = Math.max(1, plotted.slice(1).reduce((length, point, index) => {
+    const previous = plotted[index];
+    return length + Math.hypot(point.x - previous.x, point.y - previous.y);
+  }, 0));
   const last = plotted[plotted.length - 1];
   const currentBalance = formatCurrency(last.balance);
   const tooltipWidth = Math.max(83, currentBalance.length * 6 + 14);
@@ -59,21 +63,23 @@ export default function BalanceEvolutionChart({ points, hidden = false }) {
         <Svg width="100%" viewBox={`0 0 ${width} ${height}`} style={s.chart}>
           <Defs>
             <LinearGradient id={`${chartId}Area`} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={colors.primary} stopOpacity={0.16} /><Stop offset="1" stopColor={colors.primary} stopOpacity={0.02} /></LinearGradient>
-            <ClipPath id={`${chartId}Reveal`}><AnimatedRect x={left - 7} y={0} width={animation.interpolate({ inputRange: [0, 1], outputRange: [0, right - left + 14] })} height={height} /></ClipPath>
           </Defs>
           {ticks.map(value => <React.Fragment key={value}>
             <Line x1={left} x2={right} y1={y(value)} y2={y(value)} stroke={colors.border} strokeWidth={0.8} strokeDasharray="2 3" />
             <SvgText x={left - 11} y={y(value) + 3} fontFamily={fontFamily} fontSize={9} fill={colors.secondary} textAnchor="end">{value.toLocaleString('pt-BR', { maximumFractionDigits: step < 1 ? 2 : 0 })}</SvgText>
           </React.Fragment>)}
-          {[0, 2, 4, 6].map(index => <React.Fragment key={index}>
+          {[0, 2, 4, 6].filter(index => index < plotted.length).map(index => <React.Fragment key={index}>
             <Line x1={plotted[index].x} x2={plotted[index].x} y1={top} y2={bottom} stroke={colors.border} strokeWidth={0.7} strokeDasharray="2 3" />
             <SvgText x={plotted[index].x} y={bottom + 18} fontFamily={fontFamily} fontSize={9} fill={colors.secondary} textAnchor="middle">{dateLabel(plotted[index].date)}</SvgText>
           </React.Fragment>)}
-          <G clipPath={`url(#${chartId}Reveal)`}>
+          {/* Animar o traço evita o recorte em Defs que pode permanecer vazio no Android. */}
+          <AnimatedG opacity={animation}>
           <Path d={`${line} L ${last.x} ${bottom} L ${left} ${bottom} Z`} fill={`url(#${chartId}Area)`} />
-          <Path d={line} stroke={colors.primary} strokeWidth={1.8} fill="none" strokeLinejoin="round" strokeLinecap="round" />
           {plotted.map((point, index) => <Circle key={point.date} cx={point.x} cy={point.y} r={index === plotted.length - 1 ? 5.5 : 2.8} fill={colors.primary} />)}
-          </G>
+          </AnimatedG>
+          <AnimatedPath d={line} stroke={colors.primary} strokeWidth={1.8} fill="none" strokeLinejoin="round" strokeLinecap="round"
+            strokeDasharray={[lineLength, lineLength]}
+            strokeDashoffset={animation.interpolate({ inputRange: [0, 1], outputRange: [lineLength, 0] })} />
           <AnimatedG opacity={animation.interpolate({ inputRange: [0, 0.9, 1], outputRange: [0, 0, 1], extrapolate: 'clamp' })}>
           <Line x1={last.x} x2={last.x} y1={tooltipY + 23} y2={bottom} stroke={colors.primary} strokeOpacity={0.45} strokeWidth={0.9} strokeDasharray="4 4" />
           <Rect x={right - tooltipWidth + 8} y={tooltipY} width={tooltipWidth} height={21} rx={4} fill={colors.primary} />
