@@ -31,11 +31,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.HtmlUtils;
+
+import jakarta.mail.MessagingException;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -118,16 +124,28 @@ public class AuthService {
     private void sendPasswordResetEmail(UserEntity user, String token) {
         String link = UriComponentsBuilder.fromUriString(passwordResetUrl)
                 .queryParam("token", token).build().toUriString();
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(mailFrom);
-        message.setTo(user.getEmail());
-        message.setSubject("Redefina sua senha no Vikash");
-        message.setText("Para redefinir sua senha, acesse o link abaixo:\n\n" + link
+        String greeting = user.getName() == null || user.getName().isBlank()
+                ? "Olá!" : "Olá, " + user.getName().trim() + "!";
+        String text = greeting + "\n\nRecebemos um pedido para redefinir sua senha no Vikash."
+                + "\nPara escolher uma nova senha, acesse:\n\n" + link
                 + "\n\nEste link é válido por 15 minutos e só pode ser utilizado uma vez."
-                + "\nSe você não solicitou a recuperação, ignore este e-mail.");
+                + "\nApós redefinir a senha, todas as suas sessões serão encerradas."
+                + "\nSe você não fez este pedido, ignore este e-mail. Sua senha continuará a mesma."
+                + "\n\nEquipe Vikash";
         try {
+            String html = new ClassPathResource("templates/emails/password-reset.html")
+                    .getContentAsString(StandardCharsets.UTF_8)
+                    .replace("{{resetLink}}", HtmlUtils.htmlEscape(link, "UTF-8"))
+                    .replace("{{greeting}}", HtmlUtils.htmlEscape(greeting, "UTF-8"));
+            var message = mailSender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_RELATED, "UTF-8");
+            helper.setFrom(mailFrom, "Vikash");
+            helper.setTo(user.getEmail());
+            helper.setSubject("Redefina sua senha no Vikash");
+            helper.setText(text, html);
+            helper.addInline("vikash-logo", new ClassPathResource("email/vikash-logo.png"), "image/png");
             mailSender.send(message);
-        } catch (MailException ex) {
+        } catch (MailException | MessagingException | IOException ex) {
             throw new EmailDeliveryException("Não foi possível enviar o e-mail de recuperação.", ex);
         }
     }

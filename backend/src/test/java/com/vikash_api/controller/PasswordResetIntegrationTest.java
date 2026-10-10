@@ -16,7 +16,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.internet.MimeMessage;
+import com.vikash_api.support.EmailTestSupport;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -39,7 +40,7 @@ class PasswordResetIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @MockitoBean JavaMailSender mailSender;
     RestClient client;
-    BlockingQueue<SimpleMailMessage> sentMessages;
+    BlockingQueue<MimeMessage> sentMessages;
 
     @BeforeEach
     void setUp() {
@@ -48,10 +49,11 @@ class PasswordResetIntegrationTest {
         users.deleteAll();
         reset(mailSender);
         sentMessages = new LinkedBlockingQueue<>();
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> EmailTestSupport.newMessage());
         doAnswer(invocation -> {
-            sentMessages.add(new SimpleMailMessage(invocation.getArgument(0)));
+            sentMessages.add(new MimeMessage(invocation.getArgument(0, MimeMessage.class)));
             return null;
-        }).when(mailSender).send(any(SimpleMailMessage.class));
+        }).when(mailSender).send(any(MimeMessage.class));
         client = RestClient.create("http://localhost:" + port);
     }
 
@@ -76,7 +78,7 @@ class PasswordResetIntegrationTest {
                 .body(new ForgotPasswordRequest("missing@example.com")).retrieve().toEntity(String.class);
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).isNullOrEmpty();
-        verify(mailSender, after(150).never()).send(any(SimpleMailMessage.class));
+        verify(mailSender, after(150).never()).send(any(MimeMessage.class));
         assertThat(resetTokens.count()).isZero();
     }
 
@@ -182,7 +184,7 @@ class PasswordResetIntegrationTest {
         requestLink(auth.getUser().getEmail());
         String first = receivedToken();
         requestLink(auth.getUser().getEmail());
-        verify(mailSender, after(150).times(1)).send(any(SimpleMailMessage.class));
+        verify(mailSender, after(150).times(1)).send(any(MimeMessage.class));
         assertThat(resetTokens.count()).isEqualTo(1);
 
         jdbc.update("UPDATE password_reset_tokens SET created_at = ?", java.sql.Timestamp.from(Instant.now().minusSeconds(65)));
@@ -196,19 +198,21 @@ class PasswordResetIntegrationTest {
     @Test
     void smtpFailureRollsBackTheTokenAndPreservesThePasswordAndSession() {
         AuthResponse auth = register("livia@example.com");
-        doThrow(new MailSendException("SMTP unavailable")).when(mailSender).send(any(SimpleMailMessage.class));
+        doThrow(new MailSendException("SMTP unavailable")).when(mailSender).send(any(MimeMessage.class));
         requestLink(auth.getUser().getEmail());
-        verify(mailSender, timeout(3000)).send(any(SimpleMailMessage.class));
+        verify(mailSender, timeout(3000)).send(any(MimeMessage.class));
         assertThat(resetTokens.count()).isZero();
         assertThat(meStatus(auth)).isEqualTo(200);
         assertThat(loginStatus("livia@example.com", "Password123!")).isEqualTo(200);
     }
 
     private String receivedToken() throws Exception {
-        SimpleMailMessage message = sentMessages.poll(5, TimeUnit.SECONDS);
+        MimeMessage message = sentMessages.poll(5, TimeUnit.SECONDS);
         assertThat(message).isNotNull();
-        assertThat(message.getText()).contains("https://vikash.example/reset-password?token=");
-        String token = message.getText().split("token=")[1].split("\\s")[0];
+        String text = EmailTestSupport.text(message);
+        assertThat(text).contains("https://vikash.example/reset-password?token=");
+        assertThat(EmailTestSupport.html(message)).contains("Redefinir minha senha", "15 minutos", "cid:vikash-logo");
+        String token = text.split("token=")[1].split("\\s")[0];
         for (int attempt = 0; attempt < 100; attempt++) {
             if (resetTokens.findByTokenHash(jwt.hashToken(token)).isPresent()) { return token; }
             Thread.sleep(20);

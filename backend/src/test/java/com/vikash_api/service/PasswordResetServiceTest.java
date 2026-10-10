@@ -19,7 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.Multipart;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+import com.vikash_api.support.EmailTestSupport;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,7 +55,8 @@ class PasswordResetServiceTest {
     }
 
     @Test
-    void sendsARandomTokenAndStoresOnlyItsHashWithFifteenMinutesOfValidity() {
+    void sendsARandomTokenAndStoresOnlyItsHashWithFifteenMinutesOfValidity() throws Exception {
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> EmailTestSupport.newMessage());
         when(users.findByEmailForUpdate(user.getEmail())).thenReturn(Optional.of(user));
         when(jwt.hashToken(anyString())).thenReturn("stored-token-hash");
         Instant before = Instant.now();
@@ -65,11 +69,13 @@ class PasswordResetServiceTest {
         assertThat(saved.getValue().getUsedAt()).isNull();
         assertThat(saved.getValue().getEmail()).isEqualTo(user.getEmail());
 
-        ArgumentCaptor<SimpleMailMessage> mail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        ArgumentCaptor<MimeMessage> mail = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(mail.capture());
-        assertThat(mail.getValue().getFrom()).isEqualTo("no-reply@example.com");
-        assertThat(mail.getValue().getTo()).containsExactly(user.getEmail());
-        String token = mail.getValue().getText().split("token=")[1].split("\\s")[0];
+        assertThat(((InternetAddress) mail.getValue().getFrom()[0]).getAddress()).isEqualTo("no-reply@example.com");
+        assertThat(((InternetAddress) mail.getValue().getFrom()[0]).getPersonal()).isEqualTo("Vikash");
+        assertThat(((InternetAddress) mail.getValue().getAllRecipients()[0]).getAddress()).isEqualTo(user.getEmail());
+        assertThat(EmailTestSupport.html(mail.getValue())).contains("Olá!");
+        String token = EmailTestSupport.text(mail.getValue()).split("token=")[1].split("\\s")[0];
         assertThat(token).matches("[A-Za-z0-9_-]{43}");
         assertThat(Base64.getUrlDecoder().decode(token)).hasSize(32);
         verify(jwt).hashToken(token);
@@ -103,13 +109,41 @@ class PasswordResetServiceTest {
 
     @Test
     void mailFailureIsWrappedInASpecificExceptionWithoutChangingThePassword() {
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> EmailTestSupport.newMessage());
         when(users.findByEmailForUpdate(user.getEmail())).thenReturn(Optional.of(user));
         when(jwt.hashToken(anyString())).thenReturn("hash");
-        doThrow(new MailSendException("SMTP unavailable")).when(mailSender).send(any(SimpleMailMessage.class));
+        doThrow(new MailSendException("SMTP unavailable")).when(mailSender).send(any(MimeMessage.class));
         assertThatThrownBy(() -> service.requestPasswordReset(new ForgotPasswordRequest(user.getEmail())))
                 .isInstanceOf(EmailDeliveryException.class);
         assertThat(user.getPassword()).isEqualTo("original-hash");
         verifyNoInteractions(encoder, refreshTokens);
+    }
+
+    @Test
+    void sendsEscapedHtmlAndPlainTextWithAnEmbeddedLogo() throws Exception {
+        user.setName("Lívia & <b>Teste</b>");
+        ReflectionTestUtils.setField(service, "passwordResetUrl", "https://vikash.example/reset-password?source=app&lang=pt");
+        when(users.findByEmailForUpdate(user.getEmail())).thenReturn(Optional.of(user));
+        when(jwt.hashToken(anyString())).thenReturn("hash");
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> EmailTestSupport.newMessage());
+        service.requestPasswordReset(new ForgotPasswordRequest(user.getEmail()));
+
+        var mail = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(mailSender).send(mail.capture());
+        String html = EmailTestSupport.html(mail.getValue());
+        String text = EmailTestSupport.text(mail.getValue());
+        String link = text.split("\n\n")[2];
+        assertThat(html).contains("Olá, Lívia &amp; &lt;b&gt;Teste&lt;/b&gt;!", "Redefinir minha senha",
+                "15 minutos", "cid:vikash-logo", "source=app&amp;lang=pt&amp;token=");
+        assertThat(html).doesNotContain("<b>Teste</b>", "{{", "<script", "https://fonts.");
+        assertThat(text).contains("Olá, Lívia & <b>Teste</b>!", "15 minutos", "todas as suas sessões serão encerradas");
+        assertThat(html).contains(link.replace("&", "&amp;"));
+        Multipart related = (Multipart) mail.getValue().getContent();
+        assertThat(related.getCount()).isEqualTo(2);
+        var logo = related.getBodyPart(1);
+        assertThat(logo.getHeader("Content-ID")).containsExactly("<vikash-logo>");
+        assertThat(logo.getDisposition()).isEqualTo("inline");
+        assertThat(logo.getInputStream().readAllBytes()).isNotEmpty().hasSizeLessThan(30000);
     }
 
     @Test

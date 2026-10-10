@@ -31,6 +31,12 @@ Preencha o `.env` com as credenciais do banco, os secrets JWT e a chave do Gemin
 docker compose -f compose.yaml -f compose.local.yaml up -d --build
 ```
 
+O e-mail de recuperação é enviado em HTML, com uma alternativa em texto simples.
+O visual fica em `src/main/resources/templates/emails/password-reset.html`, e a logo PNG
+em `src/main/resources/email/vikash-logo.png` é embutida na mensagem, sem depender de um endereço público.
+O remetente aparece como **Vikash** usando o endereço configurado em `SMTP_FROM`.
+O botão e o link alternativo usam `PASSWORD_RESET_URL` com o token temporário de 15 minutos.
+
 Esse comando compila a API, executa os testes do build e inicia os dois serviços. A API aguarda o PostgreSQL estar disponível antes de iniciar. Para recompilar após alterar o backend, execute novamente o mesmo comando.
 
 Com as portas padrão, os acessos são:
