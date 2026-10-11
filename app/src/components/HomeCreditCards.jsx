@@ -26,6 +26,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
   const s = useThemeStyles(createStyles);
   const [selectedUuid, setSelectedUuid] = useState(cards[0]?.uuid);
   const [transition, setTransition] = useState(null);
+  const [layersSwapped, setLayersSwapped] = useState(false);
   const [width, setWidth] = useState(320);
   const progress = useRef(new Animated.Value(0)).current;
   const switching = useRef(false);
@@ -68,15 +69,25 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
     switching.current = true;
     const version = ++animationVersion.current;
     progress.setValue(0);
+    setLayersSwapped(false);
     setTransition(uuid);
     animation.current = Animated.timing(progress, {
-      toValue: 1, duration: 860, easing: Easing.inOut(Easing.cubic), useNativeDriver: true,
+      toValue: 0.5, duration: 430, easing: Easing.in(Easing.cubic), useNativeDriver: true,
     });
     animation.current.start(({ finished }) => {
       if (!finished || version !== animationVersion.current) { return; }
-      setSelectedUuid(uuid);
-      setTransition(null);
-      switching.current = false;
+      // Fabric orders siblings through React commits, not animated zIndex updates.
+      // Change layers at the top of the lift, then settle on the new front layer.
+      setLayersSwapped(true);
+      animation.current = Animated.timing(progress, {
+        toValue: 1, duration: 430, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+      });
+      animation.current.start(result => {
+        if (!result.finished || version !== animationVersion.current) { return; }
+        setSelectedUuid(uuid);
+        setTransition(null);
+        switching.current = false;
+      });
     });
   }
 
@@ -119,12 +130,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
           const opacity = moving && oldRank >= 3
             ? progress.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 1] })
             : moving && newRank >= 3 ? progress.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }) : 1;
-          // Lift out of the pile first, then move in front as the other layers settle.
-          const crossing = incoming ? 0.4 : 0.55;
-          const zIndex = moving ? progress.interpolate({
-            inputRange: [0, crossing, crossing, 1],
-            outputRange: [4 - oldRank, 4 - oldRank, incoming ? 6 : 4 - newRank, incoming ? 6 : 4 - newRank],
-          }) : 4 - oldRank;
+          const zIndex = 4 - (moving && layersSwapped ? newRank : oldRank);
           const animatedStyle = { height: cardHeight, zIndex, transform, opacity };
           const cardStyle = [s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }];
           const cardContent = <>

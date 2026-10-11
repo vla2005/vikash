@@ -261,18 +261,21 @@ test('animated card selection prevents overlapping switches and opens the new in
   const onOpenCard = jest.fn();
   await act(async () => { renderer = TestRenderer.create(<HomeCreditCards cards={cards} onOpenCard={onOpenCard} />); });
   await act(async () => button('Selecionar cartão Cartão final 7070').props.onPress());
-  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 860, useNativeDriver: true }));
+  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 0.5, duration: 430, useNativeDriver: true }));
   expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: false, disabled: true });
   expect(button('Ver detalhes de Cartão final 0032').props.disabled).toBe(true);
   await act(async () => button('Selecionar cartão Cartão final 0032').props.onPress());
   expect(timing).toHaveBeenCalledTimes(1);
+  await act(async () => finish({ finished: true }));
+  expect(timing).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, duration: 430, useNativeDriver: true }));
+  expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: false, disabled: true });
   await act(async () => finish({ finished: true }));
   expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: true, disabled: false });
   await act(async () => button('Ver fatura de Cartão final 7070').props.onPress());
   expect(onOpenCard).toHaveBeenCalledWith('second', 'new-invoice');
 });
 
-test('switching to the farthest card puts the receding card behind the middle card before the animation ends', async () => {
+test('switching to the farthest card commits the new native layer order at the lift, before settling', async () => {
   useReducedMotion.mockReturnValue(false);
   let finish; let progress;
   jest.spyOn(Animated, 'timing').mockImplementation(value => {
@@ -284,6 +287,7 @@ test('switching to the farthest card puts the receding card behind the middle ca
   const cards = Object.entries(digits).map(([uuid, lastFourDigits]) => ({ ...dashboard.creditCards[0], uuid, lastFourDigits }));
   await act(async () => { renderer = TestRenderer.create(<HomeCreditCards cards={cards} />); });
   await act(async () => select('Laranja').props.onPress());
+  await act(async () => { progress.setValue(0.5); finish({ finished: true }); });
   await act(async () => { progress.setValue(1); finish({ finished: true }); });
   const layerOf = color => {
     let node = select(color).parent;
@@ -304,11 +308,17 @@ test('switching to the farthest card puts the receding card behind the middle ca
     return typeof value === 'number' ? value : value.__getValue();
   };
   const initialY = positionY();
+  // Layer order is static React state; native transforms cannot reorder Fabric siblings.
+  expect(typeof incomingStyle().zIndex).toBe('number');
+  expect(layerOf('Azul')).toBeLessThan(layerOf('Laranja'));
   await act(async () => progress.setValue(0.5));
   expect(incomingStyle().opacity).toBe(1);
   expect(positionY()).toBeLessThan(initialY);
-  await act(async () => progress.setValue(0));
   expect(layerOf('Laranja')).toBeGreaterThan(layerOf('Vermelho'));
+  await act(async () => finish({ finished: true }));
+  expect(layerOf('Azul')).toBeGreaterThan(layerOf('Laranja'));
+  expect(layerOf('Azul')).toBeGreaterThan(layerOf('Vermelho'));
+  expect(layerOf('Laranja')).toBeLessThan(layerOf('Vermelho'));
   await act(async () => progress.setValue(0.75));
   expect(layerOf('Laranja')).toBeLessThan(layerOf('Vermelho'));
   expect(select('Azul').props.disabled).toBe(true);
@@ -333,6 +343,24 @@ test('enabling reduced motion finishes the current selection and ignores its lat
   await act(async () => button('Selecionar cartão Cartão final 8080').props.onPress());
   await act(async () => finish({ finished: true }));
   expect(button('Selecionar cartão Cartão final 8080').props.accessibilityState.selected).toBe(true);
+});
+
+test('refreshing cards during the settling phase cancels it and ignores its late callback', async () => {
+  useReducedMotion.mockReturnValue(false);
+  let finish;
+  const stop = jest.fn();
+  const timing = jest.spyOn(Animated, 'timing').mockReturnValue({ start: callback => { finish = callback; }, stop });
+  const cards = [dashboard.creditCards[0], { ...dashboard.creditCards[0], uuid: 'second', lastFourDigits: 7070 }];
+  await act(async () => { renderer = TestRenderer.create(<HomeCreditCards cards={cards} />); });
+  await act(async () => button('Selecionar cartão Cartão final 7070').props.onPress());
+  await act(async () => finish({ finished: true }));
+  expect(timing).toHaveBeenCalledTimes(2);
+  const lateFinish = finish;
+  await act(async () => renderer.update(<HomeCreditCards cards={[cards[0]]} />));
+  expect(stop).toHaveBeenCalled();
+  await act(async () => lateFinish({ finished: true }));
+  expect(button('Selecionar cartão Cartão final 0032').props.accessibilityState).toEqual({ selected: true, disabled: false });
+  expect(button('Selecionar cartão Cartão final 7070')).toBeUndefined();
 });
 
 test('Home card selection updates details and keeps financial data hidden until the eye is enabled', async () => {
