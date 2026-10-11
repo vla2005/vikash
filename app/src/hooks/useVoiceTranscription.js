@@ -9,6 +9,7 @@ const messages = {
     : 'O reconhecimento de voz não está disponível neste dispositivo.',
   'audio-capture': 'Não foi possível acessar o microfone. Confira se outro app está usando ele.',
   'no-speech': 'Não ouvimos nenhuma fala. Tente gravar novamente.',
+  background: 'Volte ao Vikash e tente gravar novamente.',
   network: 'A transcrição perdeu a conexão. Confira a internet e tente novamente.',
   'language-not-supported': 'O reconhecimento em português não está disponível neste dispositivo.',
 };
@@ -77,7 +78,9 @@ export default function useVoiceTranscription(visible) {
   useEffect(() => {
     if (!visible) { return; }
     const subscription = AppState.addEventListener('change', state => {
-      if (state === 'background' && ['starting', 'listening', 'stopping'].includes(currentPhase.current)) { cleanup(); finish(); }
+      // No Android, a janela de permissão pausa a atividade durante a preparação.
+      // O serviço só inicia a captura depois de o app voltar ao primeiro plano.
+      if (state === 'background' && ['listening', 'stopping'].includes(currentPhase.current)) { cleanup(); finish(); }
     });
     return () => subscription.remove();
   }, [visible, cleanup, finish]);

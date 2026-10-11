@@ -1,27 +1,30 @@
 import { createSpeechRecognition as createWebRecognition } from '../src/services/speechRecognition.web';
 import { createSpeechRecognition as createNativeRecognition } from '../src/services/speechRecognition';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { ExpoSpeechRecognitionModule as native } from 'expo-speech-recognition';
 import { requireOptionalNativeModule } from 'expo';
 jest.mock('expo', () => ({ requireOptionalNativeModule: jest.fn() }));
 jest.mock('expo-speech-recognition', () => ({ ExpoSpeechRecognitionModule: {
-  addListener: jest.fn(), requestPermissionsAsync: jest.fn(), isRecognitionAvailable: jest.fn(() => true),
+  addListener: jest.fn(), getPermissionsAsync: jest.fn(), requestPermissionsAsync: jest.fn(), isRecognitionAvailable: jest.fn(() => true),
   getSpeechRecognitionServices: jest.fn(), getDefaultRecognitionService: jest.fn(),
   start: jest.fn(), stop: jest.fn(), abort: jest.fn(),
 } }));
 let events;
 let removed;
+const originalAppState = AppState.currentState;
 const callbacks = () => ({ onStart: jest.fn(), onEnd: jest.fn(), onError: jest.fn(), onResult: jest.fn() });
 beforeEach(() => {
   jest.clearAllMocks(); events = {}; removed = [];
   requireOptionalNativeModule.mockReturnValue(native);
   native.addListener.mockImplementation((name, handler) => { events[name] = handler; const remove = jest.fn(); removed.push(remove); return { remove }; });
   native.requestPermissionsAsync.mockResolvedValue({ granted: true });
+  native.getPermissionsAsync.mockResolvedValue({ granted: false });
+  AppState.currentState = 'active';
   native.isRecognitionAvailable.mockReturnValue(true);
   native.getSpeechRecognitionServices.mockReturnValue(['com.google.android.tts']);
   native.getDefaultRecognitionService.mockReturnValue({ packageName: 'com.google.android.tts' });
 });
-afterEach(() => { delete global.window; jest.restoreAllMocks(); });
+afterEach(() => { delete global.window; AppState.currentState = originalAppState; jest.restoreAllMocks(); });
 
 test('web combina resultados finais e parciais sem duplicar frases e cancela callbacks ao fechar', () => {
   const browser = { start() {}, stop() {}, abort() {} };
@@ -66,8 +69,67 @@ test('cancelar enquanto aguarda permissao impede iniciar microfone depois', asyn
   let resolve;
   native.requestPermissionsAsync.mockReturnValue(new Promise(done => { resolve = done; }));
   const service = createNativeRecognition(callbacks()); const pending = service.start();
+  await Promise.resolve();
   service.dispose(); resolve({ granted: true }); await pending;
   expect(native.start).not.toHaveBeenCalled();
+  expect(native.abort).not.toHaveBeenCalled();
+});
+
+test('permissão já concedida não abre outra janela do sistema', async () => {
+  native.getPermissionsAsync.mockResolvedValue({ granted: true });
+  const service = createNativeRecognition(callbacks());
+  await service.start();
+  expect(native.requestPermissionsAsync).not.toHaveBeenCalled();
+  expect(native.start).toHaveBeenCalledTimes(1);
+  service.dispose();
+});
+
+test('aguarda o retorno da janela de permissão antes de capturar áudio', async () => {
+  let changeAppState;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((event, handler) => {
+    changeAppState = handler;
+    return { remove: jest.fn() };
+  });
+  native.requestPermissionsAsync.mockImplementation(async () => {
+    AppState.currentState = 'background';
+    return { granted: true };
+  });
+  const service = createNativeRecognition(callbacks());
+  const pending = service.start();
+  await Promise.resolve(); await Promise.resolve();
+  expect(native.start).not.toHaveBeenCalled();
+  AppState.currentState = 'active';
+  changeAppState('active');
+  await pending;
+  expect(native.start).toHaveBeenCalledTimes(1);
+  service.dispose();
+});
+
+test('fechar o drawer enquanto aguarda primeiro plano remove a espera sem iniciar o microfone', async () => {
+  AppState.currentState = 'background';
+  native.getPermissionsAsync.mockResolvedValue({ granted: true });
+  const remove = jest.fn();
+  jest.spyOn(AppState, 'addEventListener').mockReturnValue({ remove });
+  const handlers = callbacks(); const service = createNativeRecognition(handlers);
+  const pending = service.start();
+  await Promise.resolve();
+  service.dispose();
+  await pending;
+  expect(remove).toHaveBeenCalled();
+  expect(native.start).not.toHaveBeenCalled();
+  expect(native.abort).not.toHaveBeenCalled();
+  expect(handlers.onError).not.toHaveBeenCalled();
+});
+
+test('eventos atrasados de uma tentativa anterior não encerram a preparação atual', async () => {
+  const handlers = callbacks(); const service = createNativeRecognition(handlers);
+  events.end(); events.error({ error: 'aborted' });
+  expect(handlers.onEnd).not.toHaveBeenCalled();
+  expect(handlers.onError).not.toHaveBeenCalled();
+  await service.start();
+  events.start();
+  expect(handlers.onStart).toHaveBeenCalledTimes(1);
+  service.dispose();
 });
 
 test('permissao negada nao inicia reconhecimento', async () => {

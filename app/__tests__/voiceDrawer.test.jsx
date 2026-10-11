@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Text, TextInput } from 'react-native';
+import { AppState, Text, TextInput } from 'react-native';
 import VoiceDrawer from '../src/components/VoiceDrawer';
 import { createSpeechRecognition } from '../src/services/speechRecognition';
 jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition: jest.fn() }));
@@ -19,7 +19,40 @@ beforeEach(() => {
   capture = { start: jest.fn(async () => events.onStart()), stop: jest.fn(), dispose: jest.fn() };
   createSpeechRecognition.mockImplementation(callbacks => { events = callbacks; return capture; });
 });
-afterEach(async () => { if (renderer) { await act(async () => renderer.unmount()); renderer = null; } jest.useRealTimers(); });
+afterEach(async () => { if (renderer) { await act(async () => renderer.unmount()); renderer = null; } jest.useRealTimers(); jest.restoreAllMocks(); });
+
+test('a pausa temporária da permissão não cancela o microfone antes de começar a ouvir', async () => {
+  let changeAppState;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((event, handler) => {
+    if (event === 'change') { changeAppState = handler; }
+    return { remove: jest.fn() };
+  });
+  capture.start.mockImplementation(async () => {
+    await Promise.resolve();
+    changeAppState('background');
+    changeAppState('active');
+    events.onStart();
+  });
+  await open();
+  expect(capture.dispose).not.toHaveBeenCalled();
+  expect(texts()).toContain('Ouvindo você');
+  expect(texts()).not.toContain('Não ouvimos nenhuma fala. Tente gravar novamente.');
+  await act(async () => { events.onResult('Gastei dez reais em café'); events.onEnd(); });
+  expect(renderer.root.findByType(TextInput).props.value).toBe('Gastei dez reais em café');
+});
+
+test('sair do app depois de começar a ouvir interrompe a captura e preserva o texto', async () => {
+  let changeAppState;
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((event, handler) => {
+    if (event === 'change') { changeAppState = handler; }
+    return { remove: jest.fn() };
+  });
+  await open();
+  await act(async () => events.onResult('Gastei dez reais em café'));
+  await act(async () => changeAppState('background'));
+  expect(capture.dispose).toHaveBeenCalled();
+  expect(renderer.root.findByType(TextInput).props.value).toBe('Gastei dez reais em café');
+});
 
 test('recebe transcricao parcial, espera resultado final ao parar e permite editar antes de confirmar', async () => {
   const confirm = jest.fn(async () => {});
