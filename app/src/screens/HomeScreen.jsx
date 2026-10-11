@@ -10,6 +10,8 @@ import BalanceEvolutionChart from '../components/BalanceEvolutionChart';
 import RecentTransactions from '../components/RecentTransactions';
 import DashboardInsights from '../components/DashboardInsights';
 import PendingInvoices from '../components/PendingInvoices';
+import BalanceCard from '../components/BalanceCard';
+import FinancialMetric from '../components/FinancialMetric';
 import useCreditDashboard from '../hooks/useCreditDashboard';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { hiddenAmount, toRecentPurchaseRows, shiftPeriod } from '../utils/dashboard';
@@ -61,11 +63,7 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
         </Pressable>
       </View>
       <View style={s.summaryCard}>
-        <View style={s.balanceCopy}>
-          <Text style={s.label}>Saldo total</Text>
-          {loading && !hidden ? <Skeleton width="85%" height={49} /> : <Text numberOfLines={1} adjustsFontSizeToFit style={s.balance}>{amount(data?.totalBalance)}</Text>}
-          <Text style={s.caption}>Saldo atual de todas as suas contas</Text>
-        </View>
+        <BalanceCard value={amount(data?.totalBalance)} caption="Saldo atual de todas as suas contas" loading={loading && !hidden} />
       <View style={s.monthlySummary}>
         <Text accessibilityRole="header" style={s.sectionTitle}>Resumo do mês</Text>
         <View style={s.monthNavigation}>
@@ -73,18 +71,19 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
             onPress={() => setPeriod(value => shiftPeriod(value, -1))} style={s.iconButton}><Icon name="back" size={20} /></Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Selecionar mês e ano" onPress={() => { setPickerYear(period.year); setPickerOpen(true); }}
             style={({ pressed }) => [s.period, pressed && s.pressed]}>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={s.month}>{months[period.month - 1]} de {period.year}</Text><Icon name="chevronDown" size={16} />
+            <Text style={s.month}>{months[period.month - 1]} de {period.year}</Text><Icon name="chevronDown" size={16} />
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Próximo mês" disabled={period.year === 9999 && period.month === 12}
             onPress={() => setPeriod(value => shiftPeriod(value, 1))} style={s.iconButton}><Icon name="chevron" size={20} /></Pressable>
         </View>
         <Text style={s.caption}>Este período vale para entradas, saídas e o gráfico de gastos abaixo.</Text>
       <View style={s.summary}>
-        <View style={s.metric}><Text style={s.label}>Entradas</Text>{loading ? <Skeleton height={23} /> : <Text numberOfLines={1} adjustsFontSizeToFit style={[s.total, s.incomes]}>{amount(data?.incomes)}</Text>}</View>
-        <View style={[s.metric, s.divider]}><Text style={s.label}>Saídas</Text>{loading ? <Skeleton height={23} /> : <Text numberOfLines={1} adjustsFontSizeToFit style={[s.total, s.expenses]}>{amount(data?.expenses)}</Text>}</View>
+        <FinancialMetric label="Entradas" value={amount(data?.incomes)} income loading={loading && !hidden} />
+        <FinancialMetric label="Saídas" value={amount(data?.expenses)} loading={loading && !hidden} />
       </View>
-      <View style={s.remaining}><Text style={s.label}>{data && data.incomes - data.expenses < 0 ? 'Faltou no mês' : 'Sobrou no mês'}</Text>
-        {loading ? <Skeleton width={110} height={22} /> : <Text style={s.remainingValue}>{amount(data ? data.incomes - data.expenses : null)}</Text>}</View>
+      <View style={[s.remaining, !hidden && data && { backgroundColor: data.incomes - data.expenses < 0 ? colors.negativeSoft : colors.positiveSoft }]}>
+        <Text style={[s.label, !hidden && data && { color: data.incomes - data.expenses < 0 ? colors.negative : colors.positive }]}>{data && data.incomes - data.expenses < 0 ? 'Faltou no mês' : 'Sobrou no mês'}</Text>
+        {loading && !hidden ? <Skeleton width={110} height={22} /> : <Text style={[s.remainingValue, !hidden && data && { color: data.incomes - data.expenses < 0 ? colors.negative : colors.positive }]}>{amount(data ? data.incomes - data.expenses : null)}</Text>}</View>
       </View>
       </View>
       {!!data && !loading && !error && <>
@@ -136,20 +135,17 @@ const createStyles = (colors) => StyleSheet.create({
   name: { fontFamily: fontFamilyBold, fontWeight: '700' },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
   monthNavigation: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceMuted, borderRadius: 15 },
-  summaryCard: { backgroundColor: colors.surface, borderRadius: 24, padding: 20, gap: 20, marginTop: 16 },
-  monthlySummary: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: 18, gap: 12 },
+  summaryCard: { gap: 16, marginTop: 16 },
+  monthlySummary: { backgroundColor: colors.surface, borderRadius: 24, padding: 18, gap: 14 },
   sectionTitle: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, lineHeight: 26, color: colors.text },
   balanceCopy: { flex: 1 }, label: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary },
-  balance: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 37, lineHeight: 49, letterSpacing: -1.6, color: colors.text },
   caption: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary },
   visibility: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
-  summary: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 2 },
+  summary: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 2 },
   remaining: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: colors.primarySoft, padding: 14, borderRadius: 14 },
   remainingValue: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 17, lineHeight: 25, color: colors.text },
-  metric: { flex: 1, minWidth: 0 }, divider: { borderLeftWidth: 1, borderLeftColor: colors.border, paddingLeft: 12 },
-  total: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 21, lineHeight: 31 }, incomes: { color: colors.positive }, expenses: { color: colors.negative },
   period: { flex: 1, minWidth: 0, minHeight: 44, paddingHorizontal: 6, paddingVertical: 5, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
-  month: { flexShrink: 1, fontFamily: fontFamilyMedium, fontSize: 15, lineHeight: 23, color: colors.text },
+  month: { flexShrink: 1, fontFamily: fontFamilyMedium, fontSize: 15, lineHeight: 23, textAlign: 'center', color: colors.text },
   errorBox: { marginTop: 16, backgroundColor: colors.errorSoft, borderRadius: 16, padding: 14 },
   error: { fontFamily, color: colors.error, fontSize: 13, lineHeight: 20 }, retry: { paddingVertical: 12 }, link: { fontFamily: fontFamilyMedium, color: colors.primary, fontSize: 13 },
   pressed: { opacity: 0.7 }, overlay: { flex: 1, backgroundColor: colors.dialogBackdrop, alignItems: 'center', justifyContent: 'center', padding: 22 },

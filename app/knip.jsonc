@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "entry": ["index.js", "src/web/main.jsx", "src/**/*.web.{js,jsx}", "fingerprint.config.js", "jest.native-mocks.js"],
+  "project": ["App.jsx", "*.{js,cjs,mjs}", "src/**/*.{js,jsx}", "__tests__/**/*.{js,jsx}"],
+  // Babel/Expo use presets and helpers; the existing local Gradle project uses
+  // the React Native CLI via autolinkLibrariesFromCommand() in settings.gradle.
+  "ignoreDependencies": [
+    "@babel/core", "@babel/runtime", "@react-native/babel-preset",
+    "@react-native-community/cli", "@react-native-community/cli-platform-android", "@react-native-community/cli-platform-ios"
+  ],
+  // `colors` intentionally aliases `lightColors` for compatibility in tests.
+  "ignoreIssues": { "src/theme/index.js": ["duplicates"] }
+}

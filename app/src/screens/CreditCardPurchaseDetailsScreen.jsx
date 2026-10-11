@@ -20,7 +20,7 @@ export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onB
   const state = useTransactionDetails(uuid, accessToken, true);
   const data = state.details;
   const equalInstallments = data?.installments?.length && data.installments.every(item => item.amount === data.installments[0].amount);
-  return <TransactionDetailsLayout {...state} title="Detalhes da compra" onBack={onBack} subtitle="Compra no crédito" amountLabel="Valor total da compra"
+  return <TransactionDetailsLayout {...state} title="Detalhes da compra" onBack={onBack} subtitle="Compra no crédito" amountLabel="Valor total da compra" amountTone="negative"
     heroAction={onEdit && <EditTransactionButton purchase onPress={() => onEdit(data)} />}>
     {data && <>
       <Text style={s.section}>Informações da compra</Text>
@@ -54,9 +54,9 @@ const createLocalStyles = colors => StyleSheet.create({
   selected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   pressed: { opacity: 0.65 },
   numberTile: { width: 34, height: 38, borderRadius: 10, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
-  numberTileSelected: { backgroundColor: colors.primary },
+  numberTileSelected: { backgroundColor: colors.brandPrimary },
   number: { fontFamily: fontFamilyMedium, fontSize: 12, fontWeight: '600', color: colors.secondary },
-  numberSelected: { color: colors.onPrimary },
+  numberSelected: { color: colors.onBrand },
   info: { flex: 1, gap: 5 },
   month: { fontFamily: fontFamilyMedium, fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.text },
   caption: { fontFamily, fontSize: 11, lineHeight: 16, color: colors.secondary },

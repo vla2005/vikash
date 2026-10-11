@@ -5,18 +5,24 @@ colors:
   primary: "#2348EF"
   primaryPressed: "#1838CB"
   primarySoft: "#E8EDFF"
-  background: "#F4F7FC"
+  background: "#F3F5F9"
   surface: "#FFFFFF"
-  surfaceMuted: "#F0F4FC"
+  surfaceMuted: "#EDF1F7"
   text: "#15244A"
-  secondary: "#626F85"
-  border: "#DFE6F2"
-  positive: "#13765A"
-  positiveSoft: "#E6F5EE"
-  negative: "#B43C4A"
-  negativeSoft: "#F9E9ED"
+  secondary: "#606D83"
+  placeholder: "#606D83"
+  border: "#DAE1ED"
+  positive: "#08734F"
+  positiveSoft: "#DCF6E9"
+  negative: "#B42C49"
+  negativeSoft: "#FFE9EE"
   warning: "#815321"
-  warningSoft: "#FFF0D9"
+  warningSoft: "#FFF0D2"
+  info: "#6843B9"
+  infoSoft: "#EEE7FF"
+  balanceSurface: "#2348D9"
+  onBalance: "#FFFFFF"
+  balanceSecondary: "#DBE4FF"
   error: "#A3322C"
   errorSoft: "#F9EDEA"
   onPrimary: "#FFFFFF"
@@ -27,22 +33,25 @@ colors:
   brandPressed: "#1838CB"
   onBrand: "#FFFFFF"
   logoSurface: "#FFFFFF"
-  dark-primary: "#9AB0FF"
-  dark-primaryPressed: "#8299EF"
-  dark-primarySoft: "#293858"
+  dark-primary: "#96AEFF"
+  dark-primaryPressed: "#829BEF"
+  dark-primarySoft: "#273A66"
   dark-background: "#101727"
-  dark-surface: "#1B2538"
-  dark-surfaceMuted: "#243149"
+  dark-surface: "#1C2636"
+  dark-surfaceMuted: "#263244"
   dark-text: "#F0F4FF"
   dark-secondary: "#B1BED4"
   dark-placeholder: "#A1AFC8"
-  dark-border: "#3B4A64"
-  dark-positive: "#7BDCB4"
-  dark-positiveSoft: "#1C3D36"
-  dark-negative: "#FFABB9"
-  dark-negativeSoft: "#432B3B"
-  dark-warning: "#F2CB8C"
-  dark-warningSoft: "#443A2B"
+  dark-border: "#3B4A60"
+  dark-positive: "#5DE3AB"
+  dark-positiveSoft: "#163E32"
+  dark-negative: "#FF91A6"
+  dark-negativeSoft: "#472936"
+  dark-warning: "#FFCE75"
+  dark-warningSoft: "#453722"
+  dark-info: "#C6A4FF"
+  dark-infoSoft: "#392C53"
+  dark-balanceSurface: "#3048D5"
   dark-error: "#FFB1A8"
   dark-errorSoft: "#442D32"
   dark-onPrimary: "#101727"
@@ -73,13 +82,13 @@ rounded:
   dialog: "28px"
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.onPrimary}"
+    backgroundColor: "{colors.brandPrimary}"
+    textColor: "{colors.onBrand}"
     rounded: "{rounded.button}"
     padding: "15px 20px"
   button-primary-dark:
-    backgroundColor: "{colors.dark-primary}"
-    textColor: "{colors.dark-onPrimary}"
+    backgroundColor: "{colors.brandPrimary}"
+    textColor: "{colors.onBrand}"
     rounded: "{rounded.button}"
     padding: "15px 20px"
   button-outlined:
@@ -128,6 +137,50 @@ components:
     textColor: "{colors.secondary}"
     rounded: "{rounded.field}"
     padding: "12px 4px"
+  balance-card:
+    backgroundColor: "{colors.balanceSurface}"
+    textColor: "{colors.onBalance}"
+    rounded: "{rounded.panel}"
+    padding: "20px"
+  balance-card-dark:
+    backgroundColor: "{colors.dark-balanceSurface}"
+    textColor: "{colors.onBalance}"
+    rounded: "{rounded.panel}"
+    padding: "20px"
+  financial-metric-income:
+    backgroundColor: "{colors.positiveSoft}"
+    textColor: "{colors.positive}"
+    rounded: "15px"
+    padding: "12px"
+  financial-metric-expense:
+    backgroundColor: "{colors.negativeSoft}"
+    textColor: "{colors.negative}"
+    rounded: "15px"
+    padding: "12px"
+  financial-metric-income-dark:
+    backgroundColor: "{colors.dark-positiveSoft}"
+    textColor: "{colors.dark-positive}"
+    rounded: "15px"
+    padding: "12px"
+  financial-metric-expense-dark:
+    backgroundColor: "{colors.dark-negativeSoft}"
+    textColor: "{colors.dark-negative}"
+    rounded: "15px"
+    padding: "12px"
+  icon-tile:
+    backgroundColor: "{colors.primarySoft}"
+    rounded: "12.6px"
+    size: "42px"
+  category-badge-vivid:
+    backgroundColor: "#AC7A08"
+    textColor: "#101727"
+    rounded: "9.88px"
+    size: "38px"
+  segmented-selected:
+    backgroundColor: "{colors.brandPrimary}"
+    textColor: "{colors.onBrand}"
+    rounded: "12px"
+    height: "36px"
 ---
 
 # Design System: Vikash
@@ -136,14 +189,16 @@ components:
 
 **Creative North Star: "Leitura financeira clara"**
 
-Interface de produto para consultar contas, compras e faturas no celular. Mantém a identidade já presente no dashboard: azul vivo, texto azul escuro no claro, superfícies claras ou azul-marinho no escuro e cartões arredondados. A linguagem é português brasileiro; valores são formatados em reais. A pilha de cartões concentra a expressão visual; ações financeiras priorizam clareza.
+Interface de produto para consultar contas, compras e faturas no celular. A extensão cromática aprovada em `.impeccable/surfaces/color-life.md` mantém a marca Vikash, Plus Jakarta Sans e os cartões arredondados, com saldo azul saturado, entradas verdes, saídas coral e categorias vívidas. Neutros frios no claro e azul-marinho no escuro dão contraste aos valores e às ações. A linguagem é português brasileiro; valores são formatados em reais.
 
-A aparência acompanha o sistema por padrão e oferece escolhas explícitas em Meu perfil. A troca mantém a organização, a tipografia, os ícones e a geometria existentes. O código canônico dos tokens é `src/theme/index.js`; categorias usam `src/theme/categoryPalette.js`. Este documento espelha o sistema implementado e não gera arquivos.
+A aparência acompanha o sistema por padrão e oferece escolhas explícitas em Meu perfil. A troca entre essas preferências conserva a geometria da composição atual, os campos e a navegação; a extensão autorizada já introduziu novos agrupamentos de saldo e métricas. A pilha sobreposta de cartões conserva integralmente desenho, artwork, cores das instituições e movimento. O código canônico dos tokens é `src/theme/index.js`; categorias usam `src/theme/categoryPalette.js`.
 
 **Key Characteristics:**
 
 - Leitura rápida de valores, com dígitos tabulares quando disponíveis.
-- Azul semântico para ações e seleção; cores de marca preservadas nos cartões e logos.
+- Azul saturado para saldo, identidade e ações sólidas; primário semântico para texto e contornos.
+- Verde para entradas e limite disponível nos detalhes; coral para saídas, âmbar para atenção e violeta para apoio.
+- Categorias com acentos explícitos por tema, em versões suave e vivid.
 - Superfícies arredondadas e hierarquia tonal consistente nos dois temas.
 - Sistema, Claro e Escuro com seleção nomeada e marca visível.
 
@@ -153,25 +208,27 @@ A paleta combina um azul de ação com neutros frios e pares semânticos legíve
 
 ### Primary
 
-- **Azul de ação:** `primary`, `primaryPressed` e `primarySoft` orientam ações e seleção no claro; seus pares `dark-*` cumprem os mesmos papéis no escuro. `onPrimary` acompanha a troca de fundo.
-- **Azul de marca:** `brandPrimary`, `brandPressed` e `onBrand` permanecem fixos, como as cores das instituições financeiras. Não substituir o azul de ação pelo azul de marca em texto pequeno no escuro.
+- **Azul semântico:** `primary`, `primaryPressed` e `primarySoft` orientam links, contornos, indicadores e seleção suave; seus pares `dark-*` cumprem os mesmos papéis no escuro. `onPrimary` acompanha fundos que usam `primary`.
+- **Azul de marca:** `brandPrimary`, `brandPressed` e `onBrand` permanecem fixos. `PrimaryButton` sólido e o indicador selecionado de `SegmentedControl` usam `brandPrimary` com `onBrand` nos dois temas. Texto e contorno da variante outlined usam `primary` do tema.
+- **Azul de saldo:** `balanceSurface` e `dark-balanceSurface` criam o painel saturado de saldo e os avatares de perfil. `onBalance` e `balanceSecondary` permanecem fixos para valor, rótulo e apoio nesse fundo.
 
 ### Secondary
 
-- **Verde financeiro:** `positive` e `positiveSoft` indicam valores ou estados positivos.
-- **Rosa financeiro:** `negative` e `negativeSoft` indicam valores ou estados negativos.
+- **Verde financeiro:** `positive` e `positiveSoft` indicam entradas, estados positivos e limite disponível em `CreditCardDetailsScreen` quando não negativo. `CreditCardSummary` preserva o indicador disponível em primário semântico.
+- **Coral financeiro:** `negative` e `negativeSoft` indicam saídas e limite disponível negativo.
 - **Âmbar de aviso:** `warning` e `warningSoft` identificam avisos e estados de fatura.
 - **Vermelho destrutivo:** `error` e `errorSoft` apresentam erros e a ação de excluir. A confirmação usa `dangerButton` com `onDanger`; esse par sólido permanece igual nos dois temas.
-- Os pares `dark-*` preservam os significados. Categorias mantêm suas chaves e identidade de cor; no escuro, `categoryPalette` clareia o ícone e mistura o fundo com a superfície.
+- **Violeta de apoio:** `info` e `infoSoft` identificam ajuda e suporte no perfil.
+- Os pares `dark-*` preservam os significados. As 30 chaves de categoria salvas na API continuam iguais; `categoryPalettes` usa um par de acentos explícitos por chave. `foreground` é o próprio `accent`; o fundo suave mistura a superfície do tema com 12% do acento no claro e 18% no escuro. `onAccent` escolhe branco ou o neutro escuro pelo maior contraste calculado. Exemplos de acento claro/escuro: ochre (#AC7A08 / #F6C348), blue (#326AD7 / #649CFF) e cyan (#137F9A / #43CCE8). A helper legada `readableAccent` não define essa paleta.
 
 ### Neutral
 
 - **Canvas, painel e campo:** `background`, `surface` e `surfaceMuted`, com os respectivos pares escuros, separam o fundo da tela, cartões e campos.
-- **Texto e apoio:** `text` e `secondary` distinguem informação principal e contextual. `secondary` também é o placeholder claro; `dark-placeholder` é específico para campos escuros.
+- **Texto e apoio:** `text` e `secondary` distinguem informação principal e contextual. `placeholder` acompanha o apoio claro; `dark-placeholder` é específico para campos escuros.
 - **Contorno:** `border` separa grupos, chips e indicadores, seguindo o tema.
 - **Base de logo:** `logoSurface` permanece branca para preservar logos; os desenhos e cores dos cartões não são recoloridos pela aparência.
 
-**The Semantic Pair Rule.** Usar o fundo e o texto do mesmo par semântico e do mesmo tema; marca, ação primária e ação destrutiva têm papéis separados.
+**The Semantic Pair Rule.** Usar fundo e texto do mesmo par semântico e tema. Ações sólidas usam marca/onBrand; saldo usa balanceSurface/onBalance; categoria vivid usa accent/onAccent. Neutros sustentam a leitura, e cor repete rótulos, ícones ou sinais.
 
 ## Typography
 
@@ -184,14 +241,20 @@ As definições web estão em `src/web/fonts.css`; o app nativo usa `useAppFonts
 - **Body:** leitura de apoio com entrelinha confortável e cor secundária.
 - **Label:** rótulos de formulário, em peso médio.
 - **Valores:** dígitos tabulares nos campos monetários e métricas que já os utilizam.
+- **Saldo:** `BalanceCard` usa 36 px, entrelinha de 47 px e tracking de -1 px; valor com mais de 16 caracteres usa 27 px. Mantém uma linha, ajuste automático e escala mínima de 0,55.
+- **Fluxo mensal:** `FinancialMetric` usa 21 px e entrelinha de 29 px; a versão compacta usa 16 px. Tamanhos locais existentes de detalhes permanecem.
 
 **The Stable Hierarchy Rule.** Trocar o tema altera as cores, preservando família, tamanho, peso e hierarquia das telas existentes.
 
 ## Layout
 
-A interface mantém composição de celular com rolagem vertical e área segura. `Screen` centraliza um canvas de largura máxima de 460 px, com margem interna lateral de 24 px. Telas de detalhes preservam margens laterais de 22 px; Meu perfil usa 20 px. Não há escala global de espaçamento: manter a geometria do componente reutilizado.
+A interface mantém composição de celular com rolagem vertical e área segura. `Screen` centraliza um canvas de largura máxima de 460 px, com margem interna lateral de 24 px. Detalhes do cartão usam 22 px; detalhes de lançamento, Início e Meu perfil usam 20 px. Não há escala global de espaçamento: manter a geometria do componente reutilizado.
 
 O navegador inferior se adapta abaixo de 350 px, reduzindo margens, rótulos e espaço central do microfone. No web largo, o canvas continua centralizado. Drawers preservam largura máxima de 460 px; a confirmação usa no máximo 360 px e 90% da altura disponível. Rótulos de exclusão permanecem visíveis em telas estreitas, com texto e ícone no mesmo alvo de toque.
+
+O Início ordena saldo, período e resumo mensal, com intervalos de 16 px entre os blocos principais. Início e Extrato usam uma linha de métricas com wrap: abaixo de 360 px cada `FinancialMetric` ocupa a largura inteira; de 360 a 389 px, ou com valor de mais de 14 caracteres, o número usa 16 px. Limites em `CreditCardDetailsScreen` empilham abaixo de 390 px ou quando `fontScale > 1.15`.
+
+A evidência visual desta extensão é React Native Web com API sintética: 23 telas nos dois temas e estados/drawers em 390 × 844; seis telas amostradas em 320 e 768 px. O reviewer leu as folhas de contato e referências individuais do Início, sem inspeção completa dos PNGs de tablet. Não houve captura física, Simulator ou emulador. Bundles compilados não aprovam safe areas, gestos, escala de fonte ou animações em hardware nativo.
 
 ## Elevation & Depth
 
@@ -207,7 +270,7 @@ Campos e botões usam curvas suaves da família existente; painéis, folhas e co
 
 ### Buttons
 
-`PrimaryButton` combina ação e rótulo claros, com altura mínima de 54 px, espaçamento interno horizontal de 20 px e vertical de 15 px. A variante outlined mantém fundo transparente e contorno primário. Pressionar reduz opacidade e escala; carregamento mostra “Aguarde...” e bloqueia a ação.
+`PrimaryButton` combina ação e rótulo claros, com altura mínima de 54 px, espaçamento interno horizontal de 20 px e vertical de 15 px. A versão sólida conserva azul de marca e texto branco nos dois temas. A variante outlined mantém fundo transparente, texto e contorno primários do tema. Pressionar reduz opacidade a 0,88 e escala a 0,985; indisponível usa opacidade 0,55. Carregamento mostra “Aguarde...” e bloqueia a ação.
 
 `DeleteActionButton` é compartilhado por transações e faturas, com fundo suave de erro, ícone e rótulo no mesmo alvo de pelo menos 52 px. O vermelho sólido fica na confirmação; não usar vermelho para ações seguras.
 
@@ -215,9 +278,21 @@ Campos e botões usam curvas suaves da família existente; painéis, folhas e co
 
 Filtros de extrato usam contorno e texto de apoio, altura mínima de 40 px e espaçamento horizontal de 14 px. A seleção combina fundo primário suave e contorno primário; a semântica acessível acompanha o estado.
 
+`SegmentedControl` usa trilho neutro atenuado de 44 px, padding de 4 px e raio de 16 px; o indicador tem raio de 12 px, azul de marca e rótulo branco em ambos os temas. A mola existente permanece; pressionar a opção reduz opacidade a 0,65.
+
 ### Cards / Containers
 
 `CreditCardSummary` usa superfície atenuada, raio local e padding de 12 px. Métricas, limite utilizado e divisórias seguem tokens semânticos. Cartões visuais das instituições preservam seus fundos de marca e artwork. `InstitutionLogo` mantém a base branca quando há imagem; falhas usam o ícone de banco.
+
+`BalanceCard` destaca o saldo com azul saturado, raio de 24 px, padding de 20 px e gap de 8 px. Rótulo, valor e caption usam os pares de saldo; loading mantém skeleton. `FinancialMetric` repete verde/verde suave para entradas e coral/coral suave para saídas no Início e Extrato, com raio de 15 px, padding de 12 px, gap de 10 px e ícone direcional. Não deduzir novos dados ou estados da cor.
+
+`HomeCreditCards` é uma restrição fixa: preservar a pilha sobreposta, sua geometria, desenho e todas as animações. Não recolorir artwork nem alterar algoritmos ou constantes das instituições.
+
+### Category and icon identity
+
+`CategoryBadge` suave usa background/foreground da categoria em listas densas; `vivid` usa accent/onAccent nas grades. O tamanho padrão é 38 px e o raio é 26% do tamanho. `CategoryFormScreen` repete o par sólido na prévia circular de 84 px. `TransactionDetailsLayout` usa categoria sólida na identidade e par suave na linha de categoria; o valor usa o par semântico da direção do dinheiro.
+
+`IconTile` agrupa ícones em superfície suave por `tone`, com tamanho padrão de 42 px e raio de 30% do tamanho; o componente filho fornece a cor do ícone. Perfil usa primário para identidade, âmbar para senha e violeta para suporte. Perfil e edição usam avatar azul de saldo; alteração de senha repete âmbar.
 
 ### Inputs / Fields
 
@@ -242,13 +317,16 @@ O navegador inferior agrupa Início, Extrato, Contas e Categorias, com o microfo
 - Do reutilizar componentes, ícones e tokens semânticos existentes nos dois temas.
 - Do preservar a geometria e a hierarquia tipográfica ao trocar a aparência.
 - Do manter seleção nomeada e marca visível, além da cor.
-- Do preservar logos, cores de instituições e artwork dos cartões.
+- Do preservar logos, cores de instituições, artwork e todo o desenho e movimento da pilha sobreposta de cartões.
+- Do usar accent/onAccent explícitos por tema em categorias vivid e os pares suaves em listas.
+- Do manter as quebras responsivas de métricas e o ajuste de números longos.
 - Do manter a consequência da exclusão explícita e o erro dentro da confirmação.
 - Do preservar a lista se o servidor recusar a operação.
 
 ### Don't:
 
-- Don't usar vermelho para ações seguras ou azul fixo de marca como substituto do primário semântico.
+- Don't usar vermelho para ações seguras ou substituir texto/contorno semântico pelo azul fixo de marca no escuro.
+- Don't diluir acentos de categoria escuros com branco ou alterar sua chave salva na API.
 - Don't criar outra família de bordas, sombras ou animações para uma exclusão isolada.
 - Don't usar diálogo nativo do navegador ou decoração extra nas ações financeiras.
 - Don't remontar formulários ou associar a preferência de aparência à sessão de um perfil.

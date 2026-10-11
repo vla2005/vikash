@@ -1,4 +1,10 @@
-import { authenticatedFetch, postJson, putJson } from './apiClient';
+import { authenticatedFetch, deleteJson, postJson, putJson } from './apiClient';
+
+export async function deleteCategory(uuid, accessToken) {
+  if (!accessToken) { throw new Error('Entre na sua conta antes de excluir uma categoria.'); }
+  if (typeof uuid !== 'string' || !uuid.trim()) { throw new Error('A categoria não tem UUID. Atualize a listagem antes de excluir.'); }
+  await deleteJson(`/api/category/${encodeURIComponent(uuid)}`, accessToken, { headers: { access_token: accessToken } });
+}
 
 export async function fetchCategories(accessToken, signal) {
   const response = await authenticatedFetch('/api/category', {

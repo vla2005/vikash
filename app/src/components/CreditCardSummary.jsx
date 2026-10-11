@@ -1,10 +1,9 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import { creditCardLabel } from '../utils/creditCards';
+import { creditCardLabel, formatInvoiceDate } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
-import { formatInvoiceDate } from './CreditCardInvoiceDrawer';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, fontFamily, fontFamilyBold } from '../theme';
 

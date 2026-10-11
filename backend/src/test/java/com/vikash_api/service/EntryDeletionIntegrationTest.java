@@ -47,6 +47,7 @@ class EntryDeletionIntegrationTest {
     @Autowired AccountRepository accounts;
     @Autowired InstitutionRepository institutions;
     @Autowired UserRepository users;
+    @Autowired CustomCategoryRepository categories;
     @MockitoBean AuthenticatedUserService authenticatedUserService;
     RestClient client;
     AuthResponse auth;
@@ -54,6 +55,34 @@ class EntryDeletionIntegrationTest {
     AccountEntity account;
     CreditCardEntity card;
     YearMonth past = YearMonth.now().minusMonths(1);
+
+    @Test
+    void categoryDeletionPreservesTransactionsPurchasesBalancesAndInvoices() {
+        var category = new CustomCategoryEntity();
+        category.setUser(user); category.setName("Pets"); category.setIcon("paw"); category.setColor("blue");
+        category = categories.saveAndFlush(category);
+        var transaction = entry(TransactionType.EXPENSE, "50", null);
+        transaction.setCustomCategory(category); transactions.saveAndFlush(transaction);
+        var purchase = purchase("300", 3);
+        purchase.setCustomCategory(category); purchases.saveAndFlush(purchase);
+        var before = cardService.getByUuid(card.getUuid());
+        var balanceBefore = accounts.findById(account.getId()).orElseThrow().getBalance();
+        var response = client.delete().uri("/api/category/" + category.getUuid())
+                .header("Authorization", "Bearer " + auth.getAccessToken()).retrieve().toEntity(String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(categories.existsById(category.getId())).isFalse();
+        var remainingTransaction = transactions.findById(transaction.getId()).orElseThrow();
+        var remainingPurchase = purchases.findById(purchase.getId()).orElseThrow();
+        assertThat(remainingTransaction.getCustomCategory()).isNull();
+        assertThat(remainingPurchase.getCustomCategory()).isNull();
+        assertThat(remainingTransaction.getAmount()).isEqualByComparingTo("50");
+        assertThat(remainingPurchase.getAmount()).isEqualByComparingTo("300");
+        assertThat(installments.findByPurchaseId(purchase.getId())).hasSize(3);
+        assertThat(accounts.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo(balanceBefore);
+        var after = cardService.getByUuid(card.getUuid());
+        assertThat(after.availableLimit()).isEqualByComparingTo(before.availableLimit());
+        assertThat(after.invoices()).isEqualTo(before.invoices());
+    }
 
     @BeforeEach
     void setup() {

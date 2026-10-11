@@ -27,9 +27,9 @@ export default function SegmentedControl({ options, value, onChange, style }) {
 }
 const createStyles = (colors) => StyleSheet.create({
   track: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: 16, padding: 4, minHeight: 44, overflow: 'hidden' },
-  indicator: { position: 'absolute', top: 4, bottom: 4, left: 4, borderRadius: 12, backgroundColor: colors.primary },
+  indicator: { position: 'absolute', top: 4, bottom: 4, left: 4, borderRadius: 12, backgroundColor: colors.brandPrimary },
   option: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, minHeight: 36 },
   label: { fontFamily: fontFamilyMedium, fontSize: 13, color: colors.secondary, fontWeight: '500' },
-  selected: { color: colors.onPrimary },
+  selected: { color: colors.onBrand },
   pressed: { opacity: 0.65 },
 });

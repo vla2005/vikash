@@ -12,6 +12,7 @@ import { SignOut } from 'phosphor-react-native/src/icons/SignOut';
 import { User } from 'phosphor-react-native/src/icons/User';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import AppearanceSettings from '../components/AppearanceSettings';
+import IconTile from '../components/IconTile';
 import useToast from '../hooks/useToast';
 import { getProfileInitials } from '../utils/profile';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
@@ -55,8 +56,8 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
       <View style={s.personalSection}>
         <Text accessibilityRole="header" style={s.heading}>Dados pessoais</Text>
         <View style={s.group}>
-          <View style={s.row}><User size={26} color={colors.secondary} /><View style={s.copy}><Text style={s.label}>Nome</Text><Text style={s.value}>{name}</Text></View></View>
-          <View style={[s.row, s.divider]}><EnvelopeSimple size={26} color={colors.secondary} /><View style={s.copy}><Text style={s.label}>E-mail</Text><Text style={s.value}>{profile?.email || 'Não informado'}</Text></View></View>
+          <View style={s.row}><IconTile><User size={24} color={colors.primary} /></IconTile><View style={s.copy}><Text style={s.label}>Nome</Text><Text style={s.value}>{name}</Text></View></View>
+          <View style={[s.row, s.divider]}><IconTile><EnvelopeSimple size={24} color={colors.primary} /></IconTile><View style={s.copy}><Text style={s.label}>E-mail</Text><Text style={s.value}>{profile?.email || 'Não informado'}</Text></View></View>
         </View>
       </View>
       <AppearanceSettings />
@@ -64,10 +65,10 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
         <Text accessibilityRole="header" style={s.heading}>Segurança</Text>
         <View style={s.group}>
           <Pressable accessibilityRole="button" accessibilityLabel="Alterar senha" onPress={onPassword} style={({ pressed }) => [s.row, pressed && s.pressed]}>
-            <Key size={28} color={colors.secondary} /><View style={s.copy}><Text style={s.value}>Alterar senha</Text><Text style={s.description}>Atualize sua senha de acesso</Text></View><CaretRight size={23} color={colors.secondary} />
+            <IconTile tone="warning"><Key size={24} color={colors.warning} /></IconTile><View style={s.copy}><Text style={s.value}>Alterar senha</Text><Text style={s.description}>Atualize sua senha de acesso</Text></View><CaretRight size={23} color={colors.secondary} />
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Ajuda e suporte" onPress={onSupport} style={({ pressed }) => [s.row, s.divider, pressed && s.pressed]}>
-            <Question size={28} color={colors.secondary} /><Text style={[s.value, s.support]}>Ajuda e suporte</Text><CaretRight size={23} color={colors.secondary} />
+            <IconTile tone="info"><Question size={24} color={colors.info} /></IconTile><Text style={[s.value, s.support]}>Ajuda e suporte</Text><CaretRight size={23} color={colors.secondary} />
           </Pressable>
         </View>
       </View>
@@ -88,8 +89,8 @@ const createStyles = (colors) => StyleSheet.create({
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   navTitle: { flex: 1, textAlign: 'center', fontFamily: fontFamilyBold, fontSize: 21, lineHeight: 28, letterSpacing: -0.5, color: colors.text, fontWeight: '700' },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 26 },
-  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.avatar, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 38, lineHeight: 49, color: colors.text, letterSpacing: -1 },
+  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.balanceSurface, alignItems: 'center', justifyContent: 'center' },
+  initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 38, lineHeight: 49, color: colors.onBalance, letterSpacing: -1 },
   identityCopy: { flex: 1, minWidth: 0, gap: 6 },
   name: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 25, lineHeight: 32, color: colors.text, letterSpacing: -0.8 },
   subtitle: { fontFamily, fontSize: 17, lineHeight: 25, color: colors.secondary },

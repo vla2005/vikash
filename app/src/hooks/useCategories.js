@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createCategory, fetchCategories, updateCategory } from '../services/categories';
+import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../services/categories';
 
 export default function useCategories(accessToken, visible) {
   const [categories, setCategories] = useState([]);
@@ -36,5 +36,19 @@ export default function useCategories(accessToken, visible) {
       setSaving(false);
     }
   }
-  return { categories, defaultCategories, loading, error, retry: () => setAttempt(previous => previous + 1), saving, saveCategory };
+  async function removeCategory(category) {
+    if (submitting.current) { return false; }
+    submitting.current = true;
+    setSaving(true);
+    try {
+      await deleteCategory(category.uuid, accessToken);
+      setCategories(previous => previous.filter(item => item.uuid !== category.uuid));
+      setAttempt(previous => previous + 1);
+      return true;
+    } finally {
+      submitting.current = false;
+      setSaving(false);
+    }
+  }
+  return { categories, defaultCategories, loading, error, retry: () => setAttempt(previous => previous + 1), saving, saveCategory, removeCategory };
 }

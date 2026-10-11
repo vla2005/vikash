@@ -11,10 +11,10 @@ export default function VoiceWaveform({ active }) {
   const values = useRef(heights.map(() => new Animated.Value(0.45))).current;
   useEffect(() => {
     values.forEach((value, index) => value.setValue(!active ? 0.25 : reduced ? 0.65 : 0.3 + (index % 5) * 0.1));
-    if (!active) { return; }
+    if (!active || reduced) { return; }
     const animations = values.map((value, index) => Animated.loop(Animated.sequence([
-      Animated.timing(value, { toValue: reduced ? 0.85 : 1, duration: reduced ? 900 + (index % 5) * 65 : 180 + (index % 5) * 65, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
-      Animated.timing(value, { toValue: reduced ? 0.65 : 0.3, duration: reduced ? 1100 + (index % 4) * 80 : 250 + (index % 4) * 80, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
+      Animated.timing(value, { toValue: 1, duration: 180 + (index % 5) * 65, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
+      Animated.timing(value, { toValue: 0.3, duration: 250 + (index % 4) * 80, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
     ])));
     animations.forEach(animation => animation.start());
     return () => animations.forEach(animation => animation.stop());

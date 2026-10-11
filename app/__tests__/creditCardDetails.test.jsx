@@ -35,12 +35,21 @@ test('busca somente fatura selecionada, pagina ao rolar e reinicia ao trocar a f
   fetchTransactions.mockResolvedValueOnce({ rows: [row('b')], page: 1, hasNext: false });
   await act(async () => statement().props.onEndReached());
   expect(statement().props.data.map(item => item.id)).toEqual(['a', 'b']);
+  const mountedStatement = statement().instance;
+  await act(async () => {
+    statement().props.onLayout({ nativeEvent: { layout: { height: 640 } } });
+    statement().props.onScroll({ nativeEvent: { contentOffset: { y: 210 } } });
+    statement().props.onContentSizeChange(360, 950);
+  });
+  expect(statement().props.contentContainerStyle).toEqual(expect.arrayContaining([expect.objectContaining({ minHeight: 950 })]));
   await act(async () => statement().props.onEndReached());
   expect(fetchTransactions).toHaveBeenCalledTimes(2);
   fetchTransactions.mockResolvedValueOnce({ rows: [row('paid')], page: 0, hasNext: false });
   await act(async () => button('Fatura Set 2026').props.onPress());
   expect(fetchTransactions).toHaveBeenLastCalledWith('token', 0, expect.anything(), '/api/credit-card/card/invoices/invoice-1/transactions');
   expect(statement().props.data.map(item => item.id)).toEqual(['paid']);
+  expect(statement().instance).toBe(mountedStatement);
+  expect(statement().props.contentContainerStyle).toEqual(expect.arrayContaining([expect.objectContaining({ minHeight: 950 })]));
 });
 
 test('cancela consulta antiga e ignora resposta atrasada ao selecionar outra fatura', async () => {

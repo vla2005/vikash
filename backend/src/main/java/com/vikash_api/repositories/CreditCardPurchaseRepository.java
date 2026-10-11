@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
@@ -18,6 +19,10 @@ import com.vikash_api.repositories.projections.CreditMonthlyPurchasesProjection;
 
 @Repository
 public interface CreditCardPurchaseRepository extends JpaRepository<CreditCardPurchaseEntity, Long> {
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE CreditCardPurchaseEntity p SET p.customCategory = NULL WHERE p.customCategory.id = :categoryId AND p.creditCard.user.id = :userId")
+    int clearCustomCategory(@Param("categoryId") Long categoryId, @Param("userId") Long userId);
+
     @Query("""
         SELECT new com.vikash_api.repositories.projections.CreditMonthlyPurchasesProjection(
             YEAR(p.occurredAt), MONTH(p.occurredAt), SUM(p.amount), COUNT(p))

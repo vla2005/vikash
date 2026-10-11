@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
 import BrandLogo from '../components/BrandLogo';
 import Icon from '../components/Icon';
+import IconTile from '../components/IconTile';
 import { fontFamilyMedium, fontFamily } from '../theme';
 
 export default function AddFinancialItemScreen({ navigation, route, onChoose, onCancel }) {
@@ -16,7 +17,7 @@ export default function AddFinancialItemScreen({ navigation, route, onChoose, on
     <View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>O que você quer adicionar?</Text><Text style={typography.body}>Organize seu dinheiro e seus cartões.</Text></View>
     <View style={styles.options}>
       {[{ kind: 'account', title: 'Conta', icon: 'wallet', description: 'Conta corrente, poupança, carteira ou investimentos.' }, { kind: 'card', title: 'Cartão de crédito', icon: 'creditCard', description: 'Limite, faturas e compras parceladas.' }].map(option => <Pressable key={option.kind} accessibilityRole="button" accessibilityLabel={`Adicionar ${option.title.toLowerCase()}`} onPress={() => choose(option.kind)} style={({ pressed }) => [styles.option, option.kind === 'account' && styles.account, pressed && styles.pressed]}>
-        <Icon name={option.icon} size={34} color={colors.primary} /><View style={styles.optionCopy}><Text style={styles.optionTitle}>{option.title}</Text><Text style={styles.description}>{option.description}</Text></View><Icon name="chevron" color={colors.secondary} size={20} />
+        <IconTile tone={option.kind === 'account' ? 'primary' : 'info'} size={48}><Icon name={option.icon} size={28} color={option.kind === 'account' ? colors.primary : colors.info} /></IconTile><View style={styles.optionCopy}><Text style={styles.optionTitle}>{option.title}</Text><Text style={styles.description}>{option.description}</Text></View><Icon name="chevron" color={colors.secondary} size={20} />
       </Pressable>)}
     </View>
     <View style={styles.bottom}><View style={styles.notice}><Icon name="info" color={colors.primary} size={23} /><Text style={styles.noticeText}>Conta e cartão têm controles separados.</Text></View><Text style={styles.hint}>Você pode adicionar outros depois.</Text></View>

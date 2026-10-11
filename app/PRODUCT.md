@@ -16,6 +16,8 @@ Priorizar leitura rápida de valores e ações claras. Preservar nomes, logos e 
 
 Sistema é a aparência padrão. Meu perfil oferece Sistema, Claro e Escuro; a preferência fica no aparelho fora das sessões e a troca conserva campos preenchidos, navegação, geometria e tipografia.
 
+A extensão de cor em `.impeccable/surfaces/color-life.md` autoriza novos agrupamentos e acentos nas telas, preservando marca e tipografia. A pilha sobreposta de cartões, seu desenho e todas as animações são uma restrição fixa; artwork e cores das instituições permanecem.
+
 ## Fontes e limites
 
-Brief factual derivado de `README.md`, `UX-CONTRACT.md`, `src/services`, componentes e do contrato aprovado em `.impeccable/surfaces/appearance.md`. Não define novas funcionalidades ou público além de finanças pessoais. A revisão visual da aparência foi feita com React Native Web; bundles e configuração Android/iOS foram verificados, mas a conferência visual em aparelhos nativos continua necessária.
+Brief factual derivado de `README.md`, `UX-CONTRACT.md`, `src/services`, componentes e dos contratos aprovados em `.impeccable/surfaces/appearance.md` e `.impeccable/surfaces/color-life.md`. Não define novas funcionalidades ou público além de finanças pessoais. A revisão visual da aparência foi feita com React Native Web; bundles e configuração Android/iOS foram verificados, mas a conferência visual em aparelhos nativos continua necessária.

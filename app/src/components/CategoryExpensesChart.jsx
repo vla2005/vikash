@@ -49,7 +49,7 @@ function Donut({ slices, hidden, periodLabel }) {
   </Svg>;
 }
 
-export default function CategoryExpensesChart({ categories = [], creditCategories = [], periodLabel, hidden = false,
+function CategoryExpensesChart({ categories = [], creditCategories = [], periodLabel, hidden = false,
   scope = 'accounts', onChangeScope, creditLoading = false, creditError = '', onRetryCredit }) {
   const { categoryColors, colors } = useTheme();
   const s = useThemeStyles(createStyles);
@@ -119,3 +119,5 @@ const createStyles = (colors) => StyleSheet.create({
   empty: { paddingVertical: 24, gap: 6 }, emptyTitle: { fontFamily: fontFamilyMedium, fontSize: 14, lineHeight: 21, color: colors.text },
   linkButton: { minHeight: 44, justifyContent: 'center', marginBottom: 8 }, link: { fontFamily: fontFamilyMedium, fontSize: 13, color: colors.primary },
 });
+
+export default React.memo(CategoryExpensesChart);

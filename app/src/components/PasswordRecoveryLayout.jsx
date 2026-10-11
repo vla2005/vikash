@@ -20,7 +20,7 @@ export default function PasswordRecoveryLayout({ children, title, description, o
       <BrandLogo width={126} />
     </View>
     <View style={[styles.symbol, symbol === 'success' && styles.success]} accessible={false}>
-      <Symbol size={34} color={symbol === 'success' ? colors.positive : colors.primary} />
+      <Symbol size={34} color={symbol === 'success' ? colors.positive : colors.onBalance} />
     </View>
     <View style={styles.heading}><Text accessibilityRole="header" style={typography.title}>{title}</Text>
       <Text style={typography.body}>{description}</Text></View>
@@ -40,7 +40,7 @@ const createStyles = (colors) => StyleSheet.create({
   content: { justifyContent: 'flex-start', paddingTop: 28 },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginLeft: -10 },
-  symbol: { width: 68, height: 68, borderRadius: 20, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center', marginTop: 44 },
+  symbol: { width: 68, height: 68, borderRadius: 20, backgroundColor: colors.balanceSurface, justifyContent: 'center', alignItems: 'center', marginTop: 44 },
   success: { backgroundColor: colors.positiveSoft },
   heading: { marginTop: 22, gap: 12 },
   pressed: { opacity: 0.72 },

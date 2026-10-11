@@ -1,4 +1,5 @@
 app-legacy
+/app-copia/
 docs
 output
 .npm-cache/

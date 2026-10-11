@@ -32,7 +32,7 @@ export default function ChangePasswordScreen({ onBack, onSave, onForgotPassword 
     else { showToast({ type: 'info', message: 'A recuperação de senha estará disponível em breve.' }); }
   }
   return <ProfileFormLayout title="Alterar senha" submitText="Salvar nova senha" onSubmit={submit} onBack={onBack} saving={saving} error={form.requestError} secure notice="Você precisará usar a nova senha no próximo acesso.">
-    <View style={styles.symbol} accessible={false}><Key size={34} color={colors.text} /></View>
+    <View style={styles.symbol} accessible={false}><Key size={34} color={colors.warning} /></View>
     <View style={styles.heading}><Text accessibilityRole="header" style={s.title}>Uma nova senha.</Text><Text style={s.subtitle}>Proteja o acesso à sua conta.</Text></View>
     <View style={styles.fields}>
       <View>
@@ -46,7 +46,7 @@ export default function ChangePasswordScreen({ onBack, onSave, onForgotPassword 
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  symbol: { marginTop: 20, width: 60, height: 60, backgroundColor: colors.avatar, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  symbol: { marginTop: 20, width: 60, height: 60, backgroundColor: colors.warningSoft, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   heading: { marginTop: 10, gap: 7 },
   fields: { marginTop: 22, gap: 14 },
   forgot: { minHeight: 44, alignSelf: 'flex-end', justifyContent: 'center' },

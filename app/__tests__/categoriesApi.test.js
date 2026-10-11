@@ -1,6 +1,18 @@
-import { createCategory, fetchCategories, updateCategory } from '../src/services/categories';
+import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../src/services/categories';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
+
+test('DELETE usa UUID e sessão; exige UUID e não envia exclusão sem sessão', async () => {
+  global.fetch = jest.fn(async () => ({ ok: true, status: 204, json: async () => { throw new SyntaxError('sem corpo'); } }));
+  await deleteCategory('pet-uuid', 'test-access');
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/category/pet-uuid', expect.objectContaining({
+    method: 'DELETE', headers: expect.objectContaining({ Authorization: 'Bearer test-access', access_token: 'test-access' }),
+  }));
+  global.fetch.mockClear();
+  await expect(deleteCategory(null, 'test-access')).rejects.toThrow('não tem UUID');
+  await expect(deleteCategory('pet-uuid', null)).rejects.toThrow('Entre na sua conta');
+  expect(global.fetch).not.toHaveBeenCalled();
+});
 afterEach(() => { global.fetch = originalFetch; });
 
 test('PUT update envia UUID na URL e campos alterados no body com token', async () => {

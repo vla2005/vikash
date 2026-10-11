@@ -2,10 +2,14 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Modal, PanResponder } from 'react-native';
 import CategoriesScreen from '../src/screens/CategoriesScreen';
+import CategoryFormScreen from '../src/screens/CategoryFormScreen';
+import SelectionField from '../src/components/SelectionField';
 import ConfirmationDialog from '../src/components/ConfirmationDialog';
 import SwipeableRow from '../src/components/SwipeableRow';
 
 jest.mock('../src/hooks/useReducedMotion', () => () => true);
+jest.mock('../src/hooks/useToast', () => () => ({ showToast: jest.fn() }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 20 }) }));
 jest.mock('react-native-svg', () => {
   const ReactModule = require('react'); const { View } = require('react-native');
   const Shape = props => ReactModule.createElement(View, props);
@@ -16,6 +20,28 @@ let renderer;
 afterEach(async () => { if (renderer) { await act(async () => renderer.unmount()); } jest.restoreAllMocks(); });
 const dialog = () => renderer.root.findByType(ConfirmationDialog);
 const rows = () => renderer.root.findAllByType(SwipeableRow);
+
+test('edit form offers confirmed deletion, preserves fields on error and has no icon/color search', async () => {
+  const onDelete = jest.fn().mockRejectedValueOnce(new Error('Falha temporária')).mockResolvedValueOnce();
+  await act(async () => { renderer = TestRenderer.create(<CategoryFormScreen category={categories[0]} existingCategories={categories} onSave={jest.fn()} onDelete={onDelete} />); });
+  expect(renderer.root.findAllByType(SelectionField).every(field => !field.props.searchable)).toBe(true);
+  const remove = renderer.root.findAll(node => node.props.accessibilityLabel === 'Excluir categoria' && node.props.onPress)[0];
+  await act(async () => remove.props.onPress());
+  expect(onDelete).not.toHaveBeenCalled();
+  expect(dialog().props.message).toContain('lançamentos serão mantidos');
+  await act(async () => dialog().props.onConfirm());
+  expect(dialog().props.error).toBe('Falha temporária');
+  expect(dialog().props.visible).toBe(true);
+  expect(onDelete).toHaveBeenCalledWith(categories[0]);
+  await act(async () => dialog().props.onConfirm());
+  expect(dialog().props.visible).toBe(false);
+});
+
+test('create form has neither a delete action nor search inputs in the grids', async () => {
+  await act(async () => { renderer = TestRenderer.create(<CategoryFormScreen existingCategories={categories} onSave={jest.fn()} onDelete={jest.fn()} />); });
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Excluir categoria')).toHaveLength(0);
+  expect(renderer.root.findAllByType(SelectionField).every(field => !field.props.searchable)).toBe(true);
+});
 
 test('somente personalizadas revelam exclusao; cancelar preserva os dados sem executar a acao', async () => {
   const onDelete = jest.fn(); const onEdit = jest.fn();

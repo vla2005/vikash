@@ -6,9 +6,10 @@ import BrandLogo from '../components/BrandLogo';
 import PrimaryButton from '../components/PrimaryButton';
 import Icon from '../components/Icon';
 import AccountRow from '../components/AccountRow';
+import BalanceCard from '../components/BalanceCard';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
+import { fontFamilyMedium, fontFamily } from '../theme';
 
 export default function AccountsSummaryScreen({ navigation }) {
   const { colors, typography } = useTheme();
@@ -23,7 +24,7 @@ export default function AccountsSummaryScreen({ navigation }) {
     <View style={styles.heading}><Text accessibilityRole="header" style={typography.title}>{completed ? `Tudo pronto${profile.name ? `, ${profile.name.split(' ')[0]}` : ''}.` : 'Suas contas, do seu jeito.'}</Text><Text style={typography.body}>{completed ? 'Suas contas estão organizadas.' : 'Adicione outras contas ou comece agora.'}</Text></View>
     {accounts.length ? <View style={styles.list}>{accounts.map((account, index) => <AccountRow key={account.uuid} account={account} last={index === accounts.length - 1} onPress={() => navigation.navigate('CreateAccount', { accountUuid: account.uuid })} />)}</View> : <View style={styles.empty}><Icon name="wallet" size={38} color={colors.secondary} /><Text style={styles.emptyTitle}>Sua primeira conta começa aqui.</Text><Text style={typography.body}>Adicione uma conta para organizar seu saldo.</Text></View>}
     <PrimaryButton title="Adicionar conta ou cartão" onPress={() => navigation.push('AddFinancialItem')} outlined icon="plus" style={styles.add} />
-    <View style={styles.total}><Text style={typography.label}>Saldo inicial total</Text><Text style={styles.amount}>{formatCurrency(total)}</Text></View>
+    <View style={styles.total}><BalanceCard label="Saldo inicial total" value={formatCurrency(total)} /></View>
     <View style={styles.bottom}>
       {completed ? <Pressable accessibilityRole="button" onPress={backToLogin} style={styles.exit}><Text style={styles.exitText}>Voltar ao login</Text></Pressable> : <PrimaryButton title="Começar a usar" disabled={!accounts.length} onPress={startUsing} />}
     </View>
@@ -36,8 +37,7 @@ const createStyles = (colors) => StyleSheet.create({
   heading: { marginTop: 20, gap: 10 },
   list: { backgroundColor: colors.surface, borderRadius: 16, paddingHorizontal: 16, marginTop: 28 },
   add: { marginTop: 18 },
-  total: { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 26, paddingTop: 22, gap: 8 },
-  amount: { color: colors.text, fontFamily: fontFamilyBold, fontSize: 36, lineHeight: 44, letterSpacing: -1.2, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  total: { marginTop: 26 },
   bottom: { marginTop: 48 },
   empty: { marginTop: 26, paddingVertical: 20, gap: 12 },
   emptyTitle: { color: colors.text, fontFamily: fontFamilyMedium, fontSize: 18, fontWeight: '600' },

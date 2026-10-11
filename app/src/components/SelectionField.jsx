@@ -1,10 +1,13 @@
 import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useState } from 'react';
-import { FlatList, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { FlatList, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
 import DrawerPanel from './DrawerPanel';
+import DrawerModal from './DrawerModal';
 import { fontFamily } from '../theme';
+
+const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 export default function SelectionField({ label, value, options, onChange, placeholder = 'Selecione', searchable = false, error, hint, renderLeading, renderOption, numColumns = 1, disabled = false, compact = false }) {
   const inputTheme = useInputTheme();
@@ -15,15 +18,17 @@ export default function SelectionField({ label, value, options, onChange, placeh
   const insets = useSafeAreaInsets();
   const selected = options.find(option => option.value === value);
   const isGrid = numColumns > 1;
-  const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const filtered = options.filter(option => normalize(option.label).includes(normalize(query.trim())));
+  const filtered = useMemo(() => {
+    const search = normalize(query.trim());
+    return search ? options.filter(option => normalize(option.label).includes(search)) : options;
+  }, [options, query]);
   return <View style={styles.field}>
     {!compact && <Text style={typography.label}>{label}</Text>}
     <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} accessibilityState={{ expanded: visible, disabled }} aria-expanded={visible} onPress={() => { Keyboard.dismiss(); setQuery(''); setVisible(true); }} style={[styles.trigger, compact && styles.compactTrigger, error && styles.invalid]}>{selected && renderLeading?.(selected)}<Text style={[styles.value, compact && styles.compactValue, !selected && styles.placeholder]} numberOfLines={1}>{selected?.label || placeholder}</Text><Icon name="chevronDown" color={colors.secondary} size={20} /></Pressable>
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : hint && <Text style={styles.hint}>{hint}</Text>}
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setVisible(false)}>
+    <DrawerModal visible={visible} onRequestClose={() => setVisible(false)}>
       <View style={styles.overlay}><Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Fechar seleção" onPress={() => setVisible(false)} />
-        <DrawerPanel visible={visible} style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <DrawerPanel style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.header}><Text style={styles.title}>{label}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar opções" hitSlop={12} onPress={() => setVisible(false)}><Icon name="close" /></Pressable></View>
           {searchable && <TextInput {...inputTheme} accessibilityLabel={`Buscar ${label.toLowerCase()}`} placeholder="Buscar por nome" placeholderTextColor={colors.secondary} value={query} onChangeText={setQuery} style={styles.search} autoCorrect={false} />}
           <FlatList
@@ -53,7 +58,7 @@ export default function SelectionField({ label, value, options, onChange, placeh
           />
         </DrawerPanel>
       </View>
-    </Modal>
+    </DrawerModal>
   </View>;
 }
 const createStyles = (colors, typography) => StyleSheet.create({

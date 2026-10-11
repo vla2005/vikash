@@ -8,7 +8,6 @@ import useReducedMotion from '../hooks/useReducedMotion';
 
 const width = 360;
 const height = 158;
-const left = 38;
 const right = 344;
 const top = 30;
 const bottom = 132;
@@ -21,7 +20,7 @@ function dateLabel(date) {
   return `${Number(day)} ${monthNames[Number(month) - 1]}`;
 }
 
-export default function BalanceEvolutionChart({ points, hidden = false }) {
+function BalanceEvolutionChart({ points, hidden = false }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const reducedMotion = useReducedMotion();
@@ -46,6 +45,8 @@ export default function BalanceEvolutionChart({ points, hidden = false }) {
   const lower = Math.floor(minimum / step) * step;
   const upper = Math.max(lower + step, Math.ceil(maximum / step) * step);
   const ticks = Array.from({ length: Math.round((upper - lower) / step) + 1 }, (_, index) => lower + index * step);
+  const tickLabels = ticks.map(value => value.toLocaleString('pt-BR', { maximumFractionDigits: step < 1 ? 2 : 0 }));
+  const left = Math.max(38, ...tickLabels.map(label => label.length * 6 + 11));
   const y = value => bottom - (value - lower) / (upper - lower) * (bottom - top);
   const plotted = points.map((point, index) => ({ ...point, x: left + index / Math.max(points.length - 1, 1) * (right - left), y: y(point.balance) }));
   const line = plotted.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
@@ -67,9 +68,9 @@ export default function BalanceEvolutionChart({ points, hidden = false }) {
           <Defs>
             <LinearGradient id={`${chartId}Area`} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={colors.primary} stopOpacity={0.16} /><Stop offset="1" stopColor={colors.primary} stopOpacity={0.02} /></LinearGradient>
           </Defs>
-          {ticks.map(value => <React.Fragment key={value}>
+          {ticks.map((value, index) => <React.Fragment key={value}>
             <Line x1={left} x2={right} y1={y(value)} y2={y(value)} stroke={colors.border} strokeWidth={0.8} strokeDasharray="2 3" />
-            <SvgText x={left - 11} y={y(value) + 3} fontFamily={fontFamily} fontSize={9} fill={colors.secondary} textAnchor="end">{value.toLocaleString('pt-BR', { maximumFractionDigits: step < 1 ? 2 : 0 })}</SvgText>
+            <SvgText x={left - 11} y={y(value) + 3} fontFamily={fontFamily} fontSize={10} fill={colors.secondary} textAnchor="end">{tickLabels[index]}</SvgText>
           </React.Fragment>)}
           {[0, 2, 4, 6].filter(index => index < plotted.length).map(index => <React.Fragment key={index}>
             <Line x1={plotted[index].x} x2={plotted[index].x} y1={top} y2={bottom} stroke={colors.border} strokeWidth={0.7} strokeDasharray="2 3" />
@@ -80,7 +81,7 @@ export default function BalanceEvolutionChart({ points, hidden = false }) {
           <Path d={`${line} L ${last.x} ${bottom} L ${left} ${bottom} Z`} fill={`url(#${chartId}Area)`} />
           {plotted.map((point, index) => <Circle key={point.date} cx={point.x} cy={point.y} r={index === plotted.length - 1 ? 5.5 : 2.8} fill={colors.primary} />)}
           </AnimatedG>
-          <AnimatedPath d={line} stroke={colors.primary} strokeWidth={1.8} fill="none" strokeLinejoin="round" strokeLinecap="round"
+          <AnimatedPath d={line} stroke={colors.primary} strokeWidth={2.8} fill="none" strokeLinejoin="round" strokeLinecap="round"
             strokeDasharray={[lineLength, lineLength]}
             strokeDashoffset={animation.interpolate({ inputRange: [0, 1], outputRange: [lineLength, 0] })} />
           <AnimatedG opacity={animation.interpolate({ inputRange: [0, 0.9, 1], outputRange: [0, 0, 1], extrapolate: 'clamp' })}>
@@ -102,3 +103,5 @@ const createStyles = (colors) => StyleSheet.create({
   hidden: { minHeight: 158, alignItems: 'center', justifyContent: 'center', gap: 8 },
   hiddenText: { fontFamily: fontFamilyBold, fontSize: 24, letterSpacing: 3, color: colors.secondary },
 });
+
+export default React.memo(BalanceEvolutionChart);

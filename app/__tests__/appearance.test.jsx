@@ -237,18 +237,22 @@ test.each(['light', 'dark'])(
       [c.error, c.errorSoft],
       [c.warning, c.warningSoft],
       [c.positive, c.positiveSoft],
+      [c.negative, c.negativeSoft],
+      [c.info, c.infoSoft],
+      [c.onBalance, c.balanceSurface],
+      [c.balanceSecondary, c.balanceSurface],
     ]) {
       expect(contrast(foreground, background)).toBeGreaterThanOrEqual(4.5);
     }
     expect(categoryPalettes[scheme].map(item => item.key)).toEqual(
       categoryPalettes.light.map(item => item.key),
     );
-    if (scheme === 'dark') {
-      categoryPalettes.dark.forEach(item =>
-        expect(
-          contrast(item.foreground, item.background),
-        ).toBeGreaterThanOrEqual(3),
+    categoryPalettes[scheme].forEach(item => {
+      expect(contrast(item.foreground, item.background)).toBeGreaterThanOrEqual(
+        3,
       );
-    }
+      expect(contrast(item.onAccent, item.accent)).toBeGreaterThanOrEqual(3);
+      expect(contrast(item.accent, c.surface)).toBeGreaterThanOrEqual(3);
+    });
   },
 );

@@ -1,9 +1,10 @@
 import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
 import DrawerPanel from './DrawerPanel';
+import DrawerModal from './DrawerModal';
 import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 
 export const emptyFilters = () => ({ accounts: [], categories: [], payments: [], min: '', max: '', transfers: true });
@@ -15,6 +16,9 @@ export default function StatementFilters({ visible, initial, accounts, categorie
   const [draft, setDraft] = useState(initial);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => {
+    if (visible) { setDraft(initial); setError(''); setExpanded(false); }
+  }, [visible, initial]);
   const insets = useSafeAreaInsets();
   const toggle = (key, value) => setDraft(previous => ({ ...previous, [key]: previous[key].includes(value) ? previous[key].filter(item => item !== value) : [...previous[key], value] }));
   function chips(key, values) {
@@ -27,9 +31,9 @@ export default function StatementFilters({ visible, initial, accounts, categorie
     }
     onApply(draft);
   }
-  return <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+  return <DrawerModal visible={visible} onRequestClose={onClose}>
     <View style={s.overlay}><Pressable accessibilityLabel="Fechar filtros" onPress={onClose} style={s.backdrop} />
-      <DrawerPanel visible={visible} style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 16), maxHeight: '90%' }]}>
+      <DrawerPanel style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 16), maxHeight: '90%' }]}>
         <View style={s.handle} /><View style={s.heading}><Text style={s.title}>Filtrar extrato</Text><Pressable accessibilityRole="button" accessibilityLabel="Cancelar filtros" onPress={onClose} style={s.close}><Icon name="close" size={24} /></Pressable></View>
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={s.label}>Contas</Text><Text style={s.hint}>Selecione uma ou mais</Text>
@@ -44,7 +48,7 @@ export default function StatementFilters({ visible, initial, accounts, categorie
         <Text style={s.count}>{countFilters(draft)} filtros selecionados</Text><Pressable accessibilityRole="button" accessibilityLabel="Aplicar filtros" onPress={apply} style={s.primary}><Text style={s.primaryText}>Aplicar filtros</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Limpar filtros" onPress={() => { setDraft(emptyFilters()); setError(''); }} style={s.clear}><Text style={s.blue}>Limpar filtros</Text></Pressable>
       </DrawerPanel>
     </View>
-  </Modal>;
+  </DrawerModal>;
 }
 const createStyles = (colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' }, backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.dialogBackdrop },
@@ -53,5 +57,5 @@ const createStyles = (colors) => StyleSheet.create({
   label: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 17, marginTop: 18, marginBottom: 8, color: colors.text }, hint: { fontFamily, fontSize: 12, color: colors.secondary, marginBottom: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }, chip: { borderWidth: 1, borderColor: colors.border, borderRadius: 13, paddingHorizontal: 14, minHeight: 40, alignSelf: 'flex-start', justifyContent: 'center' }, selected: { backgroundColor: colors.primarySoft, borderColor: colors.primary }, chipText: { fontFamily, color: colors.secondary, fontSize: 14 }, blue: { fontFamily, color: colors.primary, fontSize: 15 },
   dropdown: { borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceMuted, padding: 14, flexDirection: 'row', gap: 8, marginBottom: 6 }, dropdownText: { fontFamily, fontSize: 14, color: colors.text, flex: 1 }, range: { flexDirection: 'row', gap: 12 }, field: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12 }, input: { fontFamily, fontSize: 16, color: colors.text, paddingVertical: 4 }, switch: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, marginTop: 18, gap: 8 },
-  count: { fontFamily, color: colors.secondary, fontSize: 12, textAlign: 'center', marginVertical: 12 }, primary: { backgroundColor: colors.primary, borderRadius: 14, minHeight: 48, alignItems: 'center', justifyContent: 'center' }, primaryText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.onPrimary }, clear: { alignItems: 'center', padding: 16 }, error: { fontFamily, color: colors.error, marginTop: 12 },
+  count: { fontFamily, color: colors.secondary, fontSize: 12, textAlign: 'center', marginVertical: 12 }, primary: { backgroundColor: colors.brandPrimary, borderRadius: 14, minHeight: 48, alignItems: 'center', justifyContent: 'center' }, primaryText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.onBrand }, clear: { alignItems: 'center', padding: 16 }, error: { fontFamily, color: colors.error, marginTop: 12 },
 });

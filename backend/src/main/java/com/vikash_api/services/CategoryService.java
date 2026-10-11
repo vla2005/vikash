@@ -18,6 +18,8 @@ import com.vikash_api.exceptions.CategoryNotFoundException;
 import com.vikash_api.exceptions.CategoryAlreadyExistsException;
 import com.vikash_api.repositories.CustomCategoryRepository;
 import com.vikash_api.repositories.DefaultCategoryRepository;
+import com.vikash_api.repositories.TransactionRepository;
+import com.vikash_api.repositories.CreditCardPurchaseRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +29,19 @@ public class CategoryService {
     private final AuthenticatedUserService authenticatedUserService;
     private final CustomCategoryRepository customCategoryRepository;
     private final DefaultCategoryRepository defaultCategoryRepository;
+    private final TransactionRepository transactionRepository;
+    private final CreditCardPurchaseRepository creditCardPurchaseRepository;
+
+    @Transactional
+    public void delete(UUID uuid) {
+        UserEntity currentUser = authenticatedUserService.getCurrentUser();
+        CustomCategoryEntity category = customCategoryRepository.findOwnedForUpdate(uuid, currentUser.getId())
+                .orElseThrow(() -> new CategoryNotFoundException("Categoria não encontrada."));
+        // Preserve purchases, transactions and all financial values; remove only their category.
+        transactionRepository.clearCustomCategory(category.getId(), currentUser.getId());
+        creditCardPurchaseRepository.clearCustomCategory(category.getId(), currentUser.getId());
+        customCategoryRepository.delete(category);
+    }
 
     @Transactional
     public void create(CategoryRequest request) {

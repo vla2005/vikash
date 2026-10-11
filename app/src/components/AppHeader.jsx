@@ -21,7 +21,7 @@ export default function AppHeader({ profile, onOpenProfile }) {
 
 const createStyles = (colors) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.avatar, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fontFamilyBold, fontSize: 15, fontWeight: '700', color: colors.text },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.balanceSurface, alignItems: 'center', justifyContent: 'center' },
+  initials: { fontFamily: fontFamilyBold, fontSize: 15, fontWeight: '700', color: colors.onBalance },
   pressed: { opacity: 0.75 },
 });

@@ -1,6 +1,6 @@
 import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useState } from 'react';
-import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ListSkeleton } from './Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OTHER_INSTITUTION_NAME, searchFinancialInstitutions } from '../constants/financialInstitutions';
@@ -9,6 +9,7 @@ import { fontFamilyMedium, fontFamily } from '../theme';
 import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
 import DrawerPanel from './DrawerPanel';
+import DrawerModal from './DrawerModal';
 
 export default function FinancialInstitutionPicker({ value, selectedInstitution, onChange, required = false, error: fieldError }) {
   const inputTheme = useInputTheme();
@@ -42,10 +43,10 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
       <Icon name="chevronDown" size={20} color={colors.secondary} />
     </Pressable>
     {fieldError && <Text accessibilityRole="alert" style={styles.fieldError}>{fieldError}</Text>}
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setVisible(false)}>
+    <DrawerModal visible={visible} onRequestClose={() => setVisible(false)}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <Pressable accessibilityRole="button" accessibilityLabel="Fechar seleção de instituição" onPress={() => setVisible(false)} style={StyleSheet.absoluteFill} />
-        <DrawerPanel visible={visible} style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <DrawerPanel style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <Text accessibilityRole="header" style={styles.title}>Sua instituição</Text>
@@ -76,7 +77,7 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
           {!required && <Pressable accessibilityRole="button" onPress={() => select(null)} style={styles.skip}><Text style={styles.skipText}>Continuar sem instituição</Text></Pressable>}
         </DrawerPanel>
       </KeyboardAvoidingView>
-    </Modal>
+    </DrawerModal>
   </View>;
 }
 

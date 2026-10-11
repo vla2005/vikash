@@ -3,6 +3,7 @@ import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from './Icon';
+import IconTile from './IconTile';
 import Skeleton from './Skeleton';
 import useDashboard from '../hooks/useDashboard';
 import { previousPeriod, spendingPace, hiddenAmount } from '../utils/dashboard';
@@ -30,13 +31,13 @@ export default function DashboardInsights({ data, period, invoices = [], hidden,
     <View style={s.panel}>
       {dueInvoice && dueInDays <= 7 && <Pressable accessibilityRole="button" accessibilityLabel="Abrir próxima fatura"
         onPress={() => onOpenCard?.(dueInvoice.creditCard.uuid, dueInvoice.uuid)} style={({ pressed }) => [s.notice, pressed && s.pressed]}>
-        <Icon name="warning" size={20} color={dueInDays < 0 ? colors.negative : colors.copper} />
+        <IconTile tone={dueInDays < 0 ? 'negative' : 'warning'}><Icon name="warning" size={21} color={dueInDays < 0 ? colors.negative : colors.warning} /></IconTile>
         <View style={s.copy}><Text style={s.noticeTitle}>{dueInDays < 0 ? 'Fatura atrasada' : dueInDays === 0 ? 'Fatura vence hoje' : 'Fatura vence em breve'}</Text>
           <Text style={s.caption}>{creditCardLabel(dueInvoice.creditCard)} · {money(dueInvoice.total)}</Text></View>
         <Icon name="chevron" size={16} color={colors.secondary} />
       </Pressable>}
       {highLimit?.used >= 80 && <View style={s.notice}>
-        <Icon name="creditCard" size={20} color={colors.copper} /><View style={s.copy}>
+        <IconTile tone="warning"><Icon name="creditCard" size={21} color={colors.warning} /></IconTile><View style={s.copy}>
           <Text style={s.noticeTitle}>Limite próximo do máximo</Text>
           <Text style={s.caption}>{creditCardLabel(highLimit)} · {hidden ? hiddenAmount : `${Math.round(highLimit.used)}% utilizado`}</Text>
         </View>

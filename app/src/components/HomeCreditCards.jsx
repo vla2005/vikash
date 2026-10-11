@@ -1,11 +1,10 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import { creditCardLabel, formatLastFourDigits } from '../utils/creditCards';
-import React, { useEffect, useRef, useState } from 'react';
+import { creditCardLabel, formatLastFourDigits, formatInvoiceDate } from '../utils/creditCards';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import InstitutionLogo from './InstitutionLogo';
 import Icon from './Icon';
-import { formatInvoiceDate } from './CreditCardInvoiceDrawer';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { formatCurrency } from '../utils/money';
 import { hiddenAmount } from '../utils/dashboard';
@@ -14,6 +13,9 @@ import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 const statusLabels = { OPEN: 'Em aberto', CLOSED: 'Fechada', PAID: 'Paga' };
 const reveal = 46;
+// Sample the lift once; Animated interpolates it on the native driver.
+const motionSteps = Array.from({ length: 21 }, (_, index) => index / 20);
+const liftCurve = motionSteps.map(step => Math.sin(step * Math.PI));
 
 function orderedCards(cards, selectedUuid) {
   return [...cards].sort((a, b) => Number(b.uuid === selectedUuid) - Number(a.uuid === selectedUuid));
@@ -28,6 +30,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
   const progress = useRef(new Animated.Value(0)).current;
   const switching = useRef(false);
   const animation = useRef(null);
+  const animationVersion = useRef(0);
   const reducedMotion = useReducedMotion();
   const selected = cards.find(card => card.uuid === selectedUuid) ?? cards[0];
   const selectedId = selected?.uuid;
@@ -36,29 +39,41 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
   const frontY = rearCount * reveal;
   const currentOrder = orderedCards(cards, selectedId);
   const nextOrder = orderedCards(cards, transition ?? selectedId);
-  const outgoingRank = nextOrder.findIndex(card => card.uuid === selectedId);
-  const layerChange = outgoingRank > 1 ? 1 / Math.min(outgoingRank, 3) : 0.5;
+
+  const cancelAnimation = useCallback(() => {
+    animationVersion.current++;
+    animation.current?.stop();
+  }, []);
 
   useEffect(() => {
     // A refreshed dashboard can remove a card or replace the entire list.
-    animation.current?.stop();
+    cancelAnimation();
     switching.current = false;
     setTransition(null);
     setSelectedUuid(uuid => cards.some(card => card.uuid === uuid) ? uuid : cards[0]?.uuid);
-    return () => animation.current?.stop();
-  }, [cards]);
+    return cancelAnimation;
+  }, [cards, cancelAnimation]);
+
+  useEffect(() => {
+    if (!reducedMotion || !transition) { return; }
+    cancelAnimation();
+    setSelectedUuid(transition);
+    setTransition(null);
+    switching.current = false;
+  }, [reducedMotion, transition, cancelAnimation]);
 
   function chooseCard(uuid) {
     if (switching.current || uuid === selectedId) { return; }
     if (reducedMotion) { setSelectedUuid(uuid); return; }
     switching.current = true;
+    const version = ++animationVersion.current;
     progress.setValue(0);
     setTransition(uuid);
     animation.current = Animated.timing(progress, {
-      toValue: 1, duration: 1050, easing: Easing.inOut(Easing.cubic), useNativeDriver: true,
+      toValue: 1, duration: 860, easing: Easing.inOut(Easing.cubic), useNativeDriver: true,
     });
     animation.current.start(({ finished }) => {
-      if (!finished) { return; }
+      if (!finished || version !== animationVersion.current) { return; }
       setSelectedUuid(uuid);
       setTransition(null);
       switching.current = false;
@@ -93,17 +108,22 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
           const newScale = 1 - Math.min(newRank, 3) * 0.045;
           const moving = !!transition;
           const transform = moving && !reducedMotion ? [
-            { translateX: progress.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0, incoming ? 18 : 0, 0] }) },
-            { translateY: progress.interpolate({ inputRange: [0, 0.25, 1], outputRange: [oldY, incoming ? oldY - 12 : oldY + (newY - oldY) * 0.25, newY] }) },
+            { translateY: progress.interpolate({
+              inputRange: motionSteps,
+              outputRange: motionSteps.map((step, index) => oldY + (newY - oldY) * step - (incoming ? liftCurve[index] * 110 : 0)),
+            }) },
             { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [oldScale, newScale] }) },
-            { rotate: progress.interpolate({ inputRange: [0, 0.45, 1], outputRange: ['0deg', incoming ? '2deg' : '0deg', '0deg'] }) },
+            { rotate: progress.interpolate({ inputRange: motionSteps, outputRange: liftCurve.map(lift => `${incoming ? lift * -3 : 0}deg`) }) },
           ] : [{ translateY: moving ? newY : oldY }, { scale: moving ? newScale : oldScale }];
-          const opacity = moving && incoming ? progress.interpolate({ inputRange: [0, 0.4, 0.85, 1], outputRange: [0, 0.35, 1, 1] })
-            : moving && newRank >= 3 ? progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) : 1;
-          // Change layers at the crossing, so the receding card cannot cover the middle card.
-          const zIndex = incoming ? 10 : moving ? progress.interpolate({
-            inputRange: [0, layerChange, layerChange, 1],
-            outputRange: [4 - oldRank, 4 - oldRank, 4 - newRank, 4 - newRank],
+          // Visible cards stay opaque. Only cards entering/leaving the three-card window fade.
+          const opacity = moving && oldRank >= 3
+            ? progress.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 1] })
+            : moving && newRank >= 3 ? progress.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }) : 1;
+          // Lift out of the pile first, then move in front as the other layers settle.
+          const crossing = incoming ? 0.4 : 0.55;
+          const zIndex = moving ? progress.interpolate({
+            inputRange: [0, crossing, crossing, 1],
+            outputRange: [4 - oldRank, 4 - oldRank, incoming ? 6 : 4 - newRank, incoming ? 6 : 4 - newRank],
           }) : 4 - oldRank;
           const animatedStyle = { height: cardHeight, zIndex, transform, opacity };
           const cardStyle = [s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }];
@@ -116,22 +136,13 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
               <Text numberOfLines={1} adjustsFontSizeToFit style={s.cardNumber}>{`•••• •••• •••• ${formatLastFourDigits(card.lastFourDigits) || '----'}`}</Text>
               <View style={s.cardFooter}><Text numberOfLines={1} style={s.holder}>{profile?.name ?? ''}</Text><Text style={s.credit}>Crédito</Text></View>
           </>;
-          return <React.Fragment key={card.uuid}>
-            {/* Keep the rear card visible while its moving copy comes to the front. */}
-            {moving && incoming && oldRank < 3 && <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-              style={[s.cardPosition, { height: cardHeight, zIndex: 4 - oldRank,
-                transform: [{ translateY: oldY }, { scale: oldScale }],
-                opacity: progress.interpolate({ inputRange: [0, 0.65, 1], outputRange: [1, 1, 0] }) }]}>
-              <View style={cardStyle}>{cardContent}</View>
-            </Animated.View>}
-            <Animated.View style={[s.cardPosition, animatedStyle]}>
+          return <Animated.View key={card.uuid} style={[s.cardPosition, animatedStyle]}>
             <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${creditCardLabel(card)}`}
               accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition}
               onPress={() => chooseCard(card.uuid)} style={cardStyle}>
               {cardContent}
             </Pressable>
-            </Animated.View>
-          </React.Fragment>;
+          </Animated.View>;
         })}
       </View>
       {cards.length > 1 && <>

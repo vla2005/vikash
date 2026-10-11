@@ -21,14 +21,27 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-test.each([false, true])('anima durante a escuta e interrompe ao parar, movimento reduzido: %s', async reduced => {
-  useReducedMotion.mockReturnValue(reduced);
+test('anima durante a escuta e interrompe ao parar', async () => {
+  useReducedMotion.mockReturnValue(false);
   await act(async () => { renderer = TestRenderer.create(<VoiceWaveform active={false} />); });
   expect(loops).toHaveLength(0);
   await act(async () => renderer.update(<VoiceWaveform active />));
   expect(loops.length).toBeGreaterThan(0);
   loops.forEach(animation => expect(animation.start).toHaveBeenCalledTimes(1));
   await act(async () => renderer.update(<VoiceWaveform active={false} />));
+  loops.forEach(animation => expect(animation.stop).toHaveBeenCalledTimes(1));
+});
+
+test('não inicia loops com movimento reduzido e interrompe os existentes ao ativá-lo', async () => {
+  useReducedMotion.mockReturnValue(true);
+  await act(async () => { renderer = TestRenderer.create(<VoiceWaveform active />); });
+  expect(loops).toHaveLength(0);
+  useReducedMotion.mockReturnValue(false);
+  await act(async () => renderer.update(<VoiceWaveform active />));
+  expect(loops).toHaveLength(33);
+  useReducedMotion.mockReturnValue(true);
+  await act(async () => renderer.update(<VoiceWaveform active />));
+  expect(loops).toHaveLength(33);
   loops.forEach(animation => expect(animation.stop).toHaveBeenCalledTimes(1));
 });
 

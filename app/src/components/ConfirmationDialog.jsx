@@ -40,8 +40,8 @@ export default function ConfirmationDialog({ visible, title, message, confirmTex
               <Text style={styles.cancelText}>{cancelText}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityState={{ busy: loading, disabled: loading }} disabled={loading}
-              onPress={onConfirm} style={({ pressed }) => [styles.button, { backgroundColor: danger ? colors.dangerButton : colors.primary }, pressed && styles.pressed, loading && styles.disabled]}>
-              <Text style={[styles.confirmText, { color: danger ? colors.onDanger : colors.onPrimary }]}>{loading ? 'Aguarde…' : confirmText}</Text>
+              onPress={onConfirm} style={({ pressed }) => [styles.button, { backgroundColor: danger ? colors.dangerButton : colors.brandPrimary }, pressed && styles.pressed, loading && styles.disabled]}>
+              <Text style={[styles.confirmText, { color: danger ? colors.onDanger : colors.onBrand }]}>{loading ? 'Aguarde…' : confirmText}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -64,7 +64,7 @@ const createStyles = (colors) => StyleSheet.create({
   button: { flex: 1, minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', padding: 12 },
   cancel: { backgroundColor: colors.surfaceMuted },
   cancelText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 14, color: colors.text },
-  confirmText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 14, color: colors.onPrimary },
+  confirmText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 14, color: colors.onBrand },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.6 },
 });

@@ -11,6 +11,8 @@ import com.vikash_api.entities.UserEntity;
 import com.vikash_api.exceptions.CategoryNotFoundException;
 import com.vikash_api.repositories.CustomCategoryRepository;
 import com.vikash_api.repositories.DefaultCategoryRepository;
+import com.vikash_api.repositories.TransactionRepository;
+import com.vikash_api.repositories.CreditCardPurchaseRepository;
 import com.vikash_api.services.AuthenticatedUserService;
 import com.vikash_api.services.CategoryService;
 import org.junit.jupiter.api.Test;
@@ -30,7 +32,33 @@ class CategoryServiceTest {
     @Mock AuthenticatedUserService authenticatedUserService;
     @Mock CustomCategoryRepository customCategoryRepository;
     @Mock DefaultCategoryRepository defaultCategoryRepository;
+    @Mock TransactionRepository transactionRepository;
+    @Mock CreditCardPurchaseRepository creditCardPurchaseRepository;
     @InjectMocks CategoryService service;
+
+    @Test
+    void deletesOwnedCategoryAfterRemovingItsReferences() {
+        currentUser();
+        var category = new CustomCategoryEntity();
+        category.setId(15L);
+        UUID uuid = UUID.randomUUID();
+        when(customCategoryRepository.findOwnedForUpdate(uuid, 42L)).thenReturn(Optional.of(category));
+        service.delete(uuid);
+        var order = inOrder(transactionRepository, creditCardPurchaseRepository, customCategoryRepository);
+        order.verify(transactionRepository).clearCustomCategory(15L, 42L);
+        order.verify(creditCardPurchaseRepository).clearCustomCategory(15L, 42L);
+        order.verify(customCategoryRepository).delete(category);
+    }
+
+    @Test
+    void refusesToDeleteCategoryFromAnotherUserOrDefaultCategory() {
+        currentUser();
+        UUID uuid = UUID.randomUUID();
+        when(customCategoryRepository.findOwnedForUpdate(uuid, 42L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.delete(uuid)).isInstanceOf(CategoryNotFoundException.class);
+        verifyNoInteractions(transactionRepository, creditCardPurchaseRepository);
+        verify(customCategoryRepository, never()).delete(any());
+    }
 
     private UserEntity currentUser() {
         UserEntity user = new UserEntity();

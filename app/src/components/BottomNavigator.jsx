@@ -6,7 +6,7 @@ import Icon from './Icon';
 import AnimatedMicButton from './AnimatedMicButton';
 import { fontFamilyMedium } from '../theme';
 
-export const mainTabs = [
+const mainTabs = [
   { key: 'Home', label: 'Início', icon: 'home' },
   { key: 'Statement', label: 'Extrato', icon: 'statement' },
   { key: 'AccountManagement', label: 'Contas', icon: 'walletFilled' },

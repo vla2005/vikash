@@ -63,7 +63,7 @@ export default function AccountsScreen({ accounts, loading, error, onRetry, onCr
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[s.balance, account.balance > 0 && s.positive, account.balance < 0 && s.negative]}>{formatCurrency(account.balance)}</Text><Icon name="chevron" size={17} color={colors.secondary} />
           </Pressable>;
         })}
-        <Pressable accessibilityRole="button" accessibilityLabel="Nova conta" onPress={onCreate} style={({ pressed }) => [s.create, pressed && s.pressed]}><Icon name="plus" size={23} color={colors.onPrimary} /><Text style={s.createText}>Nova conta</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Nova conta" onPress={onCreate} style={({ pressed }) => [s.create, pressed && s.pressed]}><Icon name="plus" size={23} color={colors.onBrand} /><Text style={s.createText}>Nova conta</Text></Pressable>
       </> : <View style={s.cardsOnly}>{creditCards()}</View>}
     </View>
     {section === 'accounts' && creditCards()}
@@ -85,8 +85,8 @@ const createStyles = (colors) => StyleSheet.create({
   name: { fontFamily: fontFamilyMedium, fontSize: 14, fontWeight: '600', color: colors.text },
   balance: { fontFamily: fontFamilyBold, fontSize: 14, fontWeight: '700', color: colors.text, maxWidth: '34%', fontVariant: ['tabular-nums'] },
   positive: { color: colors.positive }, negative: { color: colors.negative },
-  create: { backgroundColor: colors.primary, minHeight: 44, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 6 },
-  createText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.onPrimary },
+  create: { backgroundColor: colors.brandPrimary, minHeight: 44, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 6 },
+  createText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.onBrand },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   add: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 5 },
   link: { fontFamily: fontFamilyMedium, fontSize: 12, fontWeight: '600', color: colors.primary },

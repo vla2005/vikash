@@ -65,7 +65,7 @@ test('loads month, credit and previous month with authentication and displays th
   const headings = renderer.root.findAll(node => node.type === Text && node.props.accessibilityRole === 'header')
     .map(node => node.props.children);
   expect(headings.slice(0, 4)).toEqual(['Resumo do mês', 'Gastos do mês', 'Evolução do saldo', 'De olho no mês']);
-  expect(renderer.root.findByType(BalanceEvolutionChart).props.points).toEqual(dashboard.balanceEvolution);
+  expect(renderer.root.findByType(BalanceEvolutionChart.type).props.points).toEqual(dashboard.balanceEvolution);
   expect(renderer.root.findAllByType(HomeCreditCards)).toHaveLength(1);
 });
 
@@ -79,7 +79,7 @@ test('eye masks every monetary value and percentages, including accessible chart
   expect(text()).toContain('••••••');
   const chart = renderer.root.findAll(node => node.props.accessibilityRole === 'image')[0];
   expect(chart.props.accessibilityLabel).toBe('Gastos do mês. Valores ocultos.');
-  expect(renderer.root.findByType(BalanceEvolutionChart).props.hidden).toBe(true);
+  expect(renderer.root.findByType(BalanceEvolutionChart.type).props.hidden).toBe(true);
   expect(text()).toContain('Mostre os valores para ver o gráfico.');
   expect(JSON.stringify(renderer.toJSON())).not.toContain('14.850');
   await act(async () => button('Mostrar valores').props.onPress());
@@ -235,7 +235,7 @@ test('reduced motion skips donut and balance drawing; normal motion cleans up an
   await act(async () => renderer.update(<BalanceEvolutionChart points={points} />));
   expect(timing).not.toHaveBeenCalled();
   useReducedMotion.mockReturnValue(false);
-  await act(async () => renderer.update(<BalanceEvolutionChart points={points} />));
+  await act(async () => renderer.update(<BalanceEvolutionChart points={[...points]} />));
   expect(timing).toHaveBeenCalledTimes(1);
   expect(listener).not.toHaveBeenCalled();
 });
@@ -261,7 +261,7 @@ test('animated card selection prevents overlapping switches and opens the new in
   const onOpenCard = jest.fn();
   await act(async () => { renderer = TestRenderer.create(<HomeCreditCards cards={cards} onOpenCard={onOpenCard} />); });
   await act(async () => button('Selecionar cartão Cartão final 7070').props.onPress());
-  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 1050, useNativeDriver: true }));
+  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 860, useNativeDriver: true }));
   expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: false, disabled: true });
   expect(button('Ver detalhes de Cartão final 0032').props.disabled).toBe(true);
   await act(async () => button('Selecionar cartão Cartão final 0032').props.onPress());
@@ -292,6 +292,22 @@ test('switching to the farthest card puts the receding card behind the middle ca
     return typeof layer === 'number' ? layer : layer.__getValue();
   };
   await act(async () => select('Azul').props.onPress());
+  // The chosen rear card itself moves; there is no lingering duplicate or fade.
+  expect(renderer.root.findAllByType('InstitutionLogo')).toHaveLength(3);
+  const incomingStyle = () => {
+    let node = select('Azul').parent;
+    while (node && StyleSheet.flatten(node.props.style)?.zIndex == null) { node = node.parent; }
+    return StyleSheet.flatten(node.props.style);
+  };
+  const positionY = () => {
+    const value = incomingStyle().transform[0].translateY;
+    return typeof value === 'number' ? value : value.__getValue();
+  };
+  const initialY = positionY();
+  await act(async () => progress.setValue(0.5));
+  expect(incomingStyle().opacity).toBe(1);
+  expect(positionY()).toBeLessThan(initialY);
+  await act(async () => progress.setValue(0));
   expect(layerOf('Laranja')).toBeGreaterThan(layerOf('Vermelho'));
   await act(async () => progress.setValue(0.75));
   expect(layerOf('Laranja')).toBeLessThan(layerOf('Vermelho'));
@@ -300,6 +316,23 @@ test('switching to the farthest card puts the receding card behind the middle ca
   await act(async () => { progress.setValue(1); finish({ finished: true }); });
   expect([layerOf('Laranja'), layerOf('Vermelho')]).toEqual(rearLayers);
   expect(select('Azul').props.accessibilityState.selected).toBe(true);
+});
+
+test('enabling reduced motion finishes the current selection and ignores its late animation callback', async () => {
+  useReducedMotion.mockReturnValue(false);
+  let finish;
+  const stop = jest.fn();
+  jest.spyOn(Animated, 'timing').mockReturnValue({ start: callback => { finish = callback; }, stop });
+  const cards = [dashboard.creditCards[0], ...[7070, 8080].map(lastFourDigits => ({ ...dashboard.creditCards[0], uuid: String(lastFourDigits), lastFourDigits }))];
+  await act(async () => { renderer = TestRenderer.create(<HomeCreditCards cards={cards} />); });
+  await act(async () => button('Selecionar cartão Cartão final 7070').props.onPress());
+  useReducedMotion.mockReturnValue(true);
+  await act(async () => renderer.update(<HomeCreditCards cards={cards} />));
+  expect(stop).toHaveBeenCalled();
+  expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: true, disabled: false });
+  await act(async () => button('Selecionar cartão Cartão final 8080').props.onPress());
+  await act(async () => finish({ finished: true }));
+  expect(button('Selecionar cartão Cartão final 8080').props.accessibilityState.selected).toBe(true);
 });
 
 test('Home card selection updates details and keeps financial data hidden until the eye is enabled', async () => {

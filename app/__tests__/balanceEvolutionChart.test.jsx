@@ -52,3 +52,17 @@ test('Android mantém animação de desenho e libera animação ao ocultar valor
   expect(stop).toHaveBeenCalled();
   expect(renderer.root.findAllByType('Svg')).toHaveLength(0);
 });
+
+test('atualização do pai com os mesmos pontos evita recalcular o gráfico, mas novos dados redesenham', async () => {
+  useReducedMotion.mockReturnValue(false);
+  const timing = jest.spyOn(Animated, 'timing').mockReturnValue({ start: jest.fn(), stop: jest.fn() });
+  const points = [{ date: '2026-10-09', balance: 10 }, { date: '2026-10-10', balance: 20 }];
+  await act(async () => { renderer = TestRenderer.create(<BalanceEvolutionChart points={points} />); });
+  const renders = useReducedMotion.mock.calls.length;
+  await act(async () => renderer.update(<BalanceEvolutionChart points={points} />));
+  expect(useReducedMotion.mock.calls).toHaveLength(renders);
+  expect(timing).toHaveBeenCalledTimes(1);
+  await act(async () => renderer.update(<BalanceEvolutionChart points={[...points, { date: '2026-10-11', balance: 30 }]} />));
+  expect(timing).toHaveBeenCalledTimes(2);
+  expect(renderer.root.findAllByType('SvgText').some(node => /^R\$\s30,00$/.test(node.props.children))).toBe(true);
+});

@@ -53,7 +53,7 @@ export default function MainTabs({ navigation }) {
   const [invoiceToOpen, setInvoiceToOpen] = useState(null);
   const { showToast } = useToast();
   const onboarding = useOnboarding();
-  const { categories, defaultCategories, loading, error, retry, saving, saveCategory: persistCategory } = useCategories(onboarding?.session?.accessToken, selected === 'Categories');
+  const { categories, defaultCategories, loading, error, retry, saving, saveCategory: persistCategory, removeCategory } = useCategories(onboarding?.session?.accessToken, selected === 'Categories');
   const [categoryForm, setCategoryForm] = useState(null);
   const accountList = useAccounts(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
   const cardList = useCreditCards(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
@@ -102,9 +102,14 @@ export default function MainTabs({ navigation }) {
     const saved = await persistCategory(values, categoryForm.category);
     if (saved) { setCategoryForm(null); }
   }
-  function deleteCategory() {
-    // Replace this feedback with the deletion request when the endpoint is available.
-    showToast({ type: 'info', title: 'Exclusão ainda indisponível', message: 'Sua categoria foi mantida. Essa função será conectada em breve.' });
+  async function deleteCategory(category) {
+    if (!await removeCategory(category)) { throw new Error('Aguarde a alteração em andamento.'); }
+    setCategoryForm(null);
+    setDashboardRevision(value => value + 1);
+    setStatementRevision(value => value + 1);
+    setCardRevision(value => value + 1);
+    setAccountRevision(value => value + 1);
+    showToast({ type: 'success', message: 'Categoria excluída. Seus lançamentos foram preservados.' });
   }
   async function confirmTranscription(transcription) {
     try {
@@ -134,7 +139,7 @@ export default function MainTabs({ navigation }) {
       return <AccountsScreen {...accountList} profile={onboarding?.profile} cards={cardList.cards} cardsLoading={cardList.loading} cardsError={cardList.error} onRetryCards={cardList.retry} onOpenCard={openInvoice} onRetry={accountList.retry} onCreate={() => setAccountForm({ kind: 'account', account: null })} onCreateCard={() => setAccountForm({ kind: 'card' })} onEdit={account => setAccountUuid(account.uuid)} />;
     }
     if (categoryForm) {
-      return <CategoryFormScreen key={categoryForm.category?.uuid ?? categoryForm.category?.name ?? 'new-category'} category={categoryForm.category} existingCategories={[...defaultCategories, ...categories]} saving={saving} onSave={saveCategory} onCancel={() => setCategoryForm(null)} />;
+      return <CategoryFormScreen key={categoryForm.category?.uuid ?? categoryForm.category?.name ?? 'new-category'} category={categoryForm.category} existingCategories={[...defaultCategories, ...categories]} saving={saving} onSave={saveCategory} onDelete={deleteCategory} onCancel={() => setCategoryForm(null)} />;
     }
     return <CategoriesScreen categories={categories} defaultCategories={defaultCategories} loading={loading} error={error} onRetry={retry} onCreate={() => setCategoryForm({ category: null })} onEdit={category => setCategoryForm({ category })} onDelete={deleteCategory} />;
   }

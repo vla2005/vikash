@@ -1,1 +1,1 @@
-export default require('../../assets/brand/app-icon.png');
+export default require('../../assets/brand/app-icon.webp');

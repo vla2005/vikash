@@ -1,12 +1,13 @@
 import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AnimatedMicButton from './AnimatedMicButton';
 import VoiceWaveform from './VoiceWaveform';
 import Icon from './Icon';
 import useVoiceTranscription from '../hooks/useVoiceTranscription';
-import useReducedMotion from '../hooks/useReducedMotion';
+import DrawerModal from './DrawerModal';
+import DrawerPanel from './DrawerPanel';
 import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 
 export default function VoiceDrawer({ visible, onClose, onConfirm }) {
@@ -16,22 +17,15 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   const voice = useVoiceTranscription(visible);
-  const reduced = useReducedMotion();
   const [feedback, setFeedback] = useState('');
   const [sending, setSending] = useState(false);
   const submitting = useRef(false);
-  const slide = useRef(new Animated.Value(180)).current;
   const input = useRef(null);
   const review = voice.phase === 'review';
   const listening = voice.phase === 'listening';
   useEffect(() => {
-    if (!visible) { slide.setValue(180); return; }
-    setFeedback('');
-    if (reduced) { slide.setValue(0); return; }
-    const animation = Animated.spring(slide, { toValue: 0, damping: 24, stiffness: 200, useNativeDriver: Platform.OS !== 'web' });
-    animation.start();
-    return () => animation.stop();
-  }, [visible, slide, reduced]);
+    if (visible) { setFeedback(''); }
+  }, [visible]);
   function close() { if (submitting.current) { return; } voice.cancel(); onClose(); }
   async function confirm() {
     if (!voice.text.trim() || submitting.current) { return; }
@@ -44,10 +38,10 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     finally { submitting.current = false; setSending(false); }
   }
   const time = `${String(Math.floor(voice.seconds / 60)).padStart(2, '0')}:${String(voice.seconds % 60).padStart(2, '0')}`;
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
+  return <DrawerModal visible={visible} onRequestClose={close}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
       <Pressable style={styles.backdrop} accessibilityRole="button" accessibilityLabel="Fechar registro por voz" onPress={close} />
-      <Animated.View accessibilityViewIsModal style={[styles.drawer, { maxHeight: height - insets.top - 16, paddingBottom: Math.max(insets.bottom, 12) + 12, transform: [{ translateY: slide }] }]}>
+      <DrawerPanel style={[styles.drawer, { maxHeight: height - insets.top - 16, paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
         <View style={styles.handle} />
         <Pressable accessibilityRole="button" accessibilityLabel="Fechar microfone" onPress={close} hitSlop={12} style={styles.close}><Icon name="close" size={18} color={colors.secondary} /></Pressable>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -86,9 +80,9 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
             <Text style={styles.caption}>Você revisa o texto antes de enviar.</Text>
           </>}
         </View>
-      </Animated.View>
+      </DrawerPanel>
     </KeyboardAvoidingView>
-  </Modal>;
+  </DrawerModal>;
 }
 const createStyles = (colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: colors.dialogBackdrop },
@@ -114,8 +108,8 @@ const createStyles = (colors) => StyleSheet.create({
   input: { fontFamily, fontSize: 19, lineHeight: 26, color: colors.text, padding: 16, paddingRight: 42, minHeight: 116 },
   edit: { position: 'absolute', right: 8, top: 10, padding: 5 },
   footer: { width: '100%' },
-  primary: { backgroundColor: colors.primary, borderRadius: 18, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 13 },
-  primaryText: { fontFamily: fontFamilyMedium, color: colors.onPrimary, fontSize: 16, fontWeight: '600' },
+  primary: { backgroundColor: colors.brandPrimary, borderRadius: 18, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 13 },
+  primaryText: { fontFamily: fontFamilyMedium, color: colors.onBrand, fontSize: 16, fontWeight: '600' },
   pressed: { backgroundColor: colors.primaryPressed },
   disabled: { opacity: 0.5 },
   stopIcon: { width: 15, height: 15, borderRadius: 2, backgroundColor: colors.surface },

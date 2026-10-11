@@ -1,12 +1,13 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'phosphor-react-native/src/icons/Check';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { SignOut } from 'phosphor-react-native/src/icons/SignOut';
 import { UserCircle } from 'phosphor-react-native/src/icons/UserCircle';
 import DrawerPanel from './DrawerPanel';
+import DrawerModal from './DrawerModal';
 import Icon from './Icon';
 import InlineNotice from './InlineNotice';
 import ConfirmationDialog from './ConfirmationDialog';
@@ -56,12 +57,12 @@ export default function ProfileSwitcherDrawer({ visible, profiles = [], activePr
     finally { busy.current = false; setPendingId(null); }
   }
 
-  return <Modal visible={visible} transparent animationType="fade" statusBarTranslucent
+  return <DrawerModal visible={visible}
     onRequestClose={close} onShow={() => closeButton.current?.focus?.()}>
     <View style={s.overlay}>
       <Pressable accessibilityRole="button" accessibilityLabel="Fechar troca de perfis" disabled={pendingId !== null}
         onPress={close} style={StyleSheet.absoluteFill} />
-      <DrawerPanel visible={visible} style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 24), marginTop: insets.top + 24 }]}>
+      <DrawerPanel style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 24), marginTop: insets.top + 24 }]}>
         <View style={s.handle} />
         <View style={s.header}>
           <Text accessibilityRole="header" style={s.title}>Seus perfis</Text>
@@ -110,7 +111,7 @@ export default function ProfileSwitcherDrawer({ visible, profiles = [], activePr
         confirmText="Sair desta conta" variant="danger" icon="info" loading={pendingId !== null} error={error}
         onConfirm={confirmLogout} onCancel={() => { if (!busy.current) { setLeaving(null); setError(''); } }} />
     </View>
-  </Modal>;
+  </DrawerModal>;
 }
 
 const createStyles = (colors) => StyleSheet.create({

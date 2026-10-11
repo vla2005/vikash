@@ -1,4 +1,5 @@
 jest.mock('../src/hooks/useToast', () => () => ({ showToast: jest.fn() }));
+jest.mock('../src/hooks/useReducedMotion', () => () => true);
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { StyleSheet, Text, TextInput } from 'react-native';

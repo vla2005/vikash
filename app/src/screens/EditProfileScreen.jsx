@@ -34,15 +34,15 @@ export default function EditProfileScreen({ profile, onBack, onSave }) {
     <View style={s.fields}>
       <FormField label="Nome completo" value={values.name} onChangeText={value => change('name', value)} error={errors.name} placeholder="Como você se chama?" editable={!saving} maxLength={100} autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} inputContainerStyle={s.input} testID="profile-name" />
       <FormField ref={emailRef} label="E-mail" value={values.email} onChangeText={value => change('email', value)} error={errors.email} placeholder="seu@email.com" hint="Use um e-mail que você acessa com frequência." editable={!saving} maxLength={150} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" returnKeyType="done" onSubmitEditing={submit} inputContainerStyle={s.input} leadingIcon={<EnvelopeSimple size={22} color={colors.secondary} />} testID="profile-email" />
-      {(emailChanged || errors.password || values.password) && <FormField label="Senha atual" password value={values.password} onChangeText={value => change('password', value)} error={errors.password} placeholder="Confirme sua senha" hint="Para sua segurança, confirme a senha ao alterar seu e-mail." editable={!saving} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" textContentType="password" returnKeyType="done" onSubmitEditing={submit} inputContainerStyle={s.input} testID="profile-password" />}
+      {!!(emailChanged || errors.password || values.password) && <FormField label="Senha atual" password value={values.password} onChangeText={value => change('password', value)} error={errors.password} placeholder="Confirme sua senha" hint="Para sua segurança, confirme a senha ao alterar seu e-mail." editable={!saving} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" textContentType="password" returnKeyType="done" onSubmitEditing={submit} inputContainerStyle={s.input} testID="profile-password" />}
     </View>
   </ProfileFormLayout>;
 }
 
 const createStyles = (colors) => StyleSheet.create({
   identity: { marginTop: 22, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.avatar, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 32, color: colors.text, letterSpacing: -1 },
+  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.balanceSurface, alignItems: 'center', justifyContent: 'center' },
+  initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 32, color: colors.onBalance, letterSpacing: -1 },
   copy: { flex: 1, minWidth: 0, gap: 5 },
   name: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 22, lineHeight: 29, color: colors.text, letterSpacing: -0.6 },
   subtitle: { fontFamily, fontSize: 15, lineHeight: 23, color: colors.secondary },

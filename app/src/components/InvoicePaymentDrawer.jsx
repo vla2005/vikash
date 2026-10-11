@@ -1,22 +1,23 @@
 import { useInputTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Modal, TextInput, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, TextInput, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ListSkeleton } from './Skeleton';
 import useAccounts from '../hooks/useAccounts';
 import useToast from '../hooks/useToast';
 import { payCreditCardInvoice } from '../services/creditCards';
 import InstitutionLogo from './InstitutionLogo';
 import DrawerPanel from './DrawerPanel';
+import DrawerModal from './DrawerModal';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 import { initialPaymentDate, maskPaymentDate, maskPaymentTime, parsePaymentDate } from '../utils/paymentDate';
 
 const methods = [['PIX', 'Pix'], ['BANK_SLIP', 'Boleto'], ['DEBIT_CARD', 'Débito'], ['CASH', 'Dinheiro']];
 
-export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, onPaid }) {
+export default function InvoicePaymentDrawer({ visible = true, invoice, accessToken, onClose, onPaid }) {
   const inputTheme = useInputTheme();
   const s = useThemeStyles(createStyles);
-  const { accounts, loading, error, retry } = useAccounts(accessToken, true);
+  const { accounts, loading, error, retry } = useAccounts(accessToken, visible);
   const { showToast } = useToast();
   const [accountUuid, setAccountUuid] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('PIX');
@@ -25,6 +26,13 @@ export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, on
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState('');
   const busy = useRef(false);
+  useEffect(() => {
+    if (visible) {
+      const initial = initialPaymentDate();
+      setAccountUuid(null); setPaymentMethod('PIX');
+      setDate(initial.date); setTime(initial.time); setFailure('');
+    }
+  }, [visible, invoice.uuid]);
   const selected = accounts.find(account => account.uuid === accountUuid);
   async function confirm() {
     if (busy.current || !selected) { return; }
@@ -38,7 +46,7 @@ export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, on
       showToast({ type: 'error', message: cause.message });
     } finally { busy.current = false; setSaving(false); }
   }
-  return <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => { if (!busy.current) { onClose(); } }}>
+  return <DrawerModal visible={visible} onRequestClose={() => { if (!busy.current) { onClose(); } }}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}><Pressable accessibilityRole="button" accessibilityLabel="Fechar pagamento" style={StyleSheet.absoluteFill} disabled={saving} onPress={onClose} />
       <DrawerPanel style={s.drawer}><View style={s.handle} /><Text style={s.title}>Marcar fatura como paga</Text><Text style={s.amount}>{formatCurrency(invoice.total)}</Text>
         <Text style={s.note}>Escolha a conta de onde saiu o dinheiro. O pagamento será registrado no extrato e liberará este valor do limite.</Text>
@@ -53,7 +61,7 @@ export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, on
         <Pressable accessibilityRole="button" disabled={saving} onPress={onClose} style={s.cancel}><Text style={s.note}>Cancelar</Text></Pressable>
       </DrawerPanel>
     </KeyboardAvoidingView>
-  </Modal>;
+  </DrawerModal>;
 }
 const createStyles = (colors) => StyleSheet.create({
   dateFields: { flexDirection: 'row', gap: 12 }, dateField: { flex: 2 }, timeField: { flex: 1 }, input: { fontFamily, fontSize: 16, backgroundColor: colors.surface, color: colors.text, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginTop: 6 },
@@ -66,6 +74,6 @@ const createStyles = (colors) => StyleSheet.create({
   info: { flex: 1 }, name: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.text, fontWeight: '600' }, selected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   methods: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, method: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   link: { fontFamily: fontFamilyMedium, color: colors.primary, fontWeight: '600' }, error: { fontFamily, color: colors.negative, marginVertical: 12 },
-  confirm: { backgroundColor: colors.primary, borderRadius: 16, minHeight: 54, alignItems: 'center', justifyContent: 'center', marginTop: 22 }, disabled: { opacity: 0.45 },
-  confirmText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.onPrimary }, cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  confirm: { backgroundColor: colors.brandPrimary, borderRadius: 16, minHeight: 54, alignItems: 'center', justifyContent: 'center', marginTop: 22 }, disabled: { opacity: 0.45 },
+  confirmText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.onBrand }, cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });

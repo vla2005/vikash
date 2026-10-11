@@ -71,7 +71,7 @@ export default function CategoriesScreen({ categories = [], defaultCategories = 
             <Icon name="edit" size={23} color={colors.secondary} />
           </SwipeableRow>
           : <View key={item.uuid ?? item.name} style={styles.defaultCategory}>
-            <CategoryBadge category={item} size={52} iconSize={34} />
+            <CategoryBadge category={item} size={54} iconSize={30} vivid />
             <Text style={[styles.defaultName, compact && styles.compactName]}>{item.name}</Text>
           </View>)}</View>
         {custom && <Text style={styles.hint}>Toque para editar. Arraste para a esquerda para excluir.</Text>}
@@ -85,7 +85,7 @@ export default function CategoriesScreen({ categories = [], defaultCategories = 
     <View style={styles.header}>
       <Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>Categorias</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Criar categoria" onPress={onCreate} style={({ pressed }) => [styles.add, pressed && styles.pressed]}>
-        <Icon name="plus" color={colors.onPrimary} size={21} /><Text style={styles.addText}>Nova</Text>
+        <Icon name="plus" color={colors.onBrand} size={21} /><Text style={styles.addText}>Nova</Text>
       </Pressable>
     </View>
     <Text style={styles.subtitle}>Seu dinheiro, organizado.</Text>
@@ -96,7 +96,7 @@ export default function CategoriesScreen({ categories = [], defaultCategories = 
       <Pressable accessibilityRole="button" accessibilityLabel="Tentar carregar categorias novamente" onPress={onRetry} style={({ pressed }) => [styles.retry, pressed && styles.pressed]}><Text style={styles.retryText}>Tentar novamente</Text></Pressable>
     </View> : <>{group('Do app', filter(defaultCategories), false)}{group('Suas categorias', filter(categories), true)}</>}
   </ScrollView>
-    <ConfirmationDialog visible={!!categoryToDelete} title="Excluir categoria?" message={`Deseja excluir a categoria “${categoryToDelete?.name || ''}”?`}
+    <ConfirmationDialog visible={!!categoryToDelete} title="Excluir categoria?" message={`Deseja excluir a categoria “${categoryToDelete?.name || ''}”? Os lançamentos serão mantidos e ficarão sem esta categoria.`}
       confirmText="Excluir" variant="danger" icon="trash" loading={deleting} error={deleteError} onConfirm={confirmDelete}
       onCancel={() => { if (!deleteInProgress.current) { setCategoryToDelete(null); } }} />
   </>;
@@ -106,16 +106,16 @@ const createStyles = (colors) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { flexShrink: 1, fontFamily: fontFamilyBold, fontSize: 34, lineHeight: 44, fontWeight: '700', letterSpacing: -1.2, color: colors.text },
   compactTitle: { fontSize: 30, lineHeight: 40 },
-  add: { minHeight: 44, borderRadius: 13, paddingHorizontal: 15, backgroundColor: colors.primary, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
-  addText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.onPrimary },
+  add: { minHeight: 44, borderRadius: 13, paddingHorizontal: 15, backgroundColor: colors.brandPrimary, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
+  addText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.onBrand },
   subtitle: { fontFamily, fontSize: 15, lineHeight: 24, color: colors.secondary, marginTop: 3 },
   search: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.surface, borderRadius: 17, paddingHorizontal: 15, minHeight: 48 },
   searchInput: { flex: 1, minWidth: 0, fontFamily, fontSize: 15, lineHeight: 23, color: colors.text, paddingVertical: 12 },
-  section: { marginTop: 16 },
+  section: { marginTop: 24 },
   sectionTitle: { fontFamily: fontFamilyBold, fontSize: 20, lineHeight: 26, fontWeight: '700', letterSpacing: -0.5, color: colors.text, marginBottom: 10 },
   list: { backgroundColor: colors.surface, borderRadius: 20, overflow: 'hidden', marginHorizontal: -3 },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, marginHorizontal: -9 },
-  defaultCategory: { width: '33.333333%', paddingHorizontal: 3, alignItems: 'center', gap: 6 },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 18, marginHorizontal: -9 },
+  defaultCategory: { width: '33.333333%', paddingHorizontal: 3, alignItems: 'center', gap: 9 },
   defaultName: { alignSelf: 'stretch', fontFamily, fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center' },
   compactName: { fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 13, minHeight: 50, paddingVertical: 6, paddingHorizontal: 14 },

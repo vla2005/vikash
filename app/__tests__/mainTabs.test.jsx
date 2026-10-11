@@ -27,9 +27,9 @@ import { fetchAccounts, fetchAccountDetails } from '../src/services/accounts';
 jest.mock('../src/services/accounts', () => ({ fetchAccounts: jest.fn(), fetchAccountDetails: jest.fn(), createAccount: jest.fn() }));
 import useToast from '../src/hooks/useToast';
 jest.mock('../src/hooks/useToast', () => { const showToast = jest.fn(); return { __esModule: true, default: () => ({ showToast }) }; });
-import { createCategory, fetchCategories, updateCategory } from '../src/services/categories';
+import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../src/services/categories';
 
-jest.mock('../src/services/categories', () => ({ createCategory: jest.fn(async values => ({ ...values })), fetchCategories: jest.fn(), updateCategory: jest.fn(async () => null) }));
+jest.mock('../src/services/categories', () => ({ createCategory: jest.fn(async values => ({ ...values })), deleteCategory: jest.fn(async () => null), fetchCategories: jest.fn(), updateCategory: jest.fn(async () => null) }));
 jest.mock('../src/contexts/OnboardingContext', () => ({ useOnboarding: () => ({ session: { accessToken: 'test-access' }, profile: { name: 'Viktor Lucena' }, accounts: [], updateProfile: jest.fn(), changePassword: jest.fn() }) }));
 
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }) }));
@@ -186,17 +186,19 @@ test('contas só ativa o refresh nativo ao puxar, sem deslocar a tela no carrega
   expect(refreshControl().props.refreshing).toBe(false);
 });
 
-test('exclusao preparada confirma sem chamar endpoint nem remover categoria', async () => {
+test('exclusão de categoria confirma, envia UUID e atualiza a lista', async () => {
   fetchCategories.mockResolvedValue({ defaultCategories: [], customCategories: [{ uuid: 'pet-uuid', name: 'Pets', icon: 'paw', color: 'blue' }] });
   const requests = jest.spyOn(global, 'fetch').mockRejectedValue(new Error('Não deveria consultar API'));
   try {
     await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
     await act(async () => button('Categorias').props.onPress());
     await act(async () => renderer.root.findByType(SwipeableRow).props.onAction());
+    fetchCategories.mockResolvedValue({ defaultCategories: [], customCategories: [] });
     await act(async () => renderer.root.findByType(ConfirmationDialog).props.onConfirm());
     expect(requests).not.toHaveBeenCalled();
-    expect(button('Editar categoria Pets')).toBeDefined();
-    expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'info', title: 'Exclusão ainda indisponível' }));
+    expect(deleteCategory).toHaveBeenCalledWith('pet-uuid', 'test-access');
+    expect(button('Editar categoria Pets')).toBeUndefined();
+    expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', message: 'Categoria excluída. Seus lançamentos foram preservados.' }));
     expect(renderer.root.findByType(ConfirmationDialog).props.visible).toBe(false);
   } finally { requests.mockRestore(); }
 });
