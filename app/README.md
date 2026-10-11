@@ -86,8 +86,12 @@ validam esse comportamento.
 
 O runtime usa a política `fingerprint`. Os workflows devem recriar o projeto
 nativo com `expo prebuild` antes de compilar. `fingerprint.config.js` exclui as
-pastas nativas geradas e os números de versão da build do cálculo; configuração
-Expo, plugins e dependências nativas continuam determinando a compatibilidade.
+pastas nativas geradas, o cache `.kotlin` da compilação e os números de versão da
+build do cálculo; configuração Expo, plugins e dependências nativas continuam
+determinando a compatibilidade. O cache pode aparecer dentro de plugins Gradle
+durante a build e produzir um runtime diferente do publicado pelo EAS Update.
+Ao corrigir esse cálculo, gere e instale uma nova build para que o app use o
+identificador corrigido nas próximas atualizações.
 Alterações nativas exigem outro APK/IPA. Não edite as pastas nativas manualmente
 para essas builds: represente alterações nativas na configuração/plugins.
 
