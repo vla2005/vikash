@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Skeleton, { DashboardSkeleton } from '../components/Skeleton';
@@ -13,11 +14,13 @@ import useCreditDashboard from '../hooks/useCreditDashboard';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { hiddenAmount, toRecentPurchaseRows, shiftPeriod } from '../utils/dashboard';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, colors, fontFamily, fontFamilyBold } from '../theme';
+import { fontFamilyMedium, fontFamily, fontFamilyBold } from '../theme';
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 export default function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard, onViewCards, onOpenTransaction, onViewStatement }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const [period, setPeriod] = useState(() => {
     const today = new Date();
     return { year: today.getFullYear(), month: today.getMonth() + 1 };
@@ -127,7 +130,7 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
 }
 
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 28 },
   greeting: { fontFamily, fontSize: 18, lineHeight: 27, color: colors.text, marginTop: 12 },
   name: { fontFamily: fontFamilyBold, fontWeight: '700' },
@@ -155,6 +158,6 @@ const s = StyleSheet.create({
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, yearSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 12 },
   pickerYear: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 24, color: colors.text }, months: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   monthOption: { width: '30%', flexGrow: 1, minHeight: 48, borderRadius: 14, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
-  selectedMonth: { backgroundColor: colors.primary }, optionText: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.text }, selectedText: { color: colors.surface },
+  selectedMonth: { backgroundColor: colors.primary }, optionText: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.text }, selectedText: { color: colors.onPrimary },
   pickerNote: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary, textAlign: 'center', marginTop: 20 },
 });

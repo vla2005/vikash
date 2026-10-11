@@ -1,0 +1,788 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-11T15:23:17.276Z",
+  "title": "Design System: Vikash",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Claro/fixo · Azul de ação",
+        "tonalRamp": [
+          "oklch(15% 0.25024 266.20)",
+          "oklch(26.43% 0.25024 266.20)",
+          "oklch(37.86% 0.25024 266.20)",
+          "oklch(49.29% 0.25024 266.20)",
+          "oklch(60.71% 0.25024 266.20)",
+          "oklch(72.14% 0.25024 266.20)",
+          "oklch(83.57% 0.25024 266.20)",
+          "oklch(95% 0.25024 266.20)"
+        ]
+      },
+      "primaryPressed": {
+        "role": "primary",
+        "displayName": "Claro/fixo · Azul pressionado",
+        "tonalRamp": [
+          "oklch(15% 0.22596 265.89)",
+          "oklch(26.43% 0.22596 265.89)",
+          "oklch(37.86% 0.22596 265.89)",
+          "oklch(49.29% 0.22596 265.89)",
+          "oklch(60.71% 0.22596 265.89)",
+          "oklch(72.14% 0.22596 265.89)",
+          "oklch(83.57% 0.22596 265.89)",
+          "oklch(95% 0.22596 265.89)"
+        ]
+      },
+      "primarySoft": {
+        "role": "primary",
+        "displayName": "Claro/fixo · Azul suave",
+        "tonalRamp": [
+          "oklch(15% 0.02483 273.50)",
+          "oklch(26.43% 0.02483 273.50)",
+          "oklch(37.86% 0.02483 273.50)",
+          "oklch(49.29% 0.02483 273.50)",
+          "oklch(60.71% 0.02483 273.50)",
+          "oklch(72.14% 0.02483 273.50)",
+          "oklch(83.57% 0.02483 273.50)",
+          "oklch(95% 0.02483 273.50)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.00740 260.73)",
+          "oklch(26.43% 0.00740 260.73)",
+          "oklch(37.86% 0.00740 260.73)",
+          "oklch(49.29% 0.00740 260.73)",
+          "oklch(60.71% 0.00740 260.73)",
+          "oklch(72.14% 0.00740 260.73)",
+          "oklch(83.57% 0.00740 260.73)",
+          "oklch(95% 0.00740 260.73)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Painel",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26.43% 0.00000 89.88)",
+          "oklch(37.86% 0.00000 89.88)",
+          "oklch(49.29% 0.00000 89.88)",
+          "oklch(60.71% 0.00000 89.88)",
+          "oklch(72.14% 0.00000 89.88)",
+          "oklch(83.57% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "surfaceMuted": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Superfície atenuada",
+        "tonalRamp": [
+          "oklch(15% 0.01153 264.51)",
+          "oklch(26.43% 0.01153 264.51)",
+          "oklch(37.86% 0.01153 264.51)",
+          "oklch(49.29% 0.01153 264.51)",
+          "oklch(60.71% 0.01153 264.51)",
+          "oklch(72.14% 0.01153 264.51)",
+          "oklch(83.57% 0.01153 264.51)",
+          "oklch(95% 0.01153 264.51)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Texto principal",
+        "tonalRamp": [
+          "oklch(15% 0.07334 265.56)",
+          "oklch(26.43% 0.07334 265.56)",
+          "oklch(37.86% 0.07334 265.56)",
+          "oklch(49.29% 0.07334 265.56)",
+          "oklch(60.71% 0.07334 265.56)",
+          "oklch(72.14% 0.07334 265.56)",
+          "oklch(83.57% 0.07334 265.56)",
+          "oklch(95% 0.07334 265.56)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Texto de apoio",
+        "tonalRamp": [
+          "oklch(15% 0.03800 260.93)",
+          "oklch(26.43% 0.03800 260.93)",
+          "oklch(37.86% 0.03800 260.93)",
+          "oklch(49.29% 0.03800 260.93)",
+          "oklch(60.71% 0.03800 260.93)",
+          "oklch(72.14% 0.03800 260.93)",
+          "oklch(83.57% 0.03800 260.93)",
+          "oklch(95% 0.03800 260.93)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Contorno",
+        "tonalRamp": [
+          "oklch(15% 0.01796 261.34)",
+          "oklch(26.43% 0.01796 261.34)",
+          "oklch(37.86% 0.01796 261.34)",
+          "oklch(49.29% 0.01796 261.34)",
+          "oklch(60.71% 0.01796 261.34)",
+          "oklch(72.14% 0.01796 261.34)",
+          "oklch(83.57% 0.01796 261.34)",
+          "oklch(95% 0.01796 261.34)"
+        ]
+      },
+      "positive": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Verde financeiro",
+        "tonalRamp": [
+          "oklch(15% 0.09678 168.05)",
+          "oklch(26.43% 0.09678 168.05)",
+          "oklch(37.86% 0.09678 168.05)",
+          "oklch(49.29% 0.09678 168.05)",
+          "oklch(60.71% 0.09678 168.05)",
+          "oklch(72.14% 0.09678 168.05)",
+          "oklch(83.57% 0.09678 168.05)",
+          "oklch(95% 0.09678 168.05)"
+        ]
+      },
+      "positiveSoft": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Verde suave",
+        "tonalRamp": [
+          "oklch(15% 0.01833 166.38)",
+          "oklch(26.43% 0.01833 166.38)",
+          "oklch(37.86% 0.01833 166.38)",
+          "oklch(49.29% 0.01833 166.38)",
+          "oklch(60.71% 0.01833 166.38)",
+          "oklch(72.14% 0.01833 166.38)",
+          "oklch(83.57% 0.01833 166.38)",
+          "oklch(95% 0.01833 166.38)"
+        ]
+      },
+      "negative": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Rosa financeiro",
+        "tonalRamp": [
+          "oklch(15% 0.15486 17.44)",
+          "oklch(26.43% 0.15486 17.44)",
+          "oklch(37.86% 0.15486 17.44)",
+          "oklch(49.29% 0.15486 17.44)",
+          "oklch(60.71% 0.15486 17.44)",
+          "oklch(72.14% 0.15486 17.44)",
+          "oklch(83.57% 0.15486 17.44)",
+          "oklch(95% 0.15486 17.44)"
+        ]
+      },
+      "negativeSoft": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Rosa suave",
+        "tonalRamp": [
+          "oklch(15% 0.01812 0.40)",
+          "oklch(26.43% 0.01812 0.40)",
+          "oklch(37.86% 0.01812 0.40)",
+          "oklch(49.29% 0.01812 0.40)",
+          "oklch(60.71% 0.01812 0.40)",
+          "oklch(72.14% 0.01812 0.40)",
+          "oklch(83.57% 0.01812 0.40)",
+          "oklch(95% 0.01812 0.40)"
+        ]
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Âmbar de aviso",
+        "tonalRamp": [
+          "oklch(15% 0.08908 64.84)",
+          "oklch(26.43% 0.08908 64.84)",
+          "oklch(37.86% 0.08908 64.84)",
+          "oklch(49.29% 0.08908 64.84)",
+          "oklch(60.71% 0.08908 64.84)",
+          "oklch(72.14% 0.08908 64.84)",
+          "oklch(83.57% 0.08908 64.84)",
+          "oklch(95% 0.08908 64.84)"
+        ]
+      },
+      "warningSoft": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Âmbar suave",
+        "tonalRamp": [
+          "oklch(15% 0.03432 78.68)",
+          "oklch(26.43% 0.03432 78.68)",
+          "oklch(37.86% 0.03432 78.68)",
+          "oklch(49.29% 0.03432 78.68)",
+          "oklch(60.71% 0.03432 78.68)",
+          "oklch(72.14% 0.03432 78.68)",
+          "oklch(83.57% 0.03432 78.68)",
+          "oklch(95% 0.03432 78.68)"
+        ]
+      },
+      "error": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Vermelho de erro",
+        "tonalRamp": [
+          "oklch(15% 0.14979 27.23)",
+          "oklch(26.43% 0.14979 27.23)",
+          "oklch(37.86% 0.14979 27.23)",
+          "oklch(49.29% 0.14979 27.23)",
+          "oklch(60.71% 0.14979 27.23)",
+          "oklch(72.14% 0.14979 27.23)",
+          "oklch(83.57% 0.14979 27.23)",
+          "oklch(95% 0.14979 27.23)"
+        ]
+      },
+      "errorSoft": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Vermelho suave",
+        "tonalRamp": [
+          "oklch(15% 0.01366 34.30)",
+          "oklch(26.43% 0.01366 34.30)",
+          "oklch(37.86% 0.01366 34.30)",
+          "oklch(49.29% 0.01366 34.30)",
+          "oklch(60.71% 0.01366 34.30)",
+          "oklch(72.14% 0.01366 34.30)",
+          "oklch(83.57% 0.01366 34.30)",
+          "oklch(95% 0.01366 34.30)"
+        ]
+      },
+      "onPrimary": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Texto sobre ação",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26.43% 0.00000 89.88)",
+          "oklch(37.86% 0.00000 89.88)",
+          "oklch(49.29% 0.00000 89.88)",
+          "oklch(60.71% 0.00000 89.88)",
+          "oklch(72.14% 0.00000 89.88)",
+          "oklch(83.57% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "dangerButton": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Confirmação destrutiva",
+        "tonalRamp": [
+          "oklch(15% 0.14979 27.23)",
+          "oklch(26.43% 0.14979 27.23)",
+          "oklch(37.86% 0.14979 27.23)",
+          "oklch(49.29% 0.14979 27.23)",
+          "oklch(60.71% 0.14979 27.23)",
+          "oklch(72.14% 0.14979 27.23)",
+          "oklch(83.57% 0.14979 27.23)",
+          "oklch(95% 0.14979 27.23)"
+        ]
+      },
+      "dangerPressed": {
+        "role": "secondary",
+        "displayName": "Claro/fixo · Destrutivo pressionado",
+        "tonalRamp": [
+          "oklch(15% 0.13254 27.15)",
+          "oklch(26.43% 0.13254 27.15)",
+          "oklch(37.86% 0.13254 27.15)",
+          "oklch(49.29% 0.13254 27.15)",
+          "oklch(60.71% 0.13254 27.15)",
+          "oklch(72.14% 0.13254 27.15)",
+          "oklch(83.57% 0.13254 27.15)",
+          "oklch(95% 0.13254 27.15)"
+        ]
+      },
+      "onDanger": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Texto sobre destrutivo",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26.43% 0.00000 89.88)",
+          "oklch(37.86% 0.00000 89.88)",
+          "oklch(49.29% 0.00000 89.88)",
+          "oklch(60.71% 0.00000 89.88)",
+          "oklch(72.14% 0.00000 89.88)",
+          "oklch(83.57% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "brandPrimary": {
+        "role": "primary",
+        "displayName": "Claro/fixo · Azul de marca",
+        "tonalRamp": [
+          "oklch(15% 0.25024 266.20)",
+          "oklch(26.43% 0.25024 266.20)",
+          "oklch(37.86% 0.25024 266.20)",
+          "oklch(49.29% 0.25024 266.20)",
+          "oklch(60.71% 0.25024 266.20)",
+          "oklch(72.14% 0.25024 266.20)",
+          "oklch(83.57% 0.25024 266.20)",
+          "oklch(95% 0.25024 266.20)"
+        ]
+      },
+      "brandPressed": {
+        "role": "primary",
+        "displayName": "Claro/fixo · Marca pressionada",
+        "tonalRamp": [
+          "oklch(15% 0.22596 265.89)",
+          "oklch(26.43% 0.22596 265.89)",
+          "oklch(37.86% 0.22596 265.89)",
+          "oklch(49.29% 0.22596 265.89)",
+          "oklch(60.71% 0.22596 265.89)",
+          "oklch(72.14% 0.22596 265.89)",
+          "oklch(83.57% 0.22596 265.89)",
+          "oklch(95% 0.22596 265.89)"
+        ]
+      },
+      "onBrand": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Texto sobre marca",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26.43% 0.00000 89.88)",
+          "oklch(37.86% 0.00000 89.88)",
+          "oklch(49.29% 0.00000 89.88)",
+          "oklch(60.71% 0.00000 89.88)",
+          "oklch(72.14% 0.00000 89.88)",
+          "oklch(83.57% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "logoSurface": {
+        "role": "neutral",
+        "displayName": "Claro/fixo · Base branca de logo",
+        "tonalRamp": [
+          "oklch(15% 0.00000 89.88)",
+          "oklch(26.43% 0.00000 89.88)",
+          "oklch(37.86% 0.00000 89.88)",
+          "oklch(49.29% 0.00000 89.88)",
+          "oklch(60.71% 0.00000 89.88)",
+          "oklch(72.14% 0.00000 89.88)",
+          "oklch(83.57% 0.00000 89.88)",
+          "oklch(95% 0.00000 89.88)"
+        ]
+      },
+      "dark-primary": {
+        "role": "primary",
+        "displayName": "Escuro · Azul de ação",
+        "tonalRamp": [
+          "oklch(15% 0.11614 271.57)",
+          "oklch(26.43% 0.11614 271.57)",
+          "oklch(37.86% 0.11614 271.57)",
+          "oklch(49.29% 0.11614 271.57)",
+          "oklch(60.71% 0.11614 271.57)",
+          "oklch(72.14% 0.11614 271.57)",
+          "oklch(83.57% 0.11614 271.57)",
+          "oklch(95% 0.11614 271.57)"
+        ]
+      },
+      "dark-primaryPressed": {
+        "role": "primary",
+        "displayName": "Escuro · Azul pressionado",
+        "tonalRamp": [
+          "oklch(15% 0.12901 271.40)",
+          "oklch(26.43% 0.12901 271.40)",
+          "oklch(37.86% 0.12901 271.40)",
+          "oklch(49.29% 0.12901 271.40)",
+          "oklch(60.71% 0.12901 271.40)",
+          "oklch(72.14% 0.12901 271.40)",
+          "oklch(83.57% 0.12901 271.40)",
+          "oklch(95% 0.12901 271.40)"
+        ]
+      },
+      "dark-primarySoft": {
+        "role": "primary",
+        "displayName": "Escuro · Azul suave",
+        "tonalRamp": [
+          "oklch(15% 0.05987 264.36)",
+          "oklch(26.43% 0.05987 264.36)",
+          "oklch(37.86% 0.05987 264.36)",
+          "oklch(49.29% 0.05987 264.36)",
+          "oklch(60.71% 0.05987 264.36)",
+          "oklch(72.14% 0.05987 264.36)",
+          "oklch(83.57% 0.05987 264.36)",
+          "oklch(95% 0.05987 264.36)"
+        ]
+      },
+      "dark-background": {
+        "role": "neutral",
+        "displayName": "Escuro · Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.03378 265.53)",
+          "oklch(26.43% 0.03378 265.53)",
+          "oklch(37.86% 0.03378 265.53)",
+          "oklch(49.29% 0.03378 265.53)",
+          "oklch(60.71% 0.03378 265.53)",
+          "oklch(72.14% 0.03378 265.53)",
+          "oklch(83.57% 0.03378 265.53)",
+          "oklch(95% 0.03378 265.53)"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Escuro · Painel",
+        "tonalRamp": [
+          "oklch(15% 0.03854 262.70)",
+          "oklch(26.43% 0.03854 262.70)",
+          "oklch(37.86% 0.03854 262.70)",
+          "oklch(49.29% 0.03854 262.70)",
+          "oklch(60.71% 0.03854 262.70)",
+          "oklch(72.14% 0.03854 262.70)",
+          "oklch(83.57% 0.03854 262.70)",
+          "oklch(95% 0.03854 262.70)"
+        ]
+      },
+      "dark-surfaceMuted": {
+        "role": "neutral",
+        "displayName": "Escuro · Superfície atenuada",
+        "tonalRamp": [
+          "oklch(15% 0.04685 262.17)",
+          "oklch(26.43% 0.04685 262.17)",
+          "oklch(37.86% 0.04685 262.17)",
+          "oklch(49.29% 0.04685 262.17)",
+          "oklch(60.71% 0.04685 262.17)",
+          "oklch(72.14% 0.04685 262.17)",
+          "oklch(83.57% 0.04685 262.17)",
+          "oklch(95% 0.04685 262.17)"
+        ]
+      },
+      "dark-text": {
+        "role": "neutral",
+        "displayName": "Escuro · Texto principal",
+        "tonalRamp": [
+          "oklch(15% 0.01532 269.99)",
+          "oklch(26.43% 0.01532 269.99)",
+          "oklch(37.86% 0.01532 269.99)",
+          "oklch(49.29% 0.01532 269.99)",
+          "oklch(60.71% 0.01532 269.99)",
+          "oklch(72.14% 0.01532 269.99)",
+          "oklch(83.57% 0.01532 269.99)",
+          "oklch(95% 0.01532 269.99)"
+        ]
+      },
+      "dark-secondary": {
+        "role": "neutral",
+        "displayName": "Escuro · Texto de apoio",
+        "tonalRamp": [
+          "oklch(15% 0.03435 261.02)",
+          "oklch(26.43% 0.03435 261.02)",
+          "oklch(37.86% 0.03435 261.02)",
+          "oklch(49.29% 0.03435 261.02)",
+          "oklch(60.71% 0.03435 261.02)",
+          "oklch(72.14% 0.03435 261.02)",
+          "oklch(83.57% 0.03435 261.02)",
+          "oklch(95% 0.03435 261.02)"
+        ]
+      },
+      "dark-placeholder": {
+        "role": "neutral",
+        "displayName": "Escuro · Placeholder",
+        "tonalRamp": [
+          "oklch(15% 0.03932 262.10)",
+          "oklch(26.43% 0.03932 262.10)",
+          "oklch(37.86% 0.03932 262.10)",
+          "oklch(49.29% 0.03932 262.10)",
+          "oklch(60.71% 0.03932 262.10)",
+          "oklch(72.14% 0.03932 262.10)",
+          "oklch(83.57% 0.03932 262.10)",
+          "oklch(95% 0.03932 262.10)"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "Escuro · Contorno",
+        "tonalRamp": [
+          "oklch(15% 0.04802 261.20)",
+          "oklch(26.43% 0.04802 261.20)",
+          "oklch(37.86% 0.04802 261.20)",
+          "oklch(49.29% 0.04802 261.20)",
+          "oklch(60.71% 0.04802 261.20)",
+          "oklch(72.14% 0.04802 261.20)",
+          "oklch(83.57% 0.04802 261.20)",
+          "oklch(95% 0.04802 261.20)"
+        ]
+      },
+      "dark-positive": {
+        "role": "secondary",
+        "displayName": "Escuro · Verde financeiro",
+        "tonalRamp": [
+          "oklch(15% 0.10927 165.24)",
+          "oklch(26.43% 0.10927 165.24)",
+          "oklch(37.86% 0.10927 165.24)",
+          "oklch(49.29% 0.10927 165.24)",
+          "oklch(60.71% 0.10927 165.24)",
+          "oklch(72.14% 0.10927 165.24)",
+          "oklch(83.57% 0.10927 165.24)",
+          "oklch(95% 0.10927 165.24)"
+        ]
+      },
+      "dark-positiveSoft": {
+        "role": "secondary",
+        "displayName": "Escuro · Verde suave",
+        "tonalRamp": [
+          "oklch(15% 0.04106 178.14)",
+          "oklch(26.43% 0.04106 178.14)",
+          "oklch(37.86% 0.04106 178.14)",
+          "oklch(49.29% 0.04106 178.14)",
+          "oklch(60.71% 0.04106 178.14)",
+          "oklch(72.14% 0.04106 178.14)",
+          "oklch(83.57% 0.04106 178.14)",
+          "oklch(95% 0.04106 178.14)"
+        ]
+      },
+      "dark-negative": {
+        "role": "secondary",
+        "displayName": "Escuro · Rosa financeiro",
+        "tonalRamp": [
+          "oklch(15% 0.09998 8.56)",
+          "oklch(26.43% 0.09998 8.56)",
+          "oklch(37.86% 0.09998 8.56)",
+          "oklch(49.29% 0.09998 8.56)",
+          "oklch(60.71% 0.09998 8.56)",
+          "oklch(72.14% 0.09998 8.56)",
+          "oklch(83.57% 0.09998 8.56)",
+          "oklch(95% 0.09998 8.56)"
+        ]
+      },
+      "dark-negativeSoft": {
+        "role": "secondary",
+        "displayName": "Escuro · Rosa suave",
+        "tonalRamp": [
+          "oklch(15% 0.04364 339.80)",
+          "oklch(26.43% 0.04364 339.80)",
+          "oklch(37.86% 0.04364 339.80)",
+          "oklch(49.29% 0.04364 339.80)",
+          "oklch(60.71% 0.04364 339.80)",
+          "oklch(72.14% 0.04364 339.80)",
+          "oklch(83.57% 0.04364 339.80)",
+          "oklch(95% 0.04364 339.80)"
+        ]
+      },
+      "dark-warning": {
+        "role": "secondary",
+        "displayName": "Escuro · Âmbar de aviso",
+        "tonalRamp": [
+          "oklch(15% 0.09148 79.07)",
+          "oklch(26.43% 0.09148 79.07)",
+          "oklch(37.86% 0.09148 79.07)",
+          "oklch(49.29% 0.09148 79.07)",
+          "oklch(60.71% 0.09148 79.07)",
+          "oklch(72.14% 0.09148 79.07)",
+          "oklch(83.57% 0.09148 79.07)",
+          "oklch(95% 0.09148 79.07)"
+        ]
+      },
+      "dark-warningSoft": {
+        "role": "secondary",
+        "displayName": "Escuro · Âmbar suave",
+        "tonalRamp": [
+          "oklch(15% 0.02826 77.69)",
+          "oklch(26.43% 0.02826 77.69)",
+          "oklch(37.86% 0.02826 77.69)",
+          "oklch(49.29% 0.02826 77.69)",
+          "oklch(60.71% 0.02826 77.69)",
+          "oklch(72.14% 0.02826 77.69)",
+          "oklch(83.57% 0.02826 77.69)",
+          "oklch(95% 0.02826 77.69)"
+        ]
+      },
+      "dark-error": {
+        "role": "secondary",
+        "displayName": "Escuro · Vermelho de erro",
+        "tonalRamp": [
+          "oklch(15% 0.09288 26.55)",
+          "oklch(26.43% 0.09288 26.55)",
+          "oklch(37.86% 0.09288 26.55)",
+          "oklch(49.29% 0.09288 26.55)",
+          "oklch(60.71% 0.09288 26.55)",
+          "oklch(72.14% 0.09288 26.55)",
+          "oklch(83.57% 0.09288 26.55)",
+          "oklch(95% 0.09288 26.55)"
+        ]
+      },
+      "dark-errorSoft": {
+        "role": "secondary",
+        "displayName": "Escuro · Vermelho suave",
+        "tonalRamp": [
+          "oklch(15% 0.03476 4.87)",
+          "oklch(26.43% 0.03476 4.87)",
+          "oklch(37.86% 0.03476 4.87)",
+          "oklch(49.29% 0.03476 4.87)",
+          "oklch(60.71% 0.03476 4.87)",
+          "oklch(72.14% 0.03476 4.87)",
+          "oklch(83.57% 0.03476 4.87)",
+          "oklch(95% 0.03476 4.87)"
+        ]
+      },
+      "dark-onPrimary": {
+        "role": "neutral",
+        "displayName": "Escuro · Texto sobre ação",
+        "tonalRamp": [
+          "oklch(15% 0.03378 265.53)",
+          "oklch(26.43% 0.03378 265.53)",
+          "oklch(37.86% 0.03378 265.53)",
+          "oklch(49.29% 0.03378 265.53)",
+          "oklch(60.71% 0.03378 265.53)",
+          "oklch(72.14% 0.03378 265.53)",
+          "oklch(83.57% 0.03378 265.53)",
+          "oklch(95% 0.03378 265.53)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "sans": {
+        "displayName": "Plus Jakarta Sans",
+        "purpose": "Alias web da família existente; aliases nativos variam pelo peso."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Título principal do tema."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto de apoio."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Rótulos de formulário."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-light",
+        "value": "0px 6px 14px rgba(21,36,74,0.16)",
+        "purpose": "Sombras dos cartões de instituições no claro, colors.cardShadow."
+      },
+      {
+        "name": "card-dark",
+        "value": "0px 6px 14px rgba(0,0,0,0.28)",
+        "purpose": "Sombras dos cartões de instituições no escuro, colors.cardShadow."
+      },
+      {
+        "name": "navigation-native",
+        "value": "shadowColor: colors.shadow; shadowOffset: { width: 0, height: 6 }; shadowOpacity: 0.06; shadowRadius: 20; elevation: 3",
+        "purpose": "Declarações React Native de BottomNavigator; a amostra HTML traduz a sombra para CSS."
+      }
+    ],
+    "motion": [
+      {
+        "name": "drawer-spring",
+        "value": "translateY: 180 → 0; damping: 24; stiffness: 200",
+        "purpose": "DrawerPanel; redução de movimento aplica o estado final diretamente."
+      },
+      {
+        "name": "segment-spring",
+        "value": "damping: 24; stiffness: 250; mass: 0.8",
+        "purpose": "Indicador de SegmentedControl; redução de movimento aplica a posição diretamente."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "navigation-compact",
+        "value": "350px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "PrimaryButton",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal, com amostras clara e escura; o rótulo e a ação são fornecidos pela tela.",
+      "html": "<div class=\"ds-samples\"><button class=\"ds-primary\">Continuar<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h16M14 6l6 6-6 6\"/></svg></button><button class=\"ds-primary ds-dark\">Continuar<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h16M14 6l6 6-6 6\"/></svg></button></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-primary { font-family:\"Vikash Sans\",Arial,sans-serif; min-height:54px; border:0; border-radius:16px; padding:15px 20px; display:inline-flex; align-items:center; justify-content:center; gap:12px; background:#2348EF; color:#fff; font-size:17px; font-weight:600; cursor:pointer; } .ds-primary.ds-dark { background:#9AB0FF; color:#101727; } .ds-primary:hover { opacity:.88; } .ds-primary:active { opacity:.88; transform:scale(.985); } .ds-primary:disabled { opacity:.55; cursor:default; } .ds-primary:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-primary.ds-dark:focus-visible,.ds-dark .ds-primary:focus-visible { outline-color:#9AB0FF; }"
+    },
+    {
+      "name": "PrimaryButton outlined",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Variante de ação com contorno; segue o primário semântico.",
+      "html": "<div class=\"ds-samples\"><button class=\"ds-outlined\">Voltar<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h16M14 6l6 6-6 6\"/></svg></button><button class=\"ds-outlined ds-dark\">Voltar<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12h16M14 6l6 6-6 6\"/></svg></button></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-outlined { font-family:\"Vikash Sans\",Arial,sans-serif; min-height:54px; border:1px solid #2348EF; border-radius:16px; padding:15px 20px; display:inline-flex; align-items:center; justify-content:center; gap:12px; background:transparent; color:#2348EF; font-size:17px; font-weight:600; cursor:pointer; } .ds-outlined.ds-dark { border-color:#9AB0FF; color:#9AB0FF; } .ds-outlined:hover { opacity:.88; } .ds-outlined:active { opacity:.88; transform:scale(.985); } .ds-outlined:disabled { opacity:.55; } .ds-outlined:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-outlined.ds-dark:focus-visible,.ds-dark .ds-outlined:focus-visible { outline-color:#9AB0FF; }"
+    },
+    {
+      "name": "DeleteActionButton",
+      "kind": "button",
+      "refersTo": "DeleteActionButton",
+      "description": "Ação destrutiva suave que abre a confirmação compartilhada.",
+      "html": "<div class=\"ds-samples\"><button class=\"ds-delete\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7\"/></svg>Excluir fatura</button><button class=\"ds-delete ds-dark\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7\"/></svg>Excluir fatura</button></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-delete { font-family:\"Vikash Sans\",Arial,sans-serif; min-height:52px; border:0; border-radius:16px; padding:0 16px; display:inline-flex; align-items:center; justify-content:center; gap:10px; background:#F9EDEA; color:#A3322C; font-size:14px; font-weight:500; cursor:pointer; } .ds-delete.ds-dark { background:#442D32; color:#FFB1A8; } .ds-delete:hover { opacity:.8; } .ds-delete:active { opacity:.8; transform:scale(.98); } .ds-delete:disabled { opacity:.6; } .ds-delete:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-delete.ds-dark:focus-visible,.ds-dark .ds-delete:focus-visible { outline-color:#9AB0FF; }"
+    },
+    {
+      "name": "FormField",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Campo rotulado com foco no contêiner e placeholder do tema.",
+      "html": "<div class=\"ds-samples\"><label class=\"ds-field\">Descrição<input class=\"ds-input\" placeholder=\"Nome da conta\" /></label><label class=\"ds-field ds-dark\">Descrição<input class=\"ds-input\" placeholder=\"Nome da conta\" /></label></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-field { font-family:\"Vikash Sans\",Arial,sans-serif; display:flex; flex-direction:column; gap:7px; color:#626F85; font-size:13px; font-weight:500; line-height:20px; } .ds-input { font-family:\"Vikash Sans\",Arial,sans-serif; min-height:54px; border:1.5px solid transparent; border-radius:14px; background:#F0F4FC; padding:15px; color:#15244A; font-size:15px; caret-color:#2348EF; } .ds-input::placeholder { color:#626F85; } .ds-input:focus-visible { outline:none; border-color:#2348EF; background:#fff; } .ds-field.ds-dark { color:#B1BED4; } .ds-dark .ds-input { background:#243149; color:#F0F4FF; caret-color:#9AB0FF; } .ds-dark .ds-input::placeholder { color:#A1AFC8; } .ds-dark .ds-input:focus-visible { border-color:#9AB0FF; background:#1B2538; } .ds-input[aria-invalid=\"true\"] { border-color:#A3322C; } .ds-dark .ds-input[aria-invalid=\"true\"] { border-color:#FFB1A8; } .ds-input { box-sizing:border-box; }"
+    },
+    {
+      "name": "BottomNavigator",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Quatro abas com indicador ativo e acesso central ao registro por voz.",
+      "html": "<div class=\"ds-samples\"><nav class=\"ds-nav\" aria-label=\"Navegação principal\"><div role=\"tablist\" class=\"ds-tabs\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1z\"/></svg><span>Início</span><span class=\"ds-indicator\"></span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 3h10l4 4v14H5zM15 3v5h4M8 11h8M8 14h8M8 17h5\"/></svg><span>Extrato</span><span class=\"ds-indicator\"></span></button><span class=\"ds-mic-slot\"><button class=\"ds-mic\" aria-label=\"Registro por voz\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"1\" width=\"8\" height=\"14\" rx=\"4\" fill=\"currentColor\"/><path d=\"M4.5 10v2a7.5 7.5 0 0015 0v-2M12 19.5v3\"/></svg></button></span><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"3\" fill=\"currentColor\"/><path d=\"M4 8h16\" stroke=\"#fff\" stroke-width=\"1.5\"/><circle cx=\"17\" cy=\"14.5\" r=\".8\" fill=\"#fff\"/></svg><span>Contas</span><span class=\"ds-indicator\"></span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"2\"/></svg><span>Categorias</span><span class=\"ds-indicator\"></span></button></div></nav><nav class=\"ds-nav ds-dark\" aria-label=\"Navegação principal\"><div role=\"tablist\" class=\"ds-tabs\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1z\"/></svg><span>Início</span><span class=\"ds-indicator\"></span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 3h10l4 4v14H5zM15 3v5h4M8 11h8M8 14h8M8 17h5\"/></svg><span>Extrato</span><span class=\"ds-indicator\"></span></button><span class=\"ds-mic-slot\"><button class=\"ds-mic\" aria-label=\"Registro por voz\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"1\" width=\"8\" height=\"14\" rx=\"4\" fill=\"currentColor\"/><path d=\"M4.5 10v2a7.5 7.5 0 0015 0v-2M12 19.5v3\"/></svg></button></span><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"3\" fill=\"currentColor\"/><path d=\"M4 8h16\" stroke=\"#fff\" stroke-width=\"1.5\"/><circle cx=\"17\" cy=\"14.5\" r=\".8\" fill=\"#fff\"/></svg><span>Contas</span><span class=\"ds-indicator\"></span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"2\"/></svg><span>Categorias</span><span class=\"ds-indicator\"></span></button></div></nav></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-nav { font-family:\"Vikash Sans\",Arial,sans-serif; width:366px; max-width:100%; padding:9px 5px; border-radius:30px; min-height:76px; background:#fff; color:#626F85; box-shadow:0 6px 20px rgba(21,36,74,.06); } .ds-nav.ds-dark { background:#1B2538; color:#B1BED4; box-shadow:0 6px 20px rgba(0,0,0,.06); } .ds-tabs { display:flex; } .ds-tab { font-family:\"Vikash Sans\",Arial,sans-serif; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:56px; border:0; background:transparent; color:inherit; padding:0; font-size:11px; line-height:16px; font-weight:500; cursor:pointer; } .ds-tab[aria-selected=\"true\"] { color:#2348EF; font-weight:600; } .ds-dark .ds-tab[aria-selected=\"true\"] { color:#9AB0FF; } .ds-indicator { height:3px; width:22px; border-radius:2px; } .ds-tab[aria-selected=\"true\"] .ds-indicator { background:currentColor; } .ds-mic-slot { width:78px; position:relative; display:flex; justify-content:center; } .ds-mic { position:absolute; top:-25px; width:64px; height:64px; border-radius:50%; border:0; background:#2348EF; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; } .ds-tab:hover,.ds-mic:hover { opacity:.7; } .ds-tab:active,.ds-mic:active { opacity:.7; } @media(max-width:349px) { .ds-tab { font-size:10.5px; } .ds-mic-slot { width:66px; } } .ds-tab:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-tab.ds-dark:focus-visible,.ds-dark .ds-tab:focus-visible { outline-color:#9AB0FF; }.ds-mic:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-mic.ds-dark:focus-visible,.ds-dark .ds-mic:focus-visible { outline-color:#9AB0FF; } .ds-nav { box-sizing:border-box; } .ds-mic:active { background:#1838CB; transform:scale(.96); }"
+    },
+    {
+      "name": "Statement filter chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Filtro com estados selecionado e não selecionado, em ambos os temas.",
+      "html": "<div class=\"ds-samples\"><button class=\"ds-chip\" aria-pressed=\"false\">Todas</button><button class=\"ds-chip\" aria-pressed=\"true\">Receitas</button><button class=\"ds-chip ds-dark\" aria-pressed=\"false\">Todas</button><button class=\"ds-chip ds-dark\" aria-pressed=\"true\">Receitas</button></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-chip { font-family:\"Vikash Sans\",Arial,sans-serif; min-height:40px; padding:0 14px; border:1px solid #DFE6F2; border-radius:13px; background:transparent; color:#626F85; font-size:14px; cursor:pointer; } .ds-chip[aria-pressed=\"true\"] { background:#E8EDFF; border-color:#2348EF; color:#2348EF; } .ds-chip.ds-dark { border-color:#3B4A64; color:#B1BED4; } .ds-chip.ds-dark[aria-pressed=\"true\"] { background:#293858; border-color:#9AB0FF; color:#9AB0FF; } .ds-chip:hover,.ds-chip:active { opacity:.8; } .ds-chip:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-chip.ds-dark:focus-visible,.ds-dark .ds-chip:focus-visible { outline-color:#9AB0FF; }"
+    },
+    {
+      "name": "CreditCardSummary",
+      "kind": "card",
+      "refersTo": "credit-card-summary",
+      "description": "Resumo tonal de fatura e limite; os dados da amostra são ilustrativos.",
+      "html": "<div class=\"ds-samples\"><button class=\"ds-card\" aria-label=\"Abrir cartão\"><span class=\"ds-card-name\">Cartão</span><span class=\"ds-track\" role=\"progressbar\" aria-label=\"Limite utilizado\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"25\"><span class=\"ds-progress\"></span></span><span class=\"ds-metrics\"><span class=\"ds-metric\"><span class=\"ds-caption\">Fatura atual</span><strong class=\"ds-value\">R$ 250,00</strong><span class=\"ds-small\">Vence em 15/10</span></span><span class=\"ds-metric ds-divider\"><span class=\"ds-caption\">Limite disponível</span><strong class=\"ds-value ds-available\">R$ 750,00</strong><span class=\"ds-small\">de R$ 1.000,00</span></span></span><span class=\"ds-footer\">Ver fatura<svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"9,5 16,12 9,19\"/></svg></span></button><button class=\"ds-card ds-dark\" aria-label=\"Abrir cartão\"><span class=\"ds-card-name\">Cartão</span><span class=\"ds-track\" role=\"progressbar\" aria-label=\"Limite utilizado\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"25\"><span class=\"ds-progress\"></span></span><span class=\"ds-metrics\"><span class=\"ds-metric\"><span class=\"ds-caption\">Fatura atual</span><strong class=\"ds-value\">R$ 250,00</strong><span class=\"ds-small\">Vence em 15/10</span></span><span class=\"ds-metric ds-divider\"><span class=\"ds-caption\">Limite disponível</span><strong class=\"ds-value ds-available\">R$ 750,00</strong><span class=\"ds-small\">de R$ 1.000,00</span></span></span><span class=\"ds-footer\">Ver fatura<svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"9,5 16,12 9,19\"/></svg></span></button></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-card { font-family:\"Vikash Sans\",Arial,sans-serif; display:block; text-align:left; width:330px; max-width:100%; border:0; border-radius:18px; padding:12px; background:#F0F4FC; color:#15244A; cursor:pointer; } .ds-card.ds-dark { background:#243149; color:#F0F4FF; } .ds-card-name { display:block; margin-bottom:8px; font-size:14px; font-weight:600; } .ds-track { display:block; height:6px; background:#DFE6F2; border-radius:3px; overflow:hidden; } .ds-progress { display:block; height:100%; width:25%; background:#2348EF; border-radius:3px; } .ds-metrics { display:flex; padding:9px 0; } .ds-metric { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; } .ds-divider { border-left:1px solid #DFE6F2; padding-left:14px; } .ds-caption { color:#626F85; font-size:12px; line-height:16px; } .ds-value { font-size:18px; line-height:24px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.5px; } .ds-small { color:#626F85; font-size:11px; line-height:15px; } .ds-available { color:#2348EF; } .ds-footer { display:flex; align-items:center; gap:10px; border-top:1px solid #DFE6F2; min-height:44px; padding-top:10px; font-size:14px; font-weight:500; } .ds-dark .ds-track { background:#3B4A64; } .ds-dark .ds-progress { background:#9AB0FF; } .ds-dark .ds-divider,.ds-dark .ds-footer { border-color:#3B4A64; } .ds-dark .ds-caption,.ds-dark .ds-small { color:#B1BED4; } .ds-dark .ds-available { color:#9AB0FF; } .ds-card:hover { opacity:.7; } .ds-card:active { opacity:.7; transform:scale(.99); } .ds-card:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-card.ds-dark:focus-visible,.ds-dark .ds-card:focus-visible { outline-color:#9AB0FF; }"
+    },
+    {
+      "name": "AppearanceSettings",
+      "kind": "custom",
+      "refersTo": "appearance-option",
+      "description": "Sistema, Claro e Escuro; seleção ilustrada com ícone e marca, sem runtime de persistência na amostra.",
+      "html": "<div class=\"ds-samples\"><section class=\"ds-appearance\" aria-label=\"Aparência\"><div class=\"ds-options\"><button class=\"ds-option\" aria-label=\"Aparência: Sistema\" aria-pressed=\"true\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"2\" width=\"14\" height=\"20\" rx=\"3\"/><path d=\"M10 18h4\"/></svg><span>Sistema</span><span class=\"ds-check\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12l4 4L19 6\"/></svg></span></button><button class=\"ds-option\" aria-label=\"Aparência: Claro\" aria-pressed=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5\"/></svg><span>Claro</span><span class=\"ds-check\"></span></button><button class=\"ds-option\" aria-label=\"Aparência: Escuro\" aria-pressed=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 15.5A9 9 0 018.5 4 9 9 0 1020 15.5z\"/></svg><span>Escuro</span><span class=\"ds-check\"></span></button></div><p class=\"ds-appearance-caption\">Segue o sistema · Claro</p></section><section class=\"ds-appearance ds-dark\" aria-label=\"Aparência\"><div class=\"ds-options\"><button class=\"ds-option\" aria-label=\"Aparência: Sistema\" aria-pressed=\"true\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"2\" width=\"14\" height=\"20\" rx=\"3\"/><path d=\"M10 18h4\"/></svg><span>Sistema</span><span class=\"ds-check\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12l4 4L19 6\"/></svg></span></button><button class=\"ds-option\" aria-label=\"Aparência: Claro\" aria-pressed=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5\"/></svg><span>Claro</span><span class=\"ds-check\"></span></button><button class=\"ds-option\" aria-label=\"Aparência: Escuro\" aria-pressed=\"false\"><svg width=\"23\" height=\"23\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 15.5A9 9 0 018.5 4 9 9 0 1020 15.5z\"/></svg><span>Escuro</span><span class=\"ds-check\"></span></button></div><p class=\"ds-appearance-caption\">Segue o sistema · Escuro</p></section></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-appearance { font-family:\"Vikash Sans\",Arial,sans-serif; width:322px; max-width:100%; background:#fff; border-radius:22px; padding:14px; } .ds-options { display:flex; gap:8px; } .ds-option { font-family:\"Vikash Sans\",Arial,sans-serif; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:96px; padding:12px 4px; border-radius:14px; border:1px solid #DFE6F2; background:transparent; color:#626F85; font-size:14px; line-height:21px; font-weight:500; cursor:pointer; } .ds-option[aria-pressed=\"true\"] { background:#E8EDFF; border-color:#2348EF; color:#2348EF; } .ds-check { height:14px; } .ds-appearance-caption { margin:10px 0 0; min-height:24px; color:#626F85; font-size:13px; line-height:20px; } .ds-appearance.ds-dark { background:#1B2538; } .ds-dark .ds-option { border-color:#3B4A64; color:#B1BED4; } .ds-dark .ds-option[aria-pressed=\"true\"] { background:#293858; border-color:#9AB0FF; color:#9AB0FF; } .ds-dark .ds-appearance-caption { color:#B1BED4; } .ds-option:hover,.ds-option:active { opacity:.72; } .ds-option:disabled { cursor:default; } .ds-option:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-option.ds-dark:focus-visible,.ds-dark .ds-option:focus-visible { outline-color:#9AB0FF; }"
+    },
+    {
+      "name": "ConfirmationDialog",
+      "kind": "custom",
+      "refersTo": "ConfirmationDialog",
+      "description": "Confirmação destrutiva com cancelamento e vermelho sólido fixo; amostra de apresentação.",
+      "html": "<div class=\"ds-samples\"><section class=\"ds-dialog\" role=\"dialog\" aria-label=\"Excluir fatura\"><h3 class=\"ds-dialog-title\">Excluir fatura</h3><p class=\"ds-dialog-message\">O saldo e o limite permanecem iguais.</p><div class=\"ds-dialog-actions\"><button class=\"ds-dialog-button ds-cancel\">Cancelar</button><button class=\"ds-dialog-button ds-confirm\">Excluir</button></div></section><section class=\"ds-dialog ds-dark\" role=\"dialog\" aria-label=\"Excluir fatura\"><h3 class=\"ds-dialog-title\">Excluir fatura</h3><p class=\"ds-dialog-message\">O saldo e o limite permanecem iguais.</p><div class=\"ds-dialog-actions\"><button class=\"ds-dialog-button ds-cancel\">Cancelar</button><button class=\"ds-dialog-button ds-confirm\">Excluir</button></div></section></div>",
+      "css": ".ds-samples { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }.ds-dialog { font-family:\"Vikash Sans\",Arial,sans-serif; width:312px; max-width:100%; border-radius:28px; padding:24px; background:#fff; color:#15244A; } .ds-dialog-title { font-size:22px; line-height:30px; letter-spacing:-.6px; font-weight:700; margin:0; } .ds-dialog-message { color:#626F85; font-size:14px; line-height:23px; margin:8px 0 0; } .ds-dialog-actions { display:flex; gap:10px; margin-top:24px; } .ds-dialog-button { font-family:\"Vikash Sans\",Arial,sans-serif; flex:1; min-height:48px; border-radius:14px; border:0; padding:12px; font-size:14px; font-weight:600; cursor:pointer; } .ds-cancel { background:#F0F4FC; color:#15244A; } .ds-confirm { background:#A3322C; color:#fff; } .ds-dialog.ds-dark { background:#1B2538; color:#F0F4FF; } .ds-dark .ds-dialog-message { color:#B1BED4; } .ds-dark .ds-cancel { background:#243149; color:#F0F4FF; } .ds-dialog-button:hover { opacity:.85; } .ds-dialog-button:active { opacity:.85; transform:scale(.98); } .ds-dialog-button:disabled { opacity:.6; } .ds-dialog-button:focus-visible { outline:2px solid #2348EF; outline-offset:3px; } .ds-dialog-button.ds-dark:focus-visible,.ds-dark .ds-dialog-button:focus-visible { outline-color:#9AB0FF; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Leitura financeira clara",
+    "overview": "Interface de produto para consultar contas, compras e faturas no celular. Mantém a identidade já presente no dashboard: azul vivo, texto azul escuro no claro, superfícies claras ou azul-marinho no escuro e cartões arredondados. A linguagem é português brasileiro; valores são formatados em reais. A pilha de cartões concentra a expressão visual; ações financeiras priorizam clareza.\n\nA aparência acompanha o sistema por padrão e oferece escolhas explícitas em Meu perfil. A troca mantém a organização, a tipografia, os ícones e a geometria existentes. O código canônico dos tokens é `src/theme/index.js`; categorias usam `src/theme/categoryPalette.js`. Este documento espelha o sistema implementado e não gera arquivos.",
+    "keyCharacteristics": [
+      "Leitura rápida de valores, com dígitos tabulares quando disponíveis.",
+      "Azul semântico para ações e seleção; cores de marca preservadas nos cartões e logos.",
+      "Superfícies arredondadas e hierarquia tonal consistente nos dois temas.",
+      "Sistema, Claro e Escuro com seleção nomeada e marca visível."
+    ],
+    "rules": [
+      {
+        "name": "The Semantic Pair Rule",
+        "body": "Usar o fundo e o texto do mesmo par semântico e do mesmo tema; marca, ação primária e ação destrutiva têm papéis separados.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stable Hierarchy Rule",
+        "body": "Trocar o tema altera as cores, preservando família, tamanho, peso e hierarquia das telas existentes.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do reutilizar componentes, ícones e tokens semânticos existentes nos dois temas.",
+      "Do preservar a geometria e a hierarquia tipográfica ao trocar a aparência.",
+      "Do manter seleção nomeada e marca visível, além da cor.",
+      "Do preservar logos, cores de instituições e artwork dos cartões.",
+      "Do manter a consequência da exclusão explícita e o erro dentro da confirmação.",
+      "Do preservar a lista se o servidor recusar a operação."
+    ],
+    "donts": [
+      "Don't usar vermelho para ações seguras ou azul fixo de marca como substituto do primário semântico.",
+      "Don't criar outra família de bordas, sombras ou animações para uma exclusão isolada.",
+      "Don't usar diálogo nativo do navegador ou decoração extra nas ações financeiras.",
+      "Don't remontar formulários ou associar a preferência de aparência à sessão de um perfil."
+    ]
+  }
+}

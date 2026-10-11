@@ -7,13 +7,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OnboardingProvider } from './src/contexts/OnboardingContext';
 import { ToastProvider } from './src/contexts/ToastContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import { colors } from './src/theme';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import ThemeBrowserSync from './src/components/ThemeBrowserSync';
 import useAppFonts from './src/hooks/useAppFonts';
 import useRecoveryLink from './src/hooks/useRecoveryLink';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 
 export default function App() {
+  return <ThemeProvider><AppContent /></ThemeProvider>;
+}
+
+function AppContent() {
+  const { colors, scheme } = useTheme();
   const fontsReady = useAppFonts();
   const recovery = useRecoveryLink();
   const ready = fontsReady && recovery.ready;
@@ -21,8 +27,9 @@ export default function App() {
   const finishSplash = useCallback(() => setShowSplash(false), []);
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" backgroundColor={showSplash ? colors.surface : colors.background} />
-      <View style={styles.root}>
+      <ThemeBrowserSync />
+      <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={showSplash ? colors.surface : colors.background} />
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         <View style={styles.root} accessibilityElementsHidden={showSplash} importantForAccessibility={showSplash ? 'no-hide-descendants' : 'auto'}>
           <ScreenTransition sceneKey={ready ? recovery.route?.kind || 'app' : 'loading'} fade>
           {ready ? <ToastProvider>{recovery.route?.kind === 'reset'

@@ -1,15 +1,19 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Key } from 'phosphor-react-native/src/icons/Key';
-import ProfileFormLayout, { profileFormStyles as s } from '../components/ProfileFormLayout';
+import ProfileFormLayout, { useProfileFormStyles } from '../components/ProfileFormLayout';
 import FormField from '../components/FormField';
 import useProfileForm from '../hooks/useProfileForm';
 import useToast from '../hooks/useToast';
 import { validatePasswordChange } from '../utils/profileValidation';
 import { PASSWORD_HINT } from '../utils/passwordValidation';
-import { colors, fontFamilyMedium } from '../theme';
+import { fontFamilyMedium } from '../theme';
 
 export default function ChangePasswordScreen({ onBack, onSave, onForgotPassword }) {
+  const s = useProfileFormStyles();
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const newPasswordRef = useRef(null);
   const confirmRef = useRef(null);
   const { showToast } = useToast();
@@ -41,8 +45,8 @@ export default function ChangePasswordScreen({ onBack, onSave, onForgotPassword 
   </ProfileFormLayout>;
 }
 
-const styles = StyleSheet.create({
-  symbol: { marginTop: 20, width: 60, height: 60, backgroundColor: '#DCE3FF', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+const createStyles = (colors) => StyleSheet.create({
+  symbol: { marginTop: 20, width: 60, height: 60, backgroundColor: colors.avatar, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   heading: { marginTop: 10, gap: 7 },
   fields: { marginTop: 22, gap: 14 },
   forgot: { minHeight: 44, alignSelf: 'flex-end', justifyContent: 'center' },

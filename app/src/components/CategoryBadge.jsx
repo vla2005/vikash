@@ -1,9 +1,10 @@
+import { useTheme } from '../contexts/ThemeContext';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import CategoryIcon from './CategoryIcon';
-import { categoryColors } from '../data/categories';
 
 export default function CategoryBadge({ category, size = 38, iconSize = 28 }) {
+  const { categoryColors } = useTheme();
   const palette = categoryColors.find(color => color.key === category.color)
     || categoryColors.find(color => color.key === 'gray');
   return <View style={[styles.badge, {

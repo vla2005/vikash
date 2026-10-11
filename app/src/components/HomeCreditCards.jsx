@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel, formatLastFourDigits } from '../utils/creditCards';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,7 +10,7 @@ import useReducedMotion from '../hooks/useReducedMotion';
 import { formatCurrency } from '../utils/money';
 import { hiddenAmount } from '../utils/dashboard';
 import { getInstitutionCardColor } from '../constants/financialInstitutionColors';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 const statusLabels = { OPEN: 'Em aberto', CLOSED: 'Fechada', PAID: 'Paga' };
 const reveal = 46;
@@ -19,6 +20,8 @@ function orderedCards(cards, selectedUuid) {
 }
 
 export default function HomeCreditCards({ cards, profile, hidden = false, onOpenCard, onViewCards, title = 'Meus cartões', compactHeading = false }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const [selectedUuid, setSelectedUuid] = useState(cards[0]?.uuid);
   const [transition, setTransition] = useState(null);
   const [width, setWidth] = useState(320);
@@ -167,22 +170,22 @@ function Contactless() {
   </Svg>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   section: { marginTop: 24 }, heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
   title: { fontFamily: fontFamilyBold, fontWeight: '700', color: colors.text, fontSize: 22, letterSpacing: -0.7 },
   compactTitle: { fontSize: 17, letterSpacing: -0.3 },
   all: { flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 44 }, link: { fontFamily: fontFamilyMedium, color: colors.primary, fontSize: 12, fontWeight: '600' },
   stack: { position: 'relative', marginTop: 6, overflow: 'visible' }, cardPosition: { position: 'absolute', top: 0, left: 0, right: 0 },
-  card: { flex: 1, borderRadius: 20, padding: 14, overflow: 'hidden', justifyContent: 'space-between', boxShadow: '0px 6px 14px rgba(21,36,74,0.16)' },
+  card: { flex: 1, borderRadius: 20, padding: 14, overflow: 'hidden', justifyContent: 'space-between', boxShadow: colors.cardShadow },
   bankRow: { flexDirection: 'row', gap: 9, alignItems: 'center' }, bankName: { flex: 1, fontFamily: fontFamilyMedium, color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
   cardNumber: { fontFamily: fontFamilyMedium, fontSize: 23, lineHeight: 30, fontWeight: '600', letterSpacing: 1.2, fontVariant: ['tabular-nums'], color: '#FFFFFF', marginVertical: 12 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 12 }, holder: { flex: 1, fontFamily: fontFamilyMedium, fontSize: 12, color: '#FFFFFF' }, credit: { fontFamily, fontSize: 11, color: '#FFFFFF' },
   dots: { flexGrow: 1, justifyContent: 'center', paddingTop: 3 }, dotButton: { width: 30, height: 36, justifyContent: 'center', alignItems: 'center' },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#CCD5E4' }, selectedDot: { width: 18, backgroundColor: colors.primary }, hint: { fontFamily, color: colors.secondary, fontSize: 11, textAlign: 'center', marginBottom: 14 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.handle }, selectedDot: { width: 18, backgroundColor: colors.primary }, hint: { fontFamily, color: colors.secondary, fontSize: 11, textAlign: 'center', marginBottom: 14 },
   details: { backgroundColor: colors.surface, borderRadius: 22, padding: 16 }, singleDetails: { marginTop: 16 }, detailsHeading: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   detailsName: { flex: 1, fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 16, color: colors.text, lineHeight: 23 },
   badge: { fontFamily: fontFamilyMedium, fontSize: 10, color: colors.primary, backgroundColor: colors.primarySoft, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
-  closedBadge: { color: '#815321', backgroundColor: '#FFF0D9' }, paidBadge: { color: colors.positive, backgroundColor: '#E6F5EE' },
+  closedBadge: { color: colors.warning, backgroundColor: colors.warningSoft }, paidBadge: { color: colors.positive, backgroundColor: colors.positiveSoft },
   metrics: { flexDirection: 'row', marginTop: 16, marginBottom: 14 }, metric: { flex: 1, minWidth: 0, gap: 4 }, divider: { borderLeftWidth: 1, borderLeftColor: colors.border, paddingLeft: 14 },
   label: { fontFamily, color: colors.secondary, fontSize: 11 }, value: { fontFamily: fontFamilyBold, fontWeight: '700', color: colors.text, fontSize: 21, letterSpacing: -0.8 }, compactValue: { fontSize: 17, letterSpacing: -0.4 }, negative: { color: colors.negative },
   usage: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }, track: { flex: 1, height: 7, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' }, progress: { height: '100%', backgroundColor: colors.primary, borderRadius: 4 }, overLimit: { backgroundColor: colors.negative }, usageLabel: { fontFamily, color: colors.secondary, fontSize: 10 },

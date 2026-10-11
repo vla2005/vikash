@@ -1,3 +1,4 @@
+import { useInputTheme, useThemeStyles, useTheme } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import CategoryBadge from '../components/CategoryBadge';
@@ -6,9 +7,10 @@ import Icon from '../components/Icon';
 import SwipeableRow from '../components/SwipeableRow';
 import Skeleton, { SkeletonGroup } from '../components/Skeleton';
 import { normalizeCategoryName } from '../data/categories';
-import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
+import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 
 function CategorySkeleton() {
+  const styles = useThemeStyles(createStyles);
   return <SkeletonGroup label="Carregando categorias" style={styles.section}>
     <Skeleton style={styles.placeholderHeading} />
     <View style={styles.categoryGrid}>
@@ -22,6 +24,9 @@ function CategorySkeleton() {
 }
 
 export default function CategoriesScreen({ categories = [], defaultCategories = [], loading, error, onRetry, onCreate, onEdit, onDelete }) {
+  const inputTheme = useInputTheme();
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const [search, setSearch] = useState('');
   const [openRow, setOpenRow] = useState(null);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
@@ -80,11 +85,11 @@ export default function CategoriesScreen({ categories = [], defaultCategories = 
     <View style={styles.header}>
       <Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>Categorias</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Criar categoria" onPress={onCreate} style={({ pressed }) => [styles.add, pressed && styles.pressed]}>
-        <Icon name="plus" color={colors.surface} size={21} /><Text style={styles.addText}>Nova</Text>
+        <Icon name="plus" color={colors.onPrimary} size={21} /><Text style={styles.addText}>Nova</Text>
       </Pressable>
     </View>
     <Text style={styles.subtitle}>Seu dinheiro, organizado.</Text>
-    <View style={styles.search}><Icon name="search" size={22} color={colors.secondary} /><TextInput accessibilityLabel="Buscar categoria" placeholder="Buscar categoria" placeholderTextColor={colors.secondary} value={search} onChangeText={value => { setSearch(value); setOpenRow(null); }} style={styles.searchInput} returnKeyType="search" /></View>
+    <View style={styles.search}><Icon name="search" size={22} color={colors.secondary} /><TextInput {...inputTheme} accessibilityLabel="Buscar categoria" placeholder="Buscar categoria" placeholderTextColor={colors.secondary} value={search} onChangeText={value => { setSearch(value); setOpenRow(null); }} style={styles.searchInput} returnKeyType="search" /></View>
     {loading ? <CategorySkeleton /> : error ? <View style={styles.feedback}>
       <Icon name="info" size={25} color={colors.error} />
       <Text accessibilityRole="alert" style={styles.empty}>{error}</Text>
@@ -96,13 +101,13 @@ export default function CategoriesScreen({ categories = [], defaultCategories = 
       onCancel={() => { if (!deleteInProgress.current) { setCategoryToDelete(null); } }} />
   </>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 24 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { flexShrink: 1, fontFamily: fontFamilyBold, fontSize: 34, lineHeight: 44, fontWeight: '700', letterSpacing: -1.2, color: colors.text },
   compactTitle: { fontSize: 30, lineHeight: 40 },
   add: { minHeight: 44, borderRadius: 13, paddingHorizontal: 15, backgroundColor: colors.primary, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center' },
-  addText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.surface },
+  addText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.onPrimary },
   subtitle: { fontFamily, fontSize: 15, lineHeight: 24, color: colors.secondary, marginTop: 3 },
   search: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.surface, borderRadius: 17, paddingHorizontal: 15, minHeight: 48 },
   searchInput: { flex: 1, minWidth: 0, fontFamily, fontSize: 15, lineHeight: 23, color: colors.text, paddingVertical: 12 },

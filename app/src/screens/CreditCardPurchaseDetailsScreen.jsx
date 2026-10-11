@@ -1,18 +1,22 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import TransactionDetailsLayout, { CategoryRow, DetailRow, detailStyles as s } from '../components/TransactionDetailsLayout';
+import TransactionDetailsLayout, { CategoryRow, DetailRow, useDetailStyles } from '../components/TransactionDetailsLayout';
 import Icon from '../components/Icon';
 import useTransactionDetails from '../hooks/useTransactionDetails';
 import TranscriptionDisclosure from '../components/TranscriptionDisclosure';
 import DeleteTransactionButton from '../components/DeleteTransactionButton';
 import EditTransactionButton from '../components/EditTransactionButton';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
+import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const statuses = { OPEN: 'Em aberto', CLOSED: 'Fechada', PAID: 'Fatura paga' };
 export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onBack, selectedInvoiceUuid, onOpenInvoice, onDeleted, onEdit }) {
+  const s = useDetailStyles();
+  const { colors } = useTheme();
+  const local = useThemeStyles(createLocalStyles);
   const state = useTransactionDetails(uuid, accessToken, true);
   const data = state.details;
   const equalInstallments = data?.installments?.length && data.installments.every(item => item.amount === data.installments[0].amount);
@@ -30,7 +34,7 @@ export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onB
           <View style={[local.numberTile, selected && local.numberTileSelected]}><Text style={[local.number, selected && local.numberSelected]}>{item.installmentNumber}/{data.installmentCount}</Text></View>
           <View style={local.info}><Text style={local.month}>{months[Number(month) - 1]} {year}</Text><Text style={[local.caption, selected && local.selectedCaption]}>{selected ? 'Fatura selecionada' : 'Fatura do cartão'}</Text></View>
           <View style={local.price}><Text style={local.amount}>{formatCurrency(item.amount)}</Text><View style={[local.status, item.status === 'PAID' ? local.paid : item.status === 'CLOSED' ? local.closed : local.open]}><Text style={[local.statusText, item.status === 'PAID' ? local.paidText : item.status === 'CLOSED' ? local.closedText : local.openText]}>{statuses[item.status] || 'Não informado'}</Text></View></View>
-          <Icon name="chevron" size={16} color={selected ? colors.primary : '#A4A79F'} />
+          <Icon name="chevron" size={16} color={selected ? colors.primary : colors.secondary} />
         </Pressable>;
       })}</View>
       <View style={local.notice}><Icon name="info" color={colors.primary} size={21} /><Text style={local.noticeText}>O saldo da conta muda ao pagar a fatura.</Text></View>
@@ -39,20 +43,20 @@ export default function CreditCardPurchaseDetailsScreen({ uuid, accessToken, onB
     </>}
   </TransactionDetailsLayout>;
 }
-const local = StyleSheet.create({
+const createLocalStyles = colors => StyleSheet.create({
   heading: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 },
   section: { fontFamily: fontFamilyBold, fontSize: 18, fontWeight: '700', letterSpacing: -0.4, color: colors.text },
-  count: { backgroundColor: '#E9EEFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  countText: { fontFamily: fontFamilyMedium, fontSize: 12, fontWeight: '600', color: '#295CCC' },
+  count: { backgroundColor: colors.primarySoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  countText: { fontFamily: fontFamilyMedium, fontSize: 12, fontWeight: '600', color: colors.primary },
   hint: { fontFamily, fontSize: 12, lineHeight: 18, color: colors.secondary, marginBottom: 16 },
   installments: { gap: 8, marginBottom: 20 },
-  installment: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, backgroundColor: '#FFF', borderRadius: 16, borderWidth: 1, borderColor: '#EEECE6', minHeight: 86 },
-  selected: { backgroundColor: '#F0F5FF', borderColor: '#BBD1FF' },
+  installment: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, minHeight: 86 },
+  selected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   pressed: { opacity: 0.65 },
-  numberTile: { width: 34, height: 38, borderRadius: 10, backgroundColor: '#F3F3EF', alignItems: 'center', justifyContent: 'center' },
+  numberTile: { width: 34, height: 38, borderRadius: 10, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
   numberTileSelected: { backgroundColor: colors.primary },
   number: { fontFamily: fontFamilyMedium, fontSize: 12, fontWeight: '600', color: colors.secondary },
-  numberSelected: { color: '#FFF' },
+  numberSelected: { color: colors.onPrimary },
   info: { flex: 1, gap: 5 },
   month: { fontFamily: fontFamilyMedium, fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.text },
   caption: { fontFamily, fontSize: 11, lineHeight: 16, color: colors.secondary },
@@ -61,9 +65,9 @@ const local = StyleSheet.create({
   amount: { fontFamily: fontFamilyBold, fontSize: 15, lineHeight: 20, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
   status: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontFamily: fontFamilyMedium, fontSize: 10, lineHeight: 14, fontWeight: '600' },
-  open: { backgroundColor: '#E7EEFF' }, openText: { color: '#3861B4' },
-  closed: { backgroundColor: '#FBEDCE' }, closedText: { color: '#956D17' },
-  paid: { backgroundColor: '#E0F0E5' }, paidText: { color: '#33734D' },
+  open: { backgroundColor: colors.primarySoft }, openText: { color: colors.primary },
+  closed: { backgroundColor: colors.warningSoft }, closedText: { color: colors.warning },
+  paid: { backgroundColor: colors.positiveSoft }, paidText: { color: colors.positive },
   notice: { paddingHorizontal: 4, paddingVertical: 6, flexDirection: 'row', alignItems: 'flex-start', gap: 9, marginBottom: 22 },
   noticeText: { flex: 1, fontFamily, fontSize: 12, lineHeight: 19, color: colors.secondary },
 });

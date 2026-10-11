@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "icon": "./assets/brand/app-icon.png",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.vikash"
     },
@@ -34,6 +34,7 @@
           "backgroundColor": "#FFFFFF",
           "image": "./assets/brand/app-icon.png",
           "imageWidth": 180,
+          "dark": { "backgroundColor": "#101727" },
           "resizeMode": "contain"
         }
       ]

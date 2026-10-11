@@ -1,9 +1,12 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from './Icon';
-import { fontFamilyMedium, colors, fontFamily } from '../theme';
+import { fontFamilyMedium, fontFamily } from '../theme';
 
 export default function TranscriptionDisclosure({ transcription, emptyMessage = 'Não há transcrição disponível.' }) {
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const [expanded, setExpanded] = useState(false);
   return <View style={styles.container}>
     <Pressable accessibilityRole="button" accessibilityLabel="Ver transcrição original" accessibilityState={{ expanded }} aria-expanded={expanded}
@@ -16,8 +19,8 @@ export default function TranscriptionDisclosure({ transcription, emptyMessage = 
   </View>;
 }
 
-const styles = StyleSheet.create({
-  container: { backgroundColor: '#FFF', borderRadius: 20, overflow: 'hidden', marginBottom: 12 },
+const createStyles = (colors) => StyleSheet.create({
+  container: { backgroundColor: colors.surface, borderRadius: 20, overflow: 'hidden', marginBottom: 12 },
   disclosure: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, minHeight: 82 },
   pressed: { opacity: 0.65 },
   icon: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
@@ -25,6 +28,6 @@ const styles = StyleSheet.create({
   title: { fontFamily: fontFamilyMedium, fontSize: 15, lineHeight: 21, fontWeight: '600', color: colors.text },
   caption: { fontFamily, fontSize: 12, lineHeight: 18, color: colors.secondary },
   body: { paddingHorizontal: 18, paddingBottom: 20 },
-  quote: { borderLeftWidth: 2, borderLeftColor: '#B9CFFF', paddingLeft: 14, paddingVertical: 3 },
+  quote: { borderLeftWidth: 2, borderLeftColor: colors.primary, paddingLeft: 14, paddingVertical: 3 },
   text: { fontFamily, fontSize: 15, lineHeight: 25, color: colors.secondary },
 });

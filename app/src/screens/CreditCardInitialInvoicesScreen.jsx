@@ -1,3 +1,4 @@
+import { useThemeStyles, useTheme } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React, { useEffect, useRef, useState } from 'react';
 import { BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -15,9 +16,10 @@ import { distributeCreditCardInitialInvoices } from '../services/creditCards';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
 import { maskPaymentDate } from '../utils/paymentDate';
 import { displayInvoiceDate, initialInvoiceDates, initialInvoiceRow, invoiceMonthLabel, invoiceMonths, toCents, validateInitialInvoices } from '../utils/initialInvoices';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium, typography } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function CreditCardInitialInvoicesScreen({ uuid, accessToken, onBack, onSaved }) {
+  const s = useThemeStyles(createStyles);
   const { card, loading, error, retry } = useCreditCardDetails(uuid, accessToken);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -32,6 +34,8 @@ export default function CreditCardInitialInvoicesScreen({ uuid, accessToken, onB
 }
 
 function DistributionForm({ card, accessToken, saving, setSaving, onBack, onSaved }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const { showToast } = useToast();
   const [rows, setRows] = useState(() => card.invoices.filter(invoice => invoice.status !== 'PAID' && invoice.initialAmount > 0)
     .sort((a, b) => a.referenceMonth.localeCompare(b.referenceMonth)).map(invoice => initialInvoiceRow(invoice.uuid, invoice.referenceMonth, card, invoice)));
@@ -134,7 +138,7 @@ function DistributionForm({ card, accessToken, saving, setSaving, onBack, onSave
   </>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors, typography) => StyleSheet.create({
   content: { justifyContent: 'flex-start', paddingTop: 8, gap: 18 },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, navTitle: { fontFamily: fontFamilyMedium, fontSize: 18, color: colors.text },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 12 }, identityText: { flex: 1, gap: 3 }, cardName: { fontFamily: fontFamilyBold, color: colors.text, fontSize: 16 }, heading: { gap: 10 }, title: { ...typography.title, fontSize: 27, lineHeight: 35 },

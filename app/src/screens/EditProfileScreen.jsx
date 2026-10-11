@@ -1,14 +1,18 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { EnvelopeSimple } from 'phosphor-react-native/src/icons/EnvelopeSimple';
-import ProfileFormLayout, { profileFormStyles as s } from '../components/ProfileFormLayout';
+import ProfileFormLayout, { useProfileFormStyles } from '../components/ProfileFormLayout';
 import FormField from '../components/FormField';
 import useProfileForm from '../hooks/useProfileForm';
 import { getProfileInitials } from '../utils/profile';
 import { validateProfile } from '../utils/profileValidation';
-import { colors, fontFamily, fontFamilyBold } from '../theme';
+import { fontFamily, fontFamilyBold } from '../theme';
 
 export default function EditProfileScreen({ profile, onBack, onSave }) {
+  const s = useProfileFormStyles();
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const emailRef = useRef(null);
   const form = useProfileForm({
     initialValues: { name: profile?.name || '', email: profile?.email || '', password: '' },
@@ -35,9 +39,9 @@ export default function EditProfileScreen({ profile, onBack, onSave }) {
   </ProfileFormLayout>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   identity: { marginTop: 22, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: '#DCE3FF', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.avatar, alignItems: 'center', justifyContent: 'center' },
   initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 32, color: colors.text, letterSpacing: -1 },
   copy: { flex: 1, minWidth: 0, gap: 5 },
   name: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 22, lineHeight: 29, color: colors.text, letterSpacing: -0.6 },

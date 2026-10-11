@@ -1,7 +1,8 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useId, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, G, LinearGradient, Line, Path, Polygon, Rect, Stop, Text as SvgText } from 'react-native-svg';
-import { colors, fontFamily, fontFamilyBold } from '../theme';
+import { fontFamily, fontFamilyBold } from '../theme';
 import { formatCurrency } from '../utils/money';
 import useReducedMotion from '../hooks/useReducedMotion';
 
@@ -21,6 +22,8 @@ function dateLabel(date) {
 }
 
 export default function BalanceEvolutionChart({ points, hidden = false }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const reducedMotion = useReducedMotion();
   const animation = useRef(new Animated.Value(1)).current;
   const chartId = `balance${useId().replace(/:/g, '')}`;
@@ -84,14 +87,14 @@ export default function BalanceEvolutionChart({ points, hidden = false }) {
           <Line x1={last.x} x2={last.x} y1={tooltipY + 23} y2={bottom} stroke={colors.primary} strokeOpacity={0.45} strokeWidth={0.9} strokeDasharray="4 4" />
           <Rect x={right - tooltipWidth + 8} y={tooltipY} width={tooltipWidth} height={21} rx={4} fill={colors.primary} />
           <Polygon points={`${last.x - 4},${tooltipY + 21} ${last.x + 4},${tooltipY + 21} ${last.x},${tooltipY + 26}`} fill={colors.primary} />
-          <SvgText x={right - tooltipWidth / 2 + 8} y={tooltipY + 14} fill={colors.surface} fontFamily={fontFamilyBold} fontSize={10} fontWeight="700" textAnchor="middle">{currentBalance}</SvgText>
+          <SvgText x={right - tooltipWidth / 2 + 8} y={tooltipY + 14} fill={colors.onPrimary} fontFamily={fontFamilyBold} fontSize={10} fontWeight="700" textAnchor="middle">{currentBalance}</SvgText>
           </AnimatedG>
         </Svg>
       </View>}
   </View>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   card: { marginTop: 18, padding: 16, borderRadius: 22, backgroundColor: colors.surface },
   title: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, lineHeight: 26, color: colors.text },
   subtitle: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary },

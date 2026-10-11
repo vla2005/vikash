@@ -1,9 +1,11 @@
+import { useTheme } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Icon from './Icon';
-import { colors } from '../theme';
+
 
 export default function EditTransactionButton({ onPress, purchase = false }) {
+  const { colors } = useTheme();
   const label = purchase ? 'Editar compra' : 'Editar transação';
   return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}
     style={({ pressed }) => [s.button, pressed && s.pressed]}>

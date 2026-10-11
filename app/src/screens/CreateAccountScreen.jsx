@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
@@ -11,9 +12,11 @@ import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamily } from '../theme';
 
 export default function CreateAccountScreen({ navigation, route }) {
+  const { colors, typography } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const { accounts, saveAccount } = useOnboarding();
   const { showToast } = useToast();
   const fromManagement = route.params?.fromManagement || route.params?.fromChoice;
@@ -63,7 +66,7 @@ export default function CreateAccountScreen({ navigation, route }) {
     <View style={styles.bottom}><InlineNotice message={requestError} error={!!requestError} /><Text style={styles.hint}>Você pode editar tudo depois.</Text><PrimaryButton title={editing ? 'Salvar alterações' : 'Criar conta'} onPress={submit} loading={loading} /></View>
   </Screen>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   progress: { alignItems: 'flex-end', gap: 7, width: 65 },
   step: { fontFamily, color: colors.secondary, fontSize: 13 },

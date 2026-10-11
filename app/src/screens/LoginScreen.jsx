@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
@@ -9,9 +10,11 @@ import ProfileSwitcherDrawer from '../components/ProfileSwitcherDrawer';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
 import { validateLogin } from '../utils/validation';
-import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, fontFamily } from '../theme';
 
 export default function LoginScreen({ navigation, route }) {
+  const { typography } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const [email, setEmail] = useState(route?.params?.email || '');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -74,7 +77,7 @@ export default function LoginScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   heading: { marginTop: 32, gap: 10 },
   form: { marginTop: 28, gap: 18, padding: 20, backgroundColor: colors.surface, borderRadius: 24 },
   forgot: { alignSelf: 'flex-end', marginTop: 10, paddingVertical: 12 },

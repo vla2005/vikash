@@ -1,10 +1,12 @@
+import { useThemeStyles } from '../contexts/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme';
+
 import FormFocusContext from '../contexts/FormFocusContext';
 
 export default function Screen({ children, contentStyle, decoration }) {
+  const styles = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef(null);
   const focusedInput = useRef(null);
@@ -44,7 +46,7 @@ export default function Screen({ children, contentStyle, decoration }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   background: { flex: 1, backgroundColor: colors.background },
   keyboard: { flex: 1 },
   scroll: { flex: 1 },

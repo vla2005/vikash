@@ -16,6 +16,36 @@ Login, cadastro, recuperação de senha e dados financeiros estão conectados à
 O `OnboardingContext` valida a sessão antes de liberar as telas protegidas e renova
 os tokens quando necessário. Nenhuma senha é persistida.
 
+## Aparência
+
+Em **Meu perfil → Aparência**, escolha **Sistema**, **Claro** ou **Escuro**.
+O padrão é Sistema: a interface acompanha a aparência do aparelho, inclusive
+quando ela muda com o app aberto. Claro e Escuro mantêm a escolha manual.
+
+A preferência fica salva no aparelho, separada das sessões, e vale para todos
+os perfis. No Android e no iOS, usa `expo-secure-store`; na web, `localStorage`.
+Se não for possível salvar, o app mantém a aparência atual e permite tentar
+novamente. A troca não remonta os formulários nem apaga campos preenchidos.
+
+Os tokens estão em `src/theme/index.js`, e as variações das categorias em
+`src/theme/categoryPalette.js`. Componentes usam `useTheme()` e
+`useThemeStyles()`; inputs usam `useInputTheme()` para seleção, cursor,
+placeholder e aparência do teclado. Logos e cores das instituições preservam
+a identidade de cada banco nos dois modos.
+
+**Esta versão precisa de novos APK e IPA:** inclui `expo-system-ui`,
+`userInterfaceStyle: automatic` e uma splash nativa escura. Gere e instale os
+binários pelos workflows existentes; publicar somente OTA não acrescenta o
+módulo/configuração nativa aos apps anteriores.
+
+Os testes de aparência cobrem tema do sistema, restauração e falhas de
+armazenamento, troca sem perder campos, inputs e contraste dos tokens. As
+capturas locais de validação estão em `.impeccable/review/appearance/` e ficam
+fora do Git. A conferência visual foi feita com React Native Web; os bundles e
+a configuração nativa de Android/iOS também foram verificados. Após instalar
+os novos binários, confira em cada aparelho a troca do tema do sistema, barra
+de status, teclado, gráficos e abertura dos drawers.
+
 ## Perfis salvos
 
 Toque no avatar para abrir **Seus perfis**. Use **Adicionar conta** para autenticar

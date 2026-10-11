@@ -1,5 +1,33 @@
 # Comportamento dos fluxos de exclusão
 
+## Aparência global
+
+| Capacidade | Responsável canônico | Verificação |
+| --- | --- | --- |
+| Resolver Sistema/Claro/Escuro e atualizar a interface | `ThemeContext`, `src/theme/index.js` | `appearance.test.jsx` |
+| Salvar escolha independente do perfil | `appearanceStorage`, `appearanceStorage.web` | `appearanceStorage.test.js` |
+| Escolher tema no perfil, com seleção e erro acessíveis | `AppearanceSettings`, `ProfileScreen` | `appearance.test.jsx`, capturas locais dos dois temas |
+| Cores de categorias e campos | `categoryPalette`, `useInputTheme` | Contraste, identidade das chaves e preservação do formulário em `appearance.test.jsx` |
+| Navegação, barra de status, fundo nativo e browser | `App`, `AppNavigator`, `ThemeBrowserSync` | Exportação Android/iOS, introspecção Expo, revisão React Native Web |
+
+Sem preferência salva, seguir o sistema. Restaurar a preferência antes de
+mostrar o conteúdo. Aplicar a escolha após persistir; em falha, manter o tema
+atual e mostrar erro com possibilidade de nova tentativa. Trocar o tema não
+remonta rotas ou formulários, e trocar o perfil não altera a aparência.
+
+A preferência usa a chave `vikash.appearance`, fora do armazenamento das
+sessões. O controle exibe três opções nomeadas e uma marca de seleção; não
+depende somente da cor. Os tokens claros e escuros mantêm significado:
+positivo, negativo, aviso e destrutivo. Cartões e logos dos bancos mantêm suas
+cores de marca. Dados, chaves das categorias e regras financeiras permanecem
+os mesmos.
+
+As capturas em `.impeccable/review/appearance/` validam a interface web com
+dados sintéticos; não substituem a conferência em Android/iOS após gerar os
+novos binários com o módulo e a configuração nativa de aparência.
+
+## Exclusão de faturas
+
 Contrato do fluxo alterado de faturas; não representa uma auditoria de todas as telas.
 
 | Capacidade | Responsável canônico | Verificação |

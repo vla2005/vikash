@@ -1,10 +1,14 @@
+import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { forwardRef, useContext, useImperativeHandle, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Icon from './Icon';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamily } from '../theme';
 import FormFocusContext from '../contexts/FormFocusContext';
 
 const FormField = forwardRef(function FormField({ label, password = false, error, hint, large = false, style, inputContainerStyle, leadingIcon, onFocus, onBlur, ...inputProps }, ref) {
+  const inputTheme = useInputTheme();
+  const { typography, colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const inputRef = useRef(null);
   const formFocus = useContext(FormFocusContext);
   useImperativeHandle(ref, () => inputRef.current);
@@ -15,7 +19,7 @@ const FormField = forwardRef(function FormField({ label, password = false, error
       <Text style={typography.label} nativeID={`${inputProps.testID || label}-label`}>{label}</Text>
       <View style={[styles.inputContainer, inputContainerStyle, focused && styles.focused, error && styles.invalid]}>
         {leadingIcon && <View accessible={false} style={styles.leading}>{leadingIcon}</View>}
-        <TextInput ref={inputRef} accessibilityLabel={label} placeholderTextColor="#A0A0A3" selectionColor={colors.primary}
+        <TextInput {...inputTheme} ref={inputRef} accessibilityLabel={label} placeholderTextColor={colors.placeholder} selectionColor={colors.primary}
           dataSet={Platform.OS === 'web' ? { focusContainer: 'true' } : undefined}
           style={[styles.input, large && styles.large]} secureTextEntry={password && !visible}
           {...inputProps}
@@ -31,7 +35,7 @@ const FormField = forwardRef(function FormField({ label, password = false, error
 });
 export default FormField;
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   field: { gap: 7 },
   inputContainer: { flexDirection: 'row', alignItems: 'center', minHeight: 54, borderWidth: 1.5, borderColor: 'transparent', borderRadius: 14, backgroundColor: colors.surfaceMuted },
   focused: { borderColor: colors.primary, backgroundColor: colors.surface },

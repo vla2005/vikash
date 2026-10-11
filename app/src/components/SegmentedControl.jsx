@@ -1,9 +1,11 @@
+import { useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import useReducedMotion from '../hooks/useReducedMotion';
-import { colors, fontFamilyMedium } from '../theme';
+import { fontFamilyMedium } from '../theme';
 
 export default function SegmentedControl({ options, value, onChange, style }) {
+  const styles = useThemeStyles(createStyles);
   const [width, setWidth] = useState(0);
   const position = useRef(new Animated.Value(0)).current;
   const reduced = useReducedMotion();
@@ -23,11 +25,11 @@ export default function SegmentedControl({ options, value, onChange, style }) {
     </Pressable>)}
   </View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   track: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: 16, padding: 4, minHeight: 44, overflow: 'hidden' },
   indicator: { position: 'absolute', top: 4, bottom: 4, left: 4, borderRadius: 12, backgroundColor: colors.primary },
   option: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, minHeight: 36 },
   label: { fontFamily: fontFamilyMedium, fontSize: 13, color: colors.secondary, fontWeight: '500' },
-  selected: { color: colors.surface },
+  selected: { color: colors.onPrimary },
   pressed: { opacity: 0.65 },
 });

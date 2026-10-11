@@ -1,10 +1,12 @@
-import { colors } from '../theme';
+import { useThemeStyles } from '../contexts/ThemeContext';
+
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import useReducedMotion from '../hooks/useReducedMotion';
 
 const heights = [4, 9, 15, 24, 12, 8, 17, 28, 39, 26, 13, 10, 18, 28, 44, 35, 21, 12, 9, 16, 27, 40, 29, 15, 10, 18, 11, 6, 12, 20, 10, 7, 4];
 export default function VoiceWaveform({ active }) {
+  const styles = useThemeStyles(createStyles);
   const reduced = useReducedMotion();
   const values = useRef(heights.map(() => new Animated.Value(0.45))).current;
   useEffect(() => {
@@ -19,7 +21,7 @@ export default function VoiceWaveform({ active }) {
   }, [active, reduced, values]);
   return <View accessible={false} style={styles.wave}>{heights.map((height, index) => <Animated.View key={index} style={[styles.bar, index < 6 || index > 26 ? styles.faint : styles.strong, { height, transform: [{ scaleY: values[index] }] }]} />)}</View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   wave: { height: 48, width: '100%', maxWidth: 290, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 18 },
   bar: { width: 3.5, borderRadius: 3, backgroundColor: colors.primary },
   faint: { opacity: 0.4 },

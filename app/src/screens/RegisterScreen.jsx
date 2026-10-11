@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
@@ -10,9 +11,11 @@ import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
 import { validateRegistration } from '../utils/validation';
 import { PASSWORD_HINT } from '../utils/passwordValidation';
-import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, fontFamily } from '../theme';
 
 export default function RegisterScreen({ navigation, route }) {
+  const { colors, typography } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const [values, setValues] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
   const { register, session } = useOnboarding();
@@ -59,7 +62,7 @@ export default function RegisterScreen({ navigation, route }) {
     <View style={styles.footer}><Text style={styles.footerText}>Já tem cadastro?</Text><Pressable accessibilityRole="button" disabled={loading} onPress={() => navigation.navigate('Login', { addingAccount: adding })} hitSlop={8}><Text style={styles.link}>Entrar</Text></Pressable></View>
   </Screen>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors, typography) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: { width: 34, height: 44, justifyContent: 'center' },
   headerBalance: { width: 34 },
@@ -68,7 +71,7 @@ const styles = StyleSheet.create({
   form: { marginTop: 24, gap: 16, padding: 18, backgroundColor: colors.surface, borderRadius: 24 },
   nextStep: { marginTop: 23, padding: 13, borderRadius: 12, backgroundColor: colors.primarySoft, flexDirection: 'row', alignItems: 'center', gap: 12 },
   nextIcon: { height: 38, width: 38, borderRadius: 19, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  nextText: { flex: 1, color: '#555E73', fontFamily, fontSize: 14, lineHeight: 20 },
+  nextText: { flex: 1, color: colors.secondary, fontFamily, fontSize: 14, lineHeight: 20 },
   submit: { marginTop: 18 },
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 24, marginBottom: 4 },
   footerText: { color: colors.secondary, fontFamily, fontSize: 14 },

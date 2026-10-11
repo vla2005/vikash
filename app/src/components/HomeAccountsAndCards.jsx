@@ -1,11 +1,14 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import HomeAccountRow from './HomeAccountRow';
 import HomeCreditCards from './HomeCreditCards';
 import Icon from './Icon';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function HomeAccountsAndCards({ accounts = [], cards = [], profile, hidden, onOpenAccount, onOpenCard, onViewAll }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   return <View style={s.section}>
     <View style={s.heading}><Text accessibilityRole="header" style={s.title}>Minhas contas e cartões</Text>
       {!!onViewAll && <Pressable accessibilityRole="button" accessibilityLabel="Ver todas as contas e cartões" onPress={onViewAll} style={s.all}>
@@ -23,7 +26,7 @@ export default function HomeAccountsAndCards({ accounts = [], cards = [], profil
     <HomeCreditCards cards={cards} profile={profile} hidden={hidden} onOpenCard={onOpenCard} title="Cartões de crédito" compactHeading />
   </View>;
 }
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   section: { marginTop: 24 }, heading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   title: { flex: 1, fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, lineHeight: 26, color: colors.text },
   all: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 44 }, link: { fontFamily: fontFamilyMedium, fontSize: 13, color: colors.primary },

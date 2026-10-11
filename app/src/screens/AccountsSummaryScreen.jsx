@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
@@ -7,9 +8,11 @@ import Icon from '../components/Icon';
 import AccountRow from '../components/AccountRow';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, fontFamilyBold, colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 
 export default function AccountsSummaryScreen({ navigation }) {
+  const { colors, typography } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const { accounts, completed, completeSetup, profile, reset } = useOnboarding();
   const total = accounts.reduce((sum, account) => sum + account.balance, 0);
   function backToLogin() { reset(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); }
@@ -26,7 +29,7 @@ export default function AccountsSummaryScreen({ navigation }) {
     </View>
   </Screen>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   step: { color: colors.secondary, fontFamily, fontSize: 13 },
   check: { marginTop: 30, height: 48, width: 48, backgroundColor: colors.primarySoft, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },

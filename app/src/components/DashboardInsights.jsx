@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -6,9 +7,11 @@ import Skeleton from './Skeleton';
 import useDashboard from '../hooks/useDashboard';
 import { previousPeriod, spendingPace, hiddenAmount } from '../utils/dashboard';
 import { formatCurrency } from '../utils/money';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function DashboardInsights({ data, period, invoices = [], hidden, accessToken, revision, onOpenCard }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const previous = previousPeriod(period);
   const hasPrevious = previous.year >= 1900;
   const comparison = useDashboard(previous.year, previous.month, hasPrevious ? accessToken : null, revision);
@@ -55,7 +58,7 @@ export default function DashboardInsights({ data, period, invoices = [], hidden,
     </View>
   </View>;
 }
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   section: { marginTop: 24 }, title: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, lineHeight: 26, color: colors.text, marginBottom: 12 },
   panel: { borderRadius: 22, backgroundColor: colors.surface, padding: 18, gap: 16 },
   notice: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import CategoryIcon from './CategoryIcon';
@@ -5,9 +6,8 @@ import Icon from './Icon';
 import SegmentedControl from './SegmentedControl';
 import { ListSkeleton } from './Skeleton';
 import { hiddenAmount } from '../utils/dashboard';
-import { categoryColors } from '../data/categories';
 import { formatCurrency } from '../utils/money';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -21,6 +21,9 @@ function dateLabel(date) {
 }
 
 export default function RecentTransactions({ rows = [], creditRows = [], onOpenTransaction, onViewStatement, onViewCards, hidden = false, creditLoading, creditError, onRetryCredit }) {
+  const { categoryColors } = useTheme();
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const [scope, setScope] = useState('accounts');
   const isCredit = scope === 'credit';
   const visibleRows = (isCredit ? creditRows : rows).slice(0, 5);
@@ -59,7 +62,7 @@ export default function RecentTransactions({ rows = [], creditRows = [], onOpenT
   </View>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   card: { marginTop: 24, backgroundColor: colors.surface, borderRadius: 22, overflow: 'hidden', paddingTop: 8 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14 },
   title: { flex: 1, fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, lineHeight: 26, color: colors.text },

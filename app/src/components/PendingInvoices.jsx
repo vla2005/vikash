@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -6,9 +7,11 @@ import Icon from './Icon';
 import { ListSkeleton } from './Skeleton';
 import { hiddenAmount } from '../utils/dashboard';
 import { formatCurrency } from '../utils/money';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function PendingInvoices({ invoices = [], loading, error, onRetry, hidden, onOpenCard, onViewAll }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const today = new Date();
   const todayKey = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
   return <View style={s.section}>
@@ -35,7 +38,7 @@ export default function PendingInvoices({ invoices = [], loading, error, onRetry
     </View>}
   </View>;
 }
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   section: { marginTop: 24 }, heading: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { flex: 1, fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, lineHeight: 26, color: colors.text },
   linkButton: { minHeight: 44, justifyContent: 'center' }, link: { fontFamily: fontFamilyMedium, fontSize: 13, color: colors.primary },

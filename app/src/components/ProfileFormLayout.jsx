@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
@@ -6,9 +7,11 @@ import { LockSimple } from 'phosphor-react-native/src/icons/LockSimple';
 import Screen from './Screen';
 import PrimaryButton from './PrimaryButton';
 import InlineNotice from './InlineNotice';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function ProfileFormLayout({ title, children, notice, secure = false, submitText, onSubmit, onBack, saving, error }) {
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const NoticeIcon = secure ? LockSimple : Info;
   return <Screen contentStyle={styles.content}>
     <View style={styles.nav}>
@@ -25,7 +28,8 @@ export default function ProfileFormLayout({ title, children, notice, secure = fa
   </Screen>;
 }
 
-export const profileFormStyles = StyleSheet.create({
+export const useProfileFormStyles = () => useThemeStyles(createProfileFormStyles);
+const createProfileFormStyles = colors => StyleSheet.create({
   heading: { marginTop: 26, gap: 7 },
   title: { fontFamily: fontFamilyBold, fontSize: 32, lineHeight: 41, letterSpacing: -1, fontWeight: '700', color: colors.text },
   subtitle: { fontFamily, fontSize: 17, lineHeight: 25, color: colors.secondary },
@@ -33,7 +37,7 @@ export const profileFormStyles = StyleSheet.create({
   input: { minHeight: 52, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 16 },
 });
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   content: { paddingTop: 16, paddingHorizontal: 20, justifyContent: 'flex-start' },
   nav: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

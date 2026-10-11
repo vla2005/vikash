@@ -1,12 +1,12 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Defs, G, Mask } from 'react-native-svg';
 import SegmentedControl from './SegmentedControl';
 import { ListSkeleton } from './Skeleton';
-import { categoryColors } from '../data/categories';
 import { hiddenAmount } from '../utils/dashboard';
 import { formatCurrency } from '../utils/money';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 import useReducedMotion from '../hooks/useReducedMotion';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -14,9 +14,9 @@ const radius = 76;
 const circumference = 2 * Math.PI * radius;
 const keyFor = category => category.customCategoryUuid ? `custom:${category.customCategoryUuid}`
   : category.defaultCategoryId != null ? `default:${category.defaultCategoryId}` : 'uncategorized';
-const paletteFor = category => categoryColors.find(color => color.key === category.color)?.foreground || '#8995B0';
 
 function Donut({ slices, hidden, periodLabel }) {
+  const { colors } = useTheme();
   const progress = useRef(new Animated.Value(1)).current;
   const reduced = useReducedMotion();
   const maskId = `expenses${useId().replace(/:/g, '')}`;
@@ -51,6 +51,8 @@ function Donut({ slices, hidden, periodLabel }) {
 
 export default function CategoryExpensesChart({ categories = [], creditCategories = [], periodLabel, hidden = false,
   scope = 'accounts', onChangeScope, creditLoading = false, creditError = '', onRetryCredit }) {
+  const { categoryColors, colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const [expanded, setExpanded] = useState(false);
   const { width, fontScale } = useWindowDimensions();
   const stacked = width < 390 || fontScale > 1.15;
@@ -62,8 +64,8 @@ export default function CategoryExpensesChart({ categories = [], creditCategorie
       customCategoryUuid: 'dashboard-other', name: 'Outros', total: expenses.slice(3).reduce((sum, category) => sum + category.total, 0),
       color: 'purple',
     }];
-    return shown.map(category => ({ ...category, key: keyFor(category), color: paletteFor(category), fraction: category.total / total }));
-  }, [expenses, expanded, total]);
+    return shown.map(category => ({ ...category, key: keyFor(category), color: categoryColors.find(color => color.key === category.color)?.foreground || colors.secondary, fraction: category.total / total }));
+  }, [expenses, expanded, total, categoryColors, colors]);
   const percentage = fraction => `${(fraction * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
   const money = value => hidden ? hiddenAmount : formatCurrency(value);
   const loading = scope === 'credit' && creditLoading;
@@ -98,7 +100,7 @@ export default function CategoryExpensesChart({ categories = [], creditCategorie
     <Text style={s.note}>{scope === 'credit' ? 'Valor integral das compras no crédito feitas no mês.' : 'Gastos registrados nas contas neste mês.'}</Text>
   </View>;
 }
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   card: { marginTop: 24, backgroundColor: colors.surface, borderRadius: 24, padding: 18 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   title: { flexGrow: 1, fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 18, lineHeight: 26, color: colors.text },

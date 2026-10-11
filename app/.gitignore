@@ -92,3 +92,6 @@ yarn-error.log
 .jest-temp/
 
 design-qa.md
+
+# Evidência visual local; não faz parte dos bundles nem do repositório.
+.impeccable/review/

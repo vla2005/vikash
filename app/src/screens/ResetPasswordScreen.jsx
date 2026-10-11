@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Linking, Platform, Text, View } from 'react-native';
-import PasswordRecoveryLayout, { recoveryStyles as s } from '../components/PasswordRecoveryLayout';
+import PasswordRecoveryLayout, { useRecoveryStyles } from '../components/PasswordRecoveryLayout';
 import FormField from '../components/FormField';
 import PrimaryButton from '../components/PrimaryButton';
 import InlineNotice from '../components/InlineNotice';
@@ -11,6 +11,7 @@ import { PASSWORD_HINT } from '../utils/passwordValidation';
 import { RESET_TOKEN_PATTERN, validatePasswordReset } from '../utils/passwordRecovery';
 
 export default function ResetPasswordScreen({ token, onBack, onRequestLink }) {
+  const s = useRecoveryStyles();
   const [complete, setComplete] = useState(false);
   const confirmRef = useRef(null);
   const { showToast } = useToast();

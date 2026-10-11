@@ -1,3 +1,4 @@
+import { useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,9 +30,10 @@ import ProfileSwitcherDrawer from '../components/ProfileSwitcherDrawer';
 import VoiceDrawer from '../components/VoiceDrawer';
 import ScreenTransition from '../components/ScreenTransition';
 import { createTransaction } from '../services/transactions';
-import { colors } from '../theme';
+
 
 export default function MainTabs({ navigation }) {
+  const styles = useThemeStyles(createStyles);
   const [selected, setSelected] = useState('Home');
   const [voiceVisible, setVoiceVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
@@ -183,7 +185,7 @@ export default function MainTabs({ navigation }) {
       onOpenProfile={() => { setProfileForm(null); setProfileVisible(true); }} />
   </View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   background: { flex: 1, backgroundColor: colors.background },
   canvas: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
   content: { flex: 1, paddingBottom: 18 },

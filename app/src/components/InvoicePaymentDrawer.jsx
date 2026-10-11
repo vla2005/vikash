@@ -1,3 +1,4 @@
+import { useInputTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Modal, TextInput, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ListSkeleton } from './Skeleton';
@@ -7,12 +8,14 @@ import { payCreditCardInvoice } from '../services/creditCards';
 import InstitutionLogo from './InstitutionLogo';
 import DrawerPanel from './DrawerPanel';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
+import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 import { initialPaymentDate, maskPaymentDate, maskPaymentTime, parsePaymentDate } from '../utils/paymentDate';
 
 const methods = [['PIX', 'Pix'], ['BANK_SLIP', 'Boleto'], ['DEBIT_CARD', 'Débito'], ['CASH', 'Dinheiro']];
 
 export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, onPaid }) {
+  const inputTheme = useInputTheme();
+  const s = useThemeStyles(createStyles);
   const { accounts, loading, error, retry } = useAccounts(accessToken, true);
   const { showToast } = useToast();
   const [accountUuid, setAccountUuid] = useState(null);
@@ -43,7 +46,7 @@ export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, on
           {loading ? <ListSkeleton label="Carregando contas para pagamento" count={3} showAmount={false} /> : error ? <><Text accessibilityRole="alert" style={s.error}>{error}</Text><Pressable onPress={retry}><Text style={s.link}>Tentar novamente</Text></Pressable></> : accounts.length === 0 ? <Text style={s.note}>Cadastre uma conta antes de pagar a fatura.</Text> : accounts.map(account => <Pressable key={account.uuid} accessibilityRole="button" accessibilityLabel={`Pagar com ${account.description}`} accessibilityState={{ selected: accountUuid === account.uuid }} disabled={saving} onPress={() => setAccountUuid(account.uuid)} style={[s.account, accountUuid === account.uuid && s.selected]}><InstitutionLogo institution={account.financialInstitution} fallbackIcon={account.type === 'CARTEIRA' ? 'wallet' : 'bank'} size={36} /><View style={s.info}><Text style={s.name}>{account.description}</Text><Text style={s.note}>Saldo: {formatCurrency(account.balance)}</Text></View><Text style={s.link}>{accountUuid === account.uuid ? '✓' : ''}</Text></Pressable>)}
           <Text style={s.label}>Forma de pagamento</Text><View style={s.methods}>{methods.map(([value, label]) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: paymentMethod === value }} disabled={saving} onPress={() => setPaymentMethod(value)} style={[s.method, value === paymentMethod && s.selected]}><Text style={s.name}>{label}</Text></Pressable>)}</View>
           <Text style={s.label}>Quando você pagou?</Text>
-          <View style={s.dateFields}><View style={s.dateField}><Text style={s.note}>Data</Text><TextInput accessibilityLabel="Data do pagamento" placeholder="DD/MM/AAAA" value={date} onChangeText={value => setDate(maskPaymentDate(value))} editable={!saving} keyboardType="number-pad" maxLength={10} style={s.input} /></View><View style={s.timeField}><Text style={s.note}>Horário</Text><TextInput accessibilityLabel="Horário do pagamento" placeholder="HH:MM" value={time} onChangeText={value => setTime(maskPaymentTime(value))} editable={!saving} keyboardType="number-pad" maxLength={5} style={s.input} /></View></View>
+          <View style={s.dateFields}><View style={s.dateField}><Text style={s.note}>Data</Text><TextInput {...inputTheme} accessibilityLabel="Data do pagamento" placeholder="DD/MM/AAAA" value={date} onChangeText={value => setDate(maskPaymentDate(value))} editable={!saving} keyboardType="number-pad" maxLength={10} style={s.input} /></View><View style={s.timeField}><Text style={s.note}>Horário</Text><TextInput {...inputTheme} accessibilityLabel="Horário do pagamento" placeholder="HH:MM" value={time} onChangeText={value => setTime(maskPaymentTime(value))} editable={!saving} keyboardType="number-pad" maxLength={5} style={s.input} /></View></View>
           {!!failure && <Text accessibilityRole="alert" style={s.error}>{failure}</Text>}
         </ScrollView>
         <Pressable accessibilityRole="button" accessibilityLabel="Confirmar pagamento da fatura" accessibilityState={{ busy: saving }} disabled={saving || loading || !!error || !selected} onPress={confirm} style={[s.confirm, (saving || loading || !!error || !selected) && s.disabled]}><Text style={s.confirmText}>{saving ? 'Confirmando pagamento…' : 'Confirmar pagamento'}</Text></Pressable>
@@ -52,17 +55,17 @@ export default function InvoicePaymentDrawer({ invoice, accessToken, onClose, on
     </KeyboardAvoidingView>
   </Modal>;
 }
-const s = StyleSheet.create({
-  dateFields: { flexDirection: 'row', gap: 12 }, dateField: { flex: 2 }, timeField: { flex: 1 }, input: { fontFamily, fontSize: 16, backgroundColor: '#FFF', color: colors.text, borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E4', padding: 14, marginTop: 6 },
+const createStyles = (colors) => StyleSheet.create({
+  dateFields: { flexDirection: 'row', gap: 12 }, dateField: { flex: 2 }, timeField: { flex: 1 }, input: { fontFamily, fontSize: 16, backgroundColor: colors.surface, color: colors.text, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginTop: 6 },
   overlay: { flex: 1, backgroundColor: colors.dialogBackdrop, justifyContent: 'flex-end' },
   drawer: { maxHeight: '85%', backgroundColor: colors.background, padding: 22, paddingBottom: 30, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
-  handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: '#CFD0D3', alignSelf: 'center', marginBottom: 20 },
+  handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.handle, alignSelf: 'center', marginBottom: 20 },
   title: { fontFamily: fontFamilyBold, fontSize: 25, fontWeight: '700', color: colors.text }, amount: { fontFamily: fontFamilyBold, fontSize: 34, fontWeight: '700', color: colors.text, marginVertical: 10 },
   note: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary }, label: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.text, marginTop: 22, marginBottom: 12 },
-  account: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFF', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#DFE0E4', marginBottom: 8 },
+  account: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8 },
   info: { flex: 1 }, name: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.text, fontWeight: '600' }, selected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
-  methods: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, method: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#DFE0E4', backgroundColor: '#FFF' },
+  methods: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, method: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   link: { fontFamily: fontFamilyMedium, color: colors.primary, fontWeight: '600' }, error: { fontFamily, color: colors.negative, marginVertical: 12 },
   confirm: { backgroundColor: colors.primary, borderRadius: 16, minHeight: 54, alignItems: 'center', justifyContent: 'center', marginTop: 22 }, disabled: { opacity: 0.45 },
-  confirmText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: '#FFF' }, cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  confirmText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.onPrimary }, cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });

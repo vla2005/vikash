@@ -1,11 +1,13 @@
+import { useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Platform, StyleSheet, Text } from 'react-native';
 import appIcon from '../assets/appIcon';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { hideNativeSplash } from '../services/nativeSplash';
-import { colors, fontFamilyBold } from '../theme';
+import { fontFamilyBold } from '../theme';
 
 export default function AnimatedSplash({ ready, onFinish }) {
+  const styles = useThemeStyles(createStyles);
   const [layoutReady, setLayoutReady] = useState(false);
   const [imageReady, setImageReady] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -60,7 +62,7 @@ export default function AnimatedSplash({ ready, onFinish }) {
   </Animated.View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   symbol: { width: 180, height: 180 },
   wordmark: { position: 'absolute', top: '50%', marginTop: 92 },

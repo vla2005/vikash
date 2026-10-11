@@ -1,3 +1,4 @@
+import { useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -6,7 +7,7 @@ import Icon from './Icon';
 import DrawerPanel from './DrawerPanel';
 import InstitutionLogo from './InstitutionLogo';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, fontFamilyBold, colors, fontFamily } from '../theme';
+import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 
 export function formatInvoiceDate(value) {
   if (!value) { return '—'; }
@@ -15,6 +16,7 @@ export function formatInvoiceDate(value) {
 }
 
 export default function CreditCardInvoiceDrawer({ card, onClose }) {
+  const styles = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
   const invoice = card?.currentInvoice;
   const statusLabels = { OPEN: 'Aberta', CLOSED: 'Fechada', PAID: 'Paga' };
@@ -33,6 +35,6 @@ export default function CreditCardInvoiceDrawer({ card, onClose }) {
     </View>
   </Modal>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: colors.dialogBackdrop }, sheet: { backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, width: '100%', maxWidth: 460, maxHeight: '85%', paddingHorizontal: 24, paddingTop: 12 }, handle: { width: 42, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 26 }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, title: { fontFamily: fontFamilyBold, fontSize: 25, fontWeight: '700', color: colors.text }, bank: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 28 }, info: { flex: 1, gap: 5 }, name: { fontFamily: fontFamilyMedium, fontSize: 17, fontWeight: '600', color: colors.text }, label: { fontFamily, fontSize: 14, color: colors.secondary }, badge: { fontFamily, fontSize: 12, color: colors.primary, backgroundColor: colors.primarySoft, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14 }, amount: { fontFamily: fontFamilyBold, fontSize: 38, fontWeight: '700', color: colors.text, marginTop: 8, marginBottom: 24 }, row: { minHeight: 52, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14 }, value: { fontFamily: fontFamilyMedium, fontSize: 14, fontWeight: '500', color: colors.text },
 });

@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Skeleton, { CreditCardSkeleton, ListSkeleton } from '../components/Skeleton';
@@ -8,9 +9,11 @@ import HomeCreditCards from '../components/HomeCreditCards';
 import SegmentedControl from '../components/SegmentedControl';
 import { getAccountType } from '../constants/accountTypes';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, colors, fontFamily, fontFamilyBold } from '../theme';
+import { fontFamilyMedium, fontFamily, fontFamilyBold } from '../theme';
 
 export default function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, cards = [], cardsLoading = false, cardsError = '', onRetryCards, onCreateCard, onOpenCard, profile }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const [section, setSection] = useState('accounts');
   const [refreshing, setRefreshing] = useState(false);
   const refreshStarted = useRef(false);
@@ -60,13 +63,13 @@ export default function AccountsScreen({ accounts, loading, error, onRetry, onCr
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[s.balance, account.balance > 0 && s.positive, account.balance < 0 && s.negative]}>{formatCurrency(account.balance)}</Text><Icon name="chevron" size={17} color={colors.secondary} />
           </Pressable>;
         })}
-        <Pressable accessibilityRole="button" accessibilityLabel="Nova conta" onPress={onCreate} style={({ pressed }) => [s.create, pressed && s.pressed]}><Icon name="plus" size={23} color={colors.surface} /><Text style={s.createText}>Nova conta</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Nova conta" onPress={onCreate} style={({ pressed }) => [s.create, pressed && s.pressed]}><Icon name="plus" size={23} color={colors.onPrimary} /><Text style={s.createText}>Nova conta</Text></Pressable>
       </> : <View style={s.cardsOnly}>{creditCards()}</View>}
     </View>
     {section === 'accounts' && creditCards()}
   </ScrollView>;
 }
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28, gap: 8 },
   title: { fontFamily: fontFamilyBold, fontSize: 29, lineHeight: 38, letterSpacing: -1.1, color: colors.text, fontWeight: '700', marginHorizontal: 6 },
   subtitle: { fontFamily, fontSize: 14, lineHeight: 22, color: colors.secondary, marginTop: -4, marginBottom: 4, marginHorizontal: 6 },
@@ -83,7 +86,7 @@ const s = StyleSheet.create({
   balance: { fontFamily: fontFamilyBold, fontSize: 14, fontWeight: '700', color: colors.text, maxWidth: '34%', fontVariant: ['tabular-nums'] },
   positive: { color: colors.positive }, negative: { color: colors.negative },
   create: { backgroundColor: colors.primary, minHeight: 44, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 6 },
-  createText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.surface },
+  createText: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.onPrimary },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   add: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 44, gap: 5 },
   link: { fontFamily: fontFamilyMedium, fontSize: 12, fontWeight: '600', color: colors.primary },

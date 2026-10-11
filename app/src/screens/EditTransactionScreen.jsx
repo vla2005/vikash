@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
@@ -14,10 +15,9 @@ import useCreditCards from '../hooks/useCreditCards';
 import useCategories from '../hooks/useCategories';
 import useToast from '../hooks/useToast';
 import { updateTransaction } from '../services/transactions';
-import { categoryColors } from '../data/categories';
 import { creditCardLabel } from '../utils/creditCards';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 const methods = [
   { value: 'PIX', label: 'Pix' }, { value: 'DEBIT_CARD', label: 'Cartão de débito' },
@@ -31,6 +31,9 @@ function resourceOptions(items, current) {
 }
 
 export default function EditTransactionScreen({ details, purchase = false, accessToken, onBack, onSaved, onSavingChange }) {
+  const { categoryColors } = useTheme();
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const accountList = useAccounts(accessToken, true);
   const cardList = useCreditCards(accessToken, true);
   const categoryList = useCategories(accessToken, true);
@@ -114,7 +117,7 @@ export default function EditTransactionScreen({ details, purchase = false, acces
     <View style={s.footer}><InlineNotice message={requestError} error /><PrimaryButton title="Salvar alterações" onPress={submit} loading={saving} disabled={loading || !!loadError} icon={null} /><Pressable accessibilityRole="button" accessibilityLabel="Cancelar edição" disabled={saving} onPress={onBack} style={s.cancel}><Text style={s.cancelText}>Cancelar</Text></Pressable></View>
   </Screen>;
 }
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   content: { paddingTop: 8, paddingHorizontal: 22, justifyContent: 'flex-start' },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

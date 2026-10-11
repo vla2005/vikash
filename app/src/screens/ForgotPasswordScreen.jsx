@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import PasswordRecoveryLayout, { recoveryStyles as s } from '../components/PasswordRecoveryLayout';
+import PasswordRecoveryLayout, { useRecoveryStyles } from '../components/PasswordRecoveryLayout';
 import FormField from '../components/FormField';
 import PrimaryButton from '../components/PrimaryButton';
 import InlineNotice from '../components/InlineNotice';
@@ -9,6 +9,7 @@ import { requestPasswordReset } from '../services/auth';
 import { RECOVERY_MESSAGE, validateRecoveryEmail } from '../utils/passwordRecovery';
 
 export default function ForgotPasswordScreen({ navigation, route, initialEmail = '', onBack, backLabel = 'Voltar ao login' }) {
+  const s = useRecoveryStyles();
   const back = onBack || (() => navigation.goBack());
   const [sent, setSent] = useState(false);
   const [seconds, setSeconds] = useState(0);

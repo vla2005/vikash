@@ -1,9 +1,11 @@
+import { useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { colors } from '../theme';
+
 
 // Static placeholders keep content in place while the API responds.
 export default function Skeleton({ width = '100%', height = 16, radius = 8, style }) {
+  const s = useThemeStyles(createStyles);
   return <View accessible={false} importantForAccessibility="no" style={[s.block, { width, height, borderRadius: radius }, style]} />;
 }
 
@@ -12,6 +14,7 @@ export function SkeletonGroup({ label, children, style }) {
 }
 
 export function ListSkeleton({ label = 'Carregando lançamentos', count = 4, showAmount = true }) {
+  const s = useThemeStyles(createStyles);
   return <SkeletonGroup label={label} style={s.list}>
     {Array.from({ length: count }, (_, index) => <View key={index} style={[s.row, index > 0 && s.separator]}>
       <Skeleton width={42} height={42} radius={13} />
@@ -22,6 +25,7 @@ export function ListSkeleton({ label = 'Carregando lançamentos', count = 4, sho
 }
 
 export function CreditCardSkeleton({ label = 'Carregando cartões' }) {
+  const s = useThemeStyles(createStyles);
   return <SkeletonGroup label={label} style={s.card}>
     <View style={s.identity}><Skeleton width={43} height={43} radius={13} /><View style={s.copy}><Skeleton width="75%" height={18} /><Skeleton width="50%" height={12} /></View></View>
     <Skeleton height={6} radius={3} />
@@ -31,6 +35,7 @@ export function CreditCardSkeleton({ label = 'Carregando cartões' }) {
 }
 
 export function DetailsSkeleton({ label = 'Carregando detalhes', card = false }) {
+  const s = useThemeStyles(createStyles);
   return <SkeletonGroup label={label} style={s.details}>
     <View style={s.identity}><Skeleton width={54} height={54} radius={17} /><View style={s.copy}><Skeleton width="78%" height={23} /><Skeleton width="55%" height={14} /></View></View>
     <View style={s.panel}><Skeleton width="35%" height={12} /><Skeleton width="70%" height={42} />
@@ -43,6 +48,7 @@ export function DetailsSkeleton({ label = 'Carregando detalhes', card = false })
 }
 
 export function DashboardSkeleton() {
+  const s = useThemeStyles(createStyles);
   return <SkeletonGroup label="Carregando resumo" style={s.dashboard}>
     <View style={s.panel}><View style={s.metrics}><Skeleton width="45%" height={24} /><Skeleton width="35%" height={40} /></View><View style={s.metrics}><Skeleton width="45%" height={164} radius={82} /><View style={s.copy}><Skeleton height={32} /><Skeleton height={32} /><Skeleton height={32} /></View></View></View>
     <View style={s.panel}><Skeleton width="55%" height={24} /><Skeleton width="35%" height={20} /><Skeleton height={158} /></View>
@@ -54,11 +60,12 @@ export function DashboardSkeleton() {
 }
 
 export function AppSkeleton() {
+  const s = useThemeStyles(createStyles);
   return <View style={s.app}><SkeletonGroup label="Carregando aplicativo" style={s.appHeader}><Skeleton width={126} height={36} /><Skeleton width={40} height={40} radius={20} /></SkeletonGroup><Skeleton width="45%" height={23} /><Skeleton width="75%" height={42} /><DashboardSkeleton /></View>;
 }
 
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   block: { backgroundColor: colors.border },
   list: { backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 12, marginVertical: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 70, paddingVertical: 14 },

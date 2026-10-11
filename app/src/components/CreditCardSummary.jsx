@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -5,9 +6,11 @@ import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
 import { formatInvoiceDate } from './CreditCardInvoiceDrawer';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, colors, fontFamily, fontFamilyBold } from '../theme';
+import { fontFamilyMedium, fontFamily, fontFamilyBold } from '../theme';
 
 export default function CreditCardSummary({ card, onInvoice }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const invoice = card.currentInvoice;
   const used = card.creditLimit > 0 ? Math.min(1, Math.max(0, (card.creditLimit - card.availableLimit) / card.creditLimit)) : 0;
   return <Pressable accessibilityRole="button" accessibilityLabel={`Abrir cartão ${creditCardLabel(card)}`} onPress={onInvoice} style={({ pressed }) => [s.card, pressed && s.pressed]}>
@@ -20,7 +23,7 @@ export default function CreditCardSummary({ card, onInvoice }) {
     <View style={s.footer}><Icon name="statement" size={22} color={colors.text} /><Text style={s.link}>{invoice ? 'Ver fatura' : 'Ver cartão'}</Text><Icon name="chevron" size={17} color={colors.secondary} /></View>
   </Pressable>;
 }
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   card: { backgroundColor: colors.surfaceMuted, borderRadius: 18, padding: 12, marginTop: 4, marginBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   name: { fontFamily: fontFamilyMedium, fontSize: 14, fontWeight: '600', color: colors.text, flex: 1 },

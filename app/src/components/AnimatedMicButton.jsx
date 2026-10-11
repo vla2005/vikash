@@ -1,10 +1,13 @@
-import { colors } from '../theme';
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
+
 import React, { memo, useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Icon from './Icon';
 import useReducedMotion from '../hooks/useReducedMotion';
 
 function AnimatedMicButton({ onPress, large = false, animate = true, diameter }) {
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const waves = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
   const breathing = useRef(new Animated.Value(1)).current;
   const reduced = useReducedMotion();
@@ -45,16 +48,16 @@ function AnimatedMicButton({ onPress, large = false, animate = true, diameter })
     <Animated.View style={{ transform: [{ scale: breathing }] }}>
     <Pressable accessibilityRole="button" accessibilityLabel={large ? 'Microfone' : 'Registrar por voz'}
       onPress={onPress} disabled={!onPress} style={({ pressed }) => [styles.button, { width: size, height: size, borderRadius: size / 2 }, pressed && styles.pressed]}>
-      <Icon name="microphone" size={large ? size * 0.42 : 34} color="#FFFFFF" />
+      <Icon name="microphone" size={large ? size * 0.42 : 34} color={colors.onBrand} />
     </Pressable>
     </Animated.View>
   </View>;
 }
 export default memo(AnimatedMicButton);
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { alignItems: 'center', justifyContent: 'center' },
-  halo: { position: 'absolute', borderWidth: 1.5, borderColor: '#D6E4FF', backgroundColor: '#FFFFFF' },
+  halo: { position: 'absolute', borderWidth: 1.5, borderColor: colors.primarySoft, backgroundColor: colors.surface },
   wave: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderWidth: 2, borderColor: colors.primary },
-  button: { backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  pressed: { transform: [{ scale: 0.96 }], backgroundColor: colors.primaryPressed },
+  button: { backgroundColor: colors.brandPrimary, alignItems: 'center', justifyContent: 'center' },
+  pressed: { transform: [{ scale: 0.96 }], backgroundColor: colors.brandPressed },
 });

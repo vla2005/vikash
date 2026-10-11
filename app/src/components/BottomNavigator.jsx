@@ -1,9 +1,10 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
 import AnimatedMicButton from './AnimatedMicButton';
-import { fontFamilyMedium, colors } from '../theme';
+import { fontFamilyMedium } from '../theme';
 
 export const mainTabs = [
   { key: 'Home', label: 'Início', icon: 'home' },
@@ -13,6 +14,8 @@ export const mainTabs = [
 ];
 
 export default function BottomNavigator({ selected, onSelect, onMicrophone, microphoneOpen }) {
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
   const compact = useWindowDimensions().width < 350;
   function tab(item) {
@@ -30,8 +33,8 @@ export default function BottomNavigator({ selected, onSelect, onMicrophone, micr
     {mainTabs.slice(2).map(tab)}
   </View>;
 }
-const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 30, marginHorizontal: 12, paddingVertical: 9, paddingHorizontal: 5, minHeight: 76, shadowColor: '#405892', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 3 },
+const createStyles = (colors) => StyleSheet.create({
+  bar: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 30, marginHorizontal: 12, paddingVertical: 9, paddingHorizontal: 5, minHeight: 76, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 3 },
   tab: { flex: 1, minHeight: 56, alignItems: 'center', justifyContent: 'center', gap: 4 },
   icon: { height: 26, alignItems: 'center', justifyContent: 'center' },
   label: { fontFamily: fontFamilyMedium, fontSize: 11, lineHeight: 16, color: colors.secondary, fontWeight: '500' },

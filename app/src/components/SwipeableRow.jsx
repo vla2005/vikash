@@ -1,11 +1,14 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import Icon from './Icon';
 import useReducedMotion from '../hooks/useReducedMotion';
-import { colors } from '../theme';
+
 
 const actionWidth = 72;
 export default function SwipeableRow({ children, open, onOpenChange, onPress, onAction, label, actionLabel, style, containerStyle }) {
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const translation = useRef(new Animated.Value(0)).current;
   const position = useRef(0);
   const origin = useRef(0);
@@ -53,7 +56,7 @@ export default function SwipeableRow({ children, open, onOpenChange, onPress, on
     <Pressable accessibilityRole="button" accessibilityLabel={actionLabel} disabled={!open}
       accessible={open} aria-hidden={!open} accessibilityElementsHidden={!open} importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
       onPress={onAction} style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}>
-      <Icon name="trash" size={23} color={colors.surface} />
+      <Icon name="trash" size={23} color={colors.onDanger} />
     </Pressable>
     </Animated.View>
     <Animated.View {...responder.panHandlers} style={{ transform: [{ translateX: translation }] }}>
@@ -69,11 +72,11 @@ export default function SwipeableRow({ children, open, onOpenChange, onPress, on
     </Animated.View>
   </View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: { overflow: 'hidden' },
   foreground: { backgroundColor: colors.surface },
   pressed: { backgroundColor: colors.surfaceMuted },
   action: { position: 'absolute', top: 0, bottom: 0, right: 0, width: actionWidth, paddingLeft: 12, backgroundColor: colors.surface },
-  actionButton: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.error },
-  actionPressed: { backgroundColor: colors.negative },
+  actionButton: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dangerButton },
+  actionPressed: { backgroundColor: colors.dangerPressed },
 });

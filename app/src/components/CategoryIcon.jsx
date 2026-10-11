@@ -1,8 +1,11 @@
-import { colors } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
+
 import React from 'react';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
-export default function CategoryIcon({ name, size = 28, color = colors.text, solid = false }) {
+export default function CategoryIcon({ name, size = 28, color, solid = false }) {
+  const { colors } = useTheme();
+  color ??= colors.text;
   const stroke = { stroke: color, strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shapes = {
     health: <Path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" fill={color} />,
@@ -12,8 +15,8 @@ export default function CategoryIcon({ name, size = 28, color = colors.text, sol
     food: <><Path d="M4 2v7c0 4 6 4 6 0V2M7 2v20M19 13v9" {...stroke} /><Ellipse cx="19" cy="7" rx="3.5" ry="6" fill={color} /></>,
     car: <><Path d="M3 10l3-7h12l3 7v10H3z" {...stroke} /><Path d="M4 10h16M6 20v2M18 20v2" {...stroke} /><Circle cx="7" cy="15" r="1.5" fill={color} /><Circle cx="17" cy="15" r="1.5" fill={color} /></>,
     ticket: <Path d="M3 6h18v4a2 2 0 000 4v4H3v-4a2 2 0 000-4zM15 7v2m0 2v2m0 2v2" {...stroke} />,
-    gift: <><Rect x="3" y="9" width="18" height="12" rx="1" fill={color} /><Path d="M12 9v12" stroke="#FFFFFF" strokeWidth="2" /><Path d="M12 8C1 8 5-2 10 4l2 4c10 0 8-10 3-5l-3 5z" {...stroke} /></>,
-    suitcase: <><Rect x="4" y="6" width="16" height="16" rx="2" fill={color} /><Path d="M9 6V2h6v4" {...stroke} /><Path d="M8 8v12M16 8v12" stroke="#FFFFFF" strokeWidth="1.5" /></>,
+    gift: <><Rect x="3" y="9" width="18" height="12" rx="1" fill={color} /><Path d="M12 9v12" stroke={colors.surface} strokeWidth="2" /><Path d="M12 8C1 8 5-2 10 4l2 4c10 0 8-10 3-5l-3 5z" {...stroke} /></>,
+    suitcase: <><Rect x="4" y="6" width="16" height="16" rx="2" fill={color} /><Path d="M9 6V2h6v4" {...stroke} /><Path d="M8 8v12M16 8v12" stroke={colors.surface} strokeWidth="1.5" /></>,
     book: <Path d="M12 5C8 2 4 2 2 4v16c4-2 7-1 10 1 3-2 6-3 10-1V4c-2-2-6-2-10 1zM12 5v16" {...stroke} />,
     dumbbell: <><Path d="M8 12h8M3 8v8M7 5v14M17 5v14M21 8v8" {...stroke} /></>,
     game: <><Path d="M6 6h12c3 0 6 13 2 14l-5-5H9l-5 5C0 19 3 6 6 6z" {...stroke} /><Path d="M6 9v5M3.5 11.5h5" {...stroke} /><Circle cx="17" cy="10" r="1" fill={color} /><Circle cx="19" cy="13" r="1" fill={color} /></>,
@@ -21,7 +24,7 @@ export default function CategoryIcon({ name, size = 28, color = colors.text, sol
     bag: <><Path d="M4 7h16l2 15H2z" fill={color} /><Path d="M8 8V5a4 4 0 018 0v3" {...stroke} /></>,
     coffee: <><Path d="M3 3h13v8a6.5 6.5 0 01-13 0z" fill={color} /><Path d="M16 4h3c6 0 3 9-3 9M2 21h16" {...stroke} /></>,
     music: <><Path d="M9 18V5l12-3v13M9 8l12-3" {...stroke} /><Ellipse cx="5" cy="19" rx="4" ry="3" fill={color} /><Ellipse cx="17" cy="17" rx="4" ry="3" fill={color} /></>,
-    leaf: <><Path d="M3 20C-2 8 13 1 22 2c0 14-7 23-19 18z" fill={color} /><Path d="M4 20L17 7" stroke="#FFFFFF" strokeWidth="1.5" /></>,
+    leaf: <><Path d="M3 20C-2 8 13 1 22 2c0 14-7 23-19 18z" fill={color} /><Path d="M4 20L17 7" stroke={colors.surface} strokeWidth="1.5" /></>,
     plane: <Path d="M22 3L2 10l8 3 3 8 9-18zM10 13l6-6" {...stroke} />,
     bus: <><Rect x="4" y="2" width="16" height="18" rx="3" {...stroke} /><Path d="M4 11h16M12 3v8M7 20v2M17 20v2" {...stroke} /><Circle cx="8" cy="16" r="1" fill={color} /><Circle cx="16" cy="16" r="1" fill={color} /></>,
     train: <><Rect x="5" y="2" width="14" height="16" rx="4" {...stroke} /><Path d="M5 10h14M12 3v7M8 18l-3 4M16 18l3 4M7 21h10" {...stroke} /><Circle cx="9" cy="14" r="1" fill={color} /><Circle cx="15" cy="14" r="1" fill={color} /></>,
@@ -68,9 +71,9 @@ export default function CategoryIcon({ name, size = 28, color = colors.text, sol
   };
   const solidShapes = {
     book: <Path d="M11 5C8 2 4 2 2 4v16c4-2 7-1 9 1V5zM13 5c3-3 7-3 9-1v16c-4-2-7-1-9 1V5z" fill={color} />,
-    bus: <><Rect x="5" y="1" width="14" height="19" rx="3" fill={color} /><Rect x="7" y="4" width="10" height="7" rx="1" fill="#FFFFFF" /><Circle cx="8" cy="16" r="1.5" fill="#FFFFFF" /><Circle cx="16" cy="16" r="1.5" fill="#FFFFFF" /><Path d="M7 20v2M17 20v2" {...stroke} /></>,
+    bus: <><Rect x="5" y="1" width="14" height="19" rx="3" fill={color} /><Rect x="7" y="4" width="10" height="7" rx="1" fill={colors.surface} /><Circle cx="8" cy="16" r="1.5" fill={colors.surface} /><Circle cx="16" cy="16" r="1.5" fill={colors.surface} /><Path d="M7 20v2M17 20v2" {...stroke} /></>,
     ticket: <Path d="M3 6h18v4a2 2 0 000 4v4H3v-4a2 2 0 000-4z" fill={color} transform="rotate(-35 12 12)" />,
-    briefcase: <><Rect x="2" y="7" width="20" height="14" rx="2" fill={color} /><Path d="M8 7V3h8v4" {...stroke} /><Path d="M2 12h20M12 10v5" stroke="#FFFFFF" strokeWidth="1.5" /></>,
+    briefcase: <><Rect x="2" y="7" width="20" height="14" rx="2" fill={color} /><Path d="M8 7V3h8v4" {...stroke} /><Path d="M2 12h20M12 10v5" stroke={colors.surface} strokeWidth="1.5" /></>,
     dumbbell: <Path d="M2 9h3v6H2zM5 5h4v14H5zM9 10h6v4H9zM15 5h4v14h-4zM19 9h3v6h-3z" fill={color} />,
     plane: <Path d="M21 2c-1-1-2 0-3 1l-5 5-9-2-2 2 7 4-4 5-3-1-1 1 4 2 2 4 1-1-1-3 5-4 4 7 2-2-2-9 5-5c1-1 2-2 1-3z" fill={color} />,
   };

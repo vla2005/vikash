@@ -1,15 +1,19 @@
+import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useState } from 'react';
 import { FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ListSkeleton } from './Skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OTHER_INSTITUTION_NAME, searchFinancialInstitutions } from '../constants/financialInstitutions';
 import useFinancialInstitutions from '../hooks/useFinancialInstitutions';
-import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
+import { fontFamilyMedium, fontFamily } from '../theme';
 import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
 import DrawerPanel from './DrawerPanel';
 
 export default function FinancialInstitutionPicker({ value, selectedInstitution, onChange, required = false, error: fieldError }) {
+  const inputTheme = useInputTheme();
+  const { typography, colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
@@ -50,7 +54,7 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
           <Text style={styles.description}>Encontre seu banco ou conta digital.</Text>
           <View style={styles.search}>
             <Icon name="search" color={colors.secondary} size={21} />
-            <TextInput accessibilityLabel="Buscar instituição financeira" placeholder="Buscar por nome" placeholderTextColor={colors.secondary} value={query} onChangeText={setQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" style={styles.searchInput} />
+            <TextInput {...inputTheme} accessibilityLabel="Buscar instituição financeira" placeholder="Buscar por nome" placeholderTextColor={colors.secondary} value={query} onChangeText={setQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" style={styles.searchInput} />
             {query.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setQuery('')} hitSlop={8}><Icon name="close" size={18} color={colors.secondary} /></Pressable>}
           </View>
           {loading ? <ScrollView style={styles.list}><ListSkeleton label="Carregando instituições" count={6} showAmount={false} /></ScrollView>
@@ -76,14 +80,14 @@ export default function FinancialInstitutionPicker({ value, selectedInstitution,
   </View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors, typography) => StyleSheet.create({
   field: { gap: 7 },
   fieldError: { color: colors.error, fontFamily, fontSize: 13, lineHeight: 18 },
   optional: { fontWeight: '400', fontSize: 12 },
   trigger: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 62, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   value: { flex: 1, fontFamily, fontSize: 15, color: colors.text },
   placeholder: { color: colors.secondary },
-  overlay: { flex: 1, backgroundColor: 'rgba(37,40,36,0.35)', justifyContent: 'flex-end', alignItems: 'center' },
+  overlay: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'flex-end', alignItems: 'center' },
   sheet: { width: '100%', maxWidth: 460, maxHeight: '85%', backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 12 },
   handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 22 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },

@@ -1,5 +1,6 @@
+import { useTheme } from '../contexts/ThemeContext';
 import React from 'react';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -8,7 +9,7 @@ import CreateAccountScreen from '../screens/CreateAccountScreen';
 import AddFinancialItemScreen from '../screens/AddFinancialItemScreen';
 import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
 import AccountsSummaryScreen from '../screens/AccountsSummaryScreen';
-import { colors } from '../theme';
+
 import { useIsFocused } from '@react-navigation/native';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import MainTabs from './MainTabs';
@@ -18,7 +19,6 @@ import { AppSkeleton } from '../components/Skeleton';
 import useReducedMotion from '../hooks/useReducedMotion';
 
 const Stack = createNativeStackNavigator();
-const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.background, primary: colors.primary, text: colors.text, card: colors.background } };
 
 function ProtectedHome(props) { return <ProtectedScreen component={MainTabs} active={useIsFocused()} {...props} />; }
 function ProtectedCreateAccount(props) { return <ProtectedScreen component={CreateAccountScreen} active={useIsFocused()} {...props} />; }
@@ -27,6 +27,9 @@ function ProtectedCreateCreditCard(props) { return <ProtectedScreen component={C
 function ProtectedAccounts(props) { return <ProtectedScreen component={AccountsSummaryScreen} active={useIsFocused()} {...props} />; }
 
 export default function AppNavigator({ initialRouteName = 'Home' }) {
+  const { colors, scheme } = useTheme();
+  const baseTheme = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const theme = { ...baseTheme, colors: { ...baseTheme.colors, background: colors.background, primary: colors.primary, text: colors.text, card: colors.surface, border: colors.border } };
   const { ready, restoreError, retryRestore, sessionEpoch, session, sessionStartRoute } = useOnboarding();
   const reducedMotion = useReducedMotion();
   if (!ready) { return <AppSkeleton />; }

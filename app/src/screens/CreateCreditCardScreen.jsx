@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
@@ -12,9 +13,11 @@ import { useOnboarding } from '../contexts/OnboardingContext';
 import { createCreditCard, updateCreditCard } from '../services/creditCards';
 import { formatLastFourDigits } from '../utils/creditCards';
 import { formatCurrency, maskCurrency, parseCurrency } from '../utils/money';
-import { colors, fontFamily, fontFamilyBold, typography } from '../theme';
+import { fontFamily, fontFamilyBold } from '../theme';
 
 export default function CreateCreditCardScreen({ navigation, onCancel, onCreated, card: existingCard }) {
+  const { colors, typography } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const editing = Boolean(existingCard?.uuid);
   const { showToast } = useToast();
   const { session } = useOnboarding();
@@ -79,4 +82,4 @@ export default function CreateCreditCardScreen({ navigation, onCancel, onCreated
     <View style={styles.bottom}><InlineNotice message={requestError} error /><Text style={styles.hint}>{editing ? 'As faturas existentes mantêm suas datas de fechamento e vencimento.' : 'Você pode editar os dados depois.'}</Text><PrimaryButton title={editing ? 'Salvar alterações' : 'Criar cartão'} onPress={submit} loading={loading} icon={null} /></View>
   </Screen>;
 }
-const styles = StyleSheet.create({ committed: { backgroundColor: colors.primarySoft, borderRadius: 16, padding: 16, gap: 8 }, committedHeading: { flexDirection: 'row', gap: 8, alignItems: 'center' }, committedLabel: { fontFamily, fontSize: 13, color: colors.primary }, committedValue: { fontFamily: fontFamilyBold, fontSize: 25, color: colors.text, fontVariant: ['tabular-nums'] }, committedHint: { fontFamily, fontSize: 12, lineHeight: 19, color: colors.secondary }, header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, heading: { marginTop: 32, gap: 10 }, form: { marginTop: 24, gap: 22, padding: 18, backgroundColor: colors.surface, borderRadius: 24 }, days: { flexDirection: 'row', gap: 14 }, day: { flex: 1 }, bottom: { marginTop: 30, gap: 22 }, hint: { fontFamily, color: colors.secondary, fontSize: 13, lineHeight: 19, textAlign: 'center' } });
+const createStyles = (colors) => StyleSheet.create({ committed: { backgroundColor: colors.primarySoft, borderRadius: 16, padding: 16, gap: 8 }, committedHeading: { flexDirection: 'row', gap: 8, alignItems: 'center' }, committedLabel: { fontFamily, fontSize: 13, color: colors.primary }, committedValue: { fontFamily: fontFamilyBold, fontSize: 25, color: colors.text, fontVariant: ['tabular-nums'] }, committedHint: { fontFamily, fontSize: 12, lineHeight: 19, color: colors.secondary }, header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, heading: { marginTop: 32, gap: 10 }, form: { marginTop: 24, gap: 22, padding: 18, backgroundColor: colors.surface, borderRadius: 24 }, days: { flexDirection: 'row', gap: 14 }, day: { flex: 1 }, bottom: { marginTop: 30, gap: 22 }, hint: { fontFamily, color: colors.secondary, fontSize: 13, lineHeight: 19, textAlign: 'center' } });

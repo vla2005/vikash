@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,10 +12,12 @@ import InlineNotice from './InlineNotice';
 import ConfirmationDialog from './ConfirmationDialog';
 import useToast from '../hooks/useToast';
 import { getProfileInitials } from '../utils/profile';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function ProfileSwitcherDrawer({ visible, profiles = [], activeProfileId,
   onClose, onSelect, onAdd, onOpenProfile, onLogout, onRequireLogin }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
   const closeButton = useRef(null);
   const busy = useRef(false);
@@ -110,7 +113,7 @@ export default function ProfileSwitcherDrawer({ visible, profiles = [], activePr
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: colors.dialogBackdrop },
   sheet: { width: '100%', maxWidth: 460, maxHeight: '85%', paddingHorizontal: 24, paddingTop: 12, backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
   handle: { width: 42, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 18 },
@@ -123,7 +126,7 @@ const s = StyleSheet.create({
   profile: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, minHeight: 80 },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
   activeAvatar: { backgroundColor: colors.primary },
-  initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 17, color: colors.text }, activeInitials: { color: colors.surface },
+  initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 17, color: colors.text }, activeInitials: { color: colors.onPrimary },
   copy: { flex: 1, minWidth: 0, gap: 3 },
   name: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 16, lineHeight: 23, color: colors.text },
   email: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary },

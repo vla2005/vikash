@@ -1,11 +1,15 @@
+import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useState } from 'react';
 import { FlatList, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from './Icon';
 import DrawerPanel from './DrawerPanel';
-import { colors, fontFamily, typography } from '../theme';
+import { fontFamily } from '../theme';
 
 export default function SelectionField({ label, value, options, onChange, placeholder = 'Selecione', searchable = false, error, hint, renderLeading, renderOption, numColumns = 1, disabled = false, compact = false }) {
+  const inputTheme = useInputTheme();
+  const { typography, colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
@@ -21,7 +25,7 @@ export default function SelectionField({ label, value, options, onChange, placeh
       <View style={styles.overlay}><Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Fechar seleção" onPress={() => setVisible(false)} />
         <DrawerPanel visible={visible} style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.header}><Text style={styles.title}>{label}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar opções" hitSlop={12} onPress={() => setVisible(false)}><Icon name="close" /></Pressable></View>
-          {searchable && <TextInput accessibilityLabel={`Buscar ${label.toLowerCase()}`} placeholder="Buscar por nome" placeholderTextColor={colors.secondary} value={query} onChangeText={setQuery} style={styles.search} autoCorrect={false} />}
+          {searchable && <TextInput {...inputTheme} accessibilityLabel={`Buscar ${label.toLowerCase()}`} placeholder="Buscar por nome" placeholderTextColor={colors.secondary} value={query} onChangeText={setQuery} style={styles.search} autoCorrect={false} />}
           <FlatList
             key={numColumns}
             data={filtered}
@@ -52,7 +56,7 @@ export default function SelectionField({ label, value, options, onChange, placeh
     </Modal>
   </View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors, typography) => StyleSheet.create({
   compactTrigger: { minHeight: 44, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 14 },
   compactValue: { fontSize: 13 },
   field: { gap: 7 }, trigger: { minHeight: 56, borderWidth: 1, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.surface, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }, value: { flex: 1, minWidth: 0, fontFamily, fontSize: 16, color: colors.text }, placeholder: { color: colors.secondary }, invalid: { borderColor: colors.error }, error: { fontFamily, fontSize: 13, color: colors.error }, hint: { fontFamily, fontSize: 13, lineHeight: 18, color: colors.secondary },

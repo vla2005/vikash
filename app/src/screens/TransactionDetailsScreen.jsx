@@ -1,7 +1,7 @@
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
 import { Text, View } from 'react-native';
-import TransactionDetailsLayout, { CategoryRow, DetailRow, detailStyles as s } from '../components/TransactionDetailsLayout';
+import TransactionDetailsLayout, { CategoryRow, DetailRow, useDetailStyles } from '../components/TransactionDetailsLayout';
 import useTransactionDetails from '../hooks/useTransactionDetails';
 import TranscriptionDisclosure from '../components/TranscriptionDisclosure';
 import DeleteTransactionButton from '../components/DeleteTransactionButton';
@@ -10,6 +10,7 @@ import EditTransactionButton from '../components/EditTransactionButton';
 const methods = { PIX: 'Pix', DEBIT_CARD: 'Débito', BANK_SLIP: 'Boleto', BANK_TRANSFER: 'Transferência', CASH: 'Dinheiro', OTHER: 'Outro' };
 const types = { INCOME: 'Entrada', EXPENSE: 'Saída', TRANSFER: 'Transferência entre contas', INVOICE_PAYMENT: 'Pagamento de fatura' };
 export default function TransactionDetailsScreen({ uuid, accessToken, onBack, onDeleted, onEdit }) {
+  const s = useDetailStyles();
   const state = useTransactionDetails(uuid, accessToken);
   const data = state.details;
   return <TransactionDetailsLayout {...state} title="Detalhes da transação" onBack={onBack} subtitle={types[data?.type]}

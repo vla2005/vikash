@@ -1,9 +1,12 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Icon from './Icon';
-import { colors, fontFamilyMedium } from '../theme';
+import { fontFamilyMedium } from '../theme';
 
 export default function DeleteActionButton({ label, onPress, disabled = false }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   return <Pressable accessibilityRole="button" accessibilityLabel={label}
     accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
     style={({ pressed }) => [s.button, pressed && s.pressed, disabled && s.disabled]}>
@@ -11,7 +14,7 @@ export default function DeleteActionButton({ label, onPress, disabled = false })
   </Pressable>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   button: { minHeight: 52, borderRadius: 16, backgroundColor: colors.errorSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 16 },
   text: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.error },
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },

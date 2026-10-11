@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import InstitutionLogo from './InstitutionLogo';
@@ -7,9 +8,11 @@ import { getAccountType } from '../constants/accountTypes';
 import { getInstitutionCardColor } from '../constants/financialInstitutionColors';
 import { hiddenAmount } from '../utils/dashboard';
 import { formatCurrency } from '../utils/money';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function HomeAccountRow({ account, hidden, onOpen }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const type = getAccountType(account.type);
   const scale = useRef(new Animated.Value(1)).current;
   const animation = useRef(null);
@@ -54,7 +57,7 @@ export default function HomeAccountRow({ account, hidden, onOpen }) {
   </Animated.View>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 88, paddingVertical: 16, borderRadius: 14 },
   copy: { flex: 1, minWidth: 0, gap: 4 },
   name: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 15, lineHeight: 22, color: colors.text },

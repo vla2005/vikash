@@ -1,3 +1,4 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,11 +11,14 @@ import { Question } from 'phosphor-react-native/src/icons/Question';
 import { SignOut } from 'phosphor-react-native/src/icons/SignOut';
 import { User } from 'phosphor-react-native/src/icons/User';
 import ConfirmationDialog from '../components/ConfirmationDialog';
+import AppearanceSettings from '../components/AppearanceSettings';
 import useToast from '../hooks/useToast';
 import { getProfileInitials } from '../utils/profile';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPassword, onSupport }) {
+  const { colors } = useTheme();
+  const s = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -55,6 +59,7 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
           <View style={[s.row, s.divider]}><EnvelopeSimple size={26} color={colors.secondary} /><View style={s.copy}><Text style={s.label}>E-mail</Text><Text style={s.value}>{profile?.email || 'Não informado'}</Text></View></View>
         </View>
       </View>
+      <AppearanceSettings />
       <View style={s.securitySection}>
         <Text accessibilityRole="header" style={s.heading}>Segurança</Text>
         <View style={s.group}>
@@ -77,13 +82,13 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
   </>;
 }
 
-const s = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 16 },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   navTitle: { flex: 1, textAlign: 'center', fontFamily: fontFamilyBold, fontSize: 21, lineHeight: 28, letterSpacing: -0.5, color: colors.text, fontWeight: '700' },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 26 },
-  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#DCE3FF', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.avatar, alignItems: 'center', justifyContent: 'center' },
   initials: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 38, lineHeight: 49, color: colors.text, letterSpacing: -1 },
   identityCopy: { flex: 1, minWidth: 0, gap: 6 },
   name: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 25, lineHeight: 32, color: colors.text, letterSpacing: -0.8 },
@@ -101,7 +106,7 @@ const s = StyleSheet.create({
   description: { fontFamily, fontSize: 12, lineHeight: 18, color: colors.secondary },
   support: { flex: 1 },
   footer: { flex: 1, justifyContent: 'flex-end', marginTop: 32 },
-  logout: { minHeight: 62, borderRadius: 18, padding: 16, backgroundColor: '#F9E9ED', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  logout: { minHeight: 62, borderRadius: 18, padding: 16, backgroundColor: colors.negativeSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   logoutText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 17, color: colors.negative },
   brand: { fontFamily, color: colors.secondary, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 24 },
   pressed: { opacity: 0.72 },

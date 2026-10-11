@@ -1,12 +1,15 @@
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Icon from './Icon';
 import useReducedMotion from '../hooks/useReducedMotion';
-import { colors, fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 // The caller controls visibility, runs the action and supplies its loading/error states.
 export default function ConfirmationDialog({ visible, title, message, confirmText = 'Confirmar', cancelText = 'Cancelar',
   variant = 'primary', icon, loading = false, error, onConfirm, onCancel }) {
+  const { colors } = useTheme();
+  const styles = useThemeStyles(createStyles);
   const cancelButton = useRef(null);
   const reducedMotion = useReducedMotion();
   const danger = variant === 'danger';
@@ -37,8 +40,8 @@ export default function ConfirmationDialog({ visible, title, message, confirmTex
               <Text style={styles.cancelText}>{cancelText}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityState={{ busy: loading, disabled: loading }} disabled={loading}
-              onPress={onConfirm} style={({ pressed }) => [styles.button, { backgroundColor: accent }, pressed && styles.pressed, loading && styles.disabled]}>
-              <Text style={styles.confirmText}>{loading ? 'Aguarde…' : confirmText}</Text>
+              onPress={onConfirm} style={({ pressed }) => [styles.button, { backgroundColor: danger ? colors.dangerButton : colors.primary }, pressed && styles.pressed, loading && styles.disabled]}>
+              <Text style={[styles.confirmText, { color: danger ? colors.onDanger : colors.onPrimary }]}>{loading ? 'Aguarde…' : confirmText}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -46,7 +49,7 @@ export default function ConfirmationDialog({ visible, title, message, confirmTex
     </View>
   </Modal>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.dialogBackdrop },
   backdrop: { ...StyleSheet.absoluteFill },
   card: { width: '100%', maxWidth: 360, maxHeight: '90%', borderRadius: 28, backgroundColor: colors.surface, overflow: 'hidden' },
@@ -61,7 +64,7 @@ const styles = StyleSheet.create({
   button: { flex: 1, minHeight: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', padding: 12 },
   cancel: { backgroundColor: colors.surfaceMuted },
   cancelText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 14, color: colors.text },
-  confirmText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 14, color: colors.surface },
+  confirmText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 14, color: colors.onPrimary },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.6 },
 });
