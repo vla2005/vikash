@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useOnboarding } from '../contexts/OnboardingContext';
 
 export default function ProtectedScreen({ component: Component, active = true, ...props }) {
-  const { ready, session } = useOnboarding();
+  const { ready, session, sessionEpoch } = useOnboarding();
   const navigationRef = useRef(props.navigation);
   navigationRef.current = props.navigation;
   const token = session?.accessToken;
@@ -14,5 +14,5 @@ export default function ProtectedScreen({ component: Component, active = true, .
   }, [ready, token, active]);
   // O provider só disponibiliza a sessão após validar a autenticação inicial.
   if (!ready || !token || !active) { return null; }
-  return <Component {...props} />;
+  return <Component key={sessionEpoch} {...props} />;
 }

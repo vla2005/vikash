@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -17,9 +17,15 @@ const screens = { Home: MainTabs, Login: LoginScreen, Register: RegisterScreen, 
 
 // A previa web usa as mesmas telas; o app nativo usa o stack nativo.
 export default function AppNavigator({ initialRouteName = 'Home' }) {
-  const { ready, restoreError, retryRestore } = useOnboarding();
+  const { ready, restoreError, retryRestore, sessionEpoch, session, sessionStartRoute } = useOnboarding();
+  const epoch = useRef(sessionEpoch);
   const [stack, setStack] = useState([{ name: initialRouteName }]);
-  const route = stack[stack.length - 1];
+  useEffect(() => {
+    if (epoch.current === sessionEpoch) { return; }
+    epoch.current = sessionEpoch;
+    if (session) { setStack([{ name: sessionStartRoute }]); }
+  }, [sessionEpoch, session, sessionStartRoute]);
+  const route = epoch.current !== sessionEpoch && session ? { name: sessionStartRoute } : stack[stack.length - 1];
   const Screen = screens[route.name];
   const navigation = {
     navigate: (name, params) => setStack(previous => [...previous, { name, params }]),
@@ -30,7 +36,7 @@ export default function AppNavigator({ initialRouteName = 'Home' }) {
   if (!ready) { return <AppSkeleton />; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
   const key = `${route.name}-${route.params?.accountUuid || ''}`;
-  return <ScreenTransition sceneKey={`${stack.length}:${key}`} depth={stack.length - 1} fade={route.name === 'Login' || route.name === 'Home'}>
+  return <ScreenTransition key={sessionEpoch} sceneKey={`${stack.length}:${key}`} depth={stack.length - 1} fade={route.name === 'Login' || route.name === 'Home'}>
     {['Home', 'CreateAccount', 'AddFinancialItem', 'CreateCreditCard', 'Accounts'].includes(route.name)
     ? <ProtectedScreen key={key} component={Screen} route={route} navigation={navigation} />
     : <Screen key={key} route={route} navigation={navigation} />}

@@ -71,7 +71,7 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
         <Text style={s.brand}>Vikash</Text>
       </View>
     </ScrollView>
-    <ConfirmationDialog visible={confirmVisible} title="Sair da conta?" message="Você precisará entrar novamente para acessar seus dados."
+    <ConfirmationDialog visible={confirmVisible} title="Sair da conta?" message="Você precisará entrar novamente nesta conta. Os outros perfis continuarão salvos."
       confirmText="Sair" cancelText="Continuar no app" variant="danger" icon="info" loading={saving} error={error}
       onConfirm={confirmLogout} onCancel={() => { if (!submitting.current) setConfirmVisible(false); }} />
   </>;

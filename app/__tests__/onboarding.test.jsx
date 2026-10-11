@@ -11,7 +11,7 @@ import useToast from '../src/hooks/useToast';
 jest.mock('../src/hooks/useToast', () => { const showToast = jest.fn(); return { __esModule: true, default: () => ({ showToast }) }; });
 import AccountsSummaryScreen from '../src/screens/AccountsSummaryScreen';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
-jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(async () => null), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}) }));
+jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(async () => null), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}), loadProfileSessions: jest.fn(async () => []), expireProfileSession: jest.fn(async () => {}), removeProfileSession: jest.fn(async () => {}) }));
 
 jest.mock('react-native-svg', () => {
   const ReactModule = require('react');
@@ -48,7 +48,7 @@ beforeEach(() => { global.fetch = jest.fn(apiFetch); });
 afterEach(async () => { if (renderer) { await act(() => renderer.unmount()); } global.fetch = originalFetch; jest.clearAllMocks(); });
 
 async function renderScreen(screen) {
-  await act(() => { renderer = TestRenderer.create(<OnboardingProvider><Observer />{screen}</OnboardingProvider>); });
+  await act(async () => { renderer = TestRenderer.create(<OnboardingProvider><Observer />{screen}</OnboardingProvider>); });
   if (screen?.type === CreateAccountScreen) {
     await act(() => currentState.register({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }));
     global.fetch.mockClear();
@@ -56,6 +56,21 @@ async function renderScreen(screen) {
 }
 function input(testID) { return renderer.root.findAllByType(TextInput).find(node => node.props.testID === testID); }
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
+
+test('cadastro e login preservam a adição de conta e permitem voltar à conta atual', async () => {
+  await renderScreen(<LoginScreen navigation={navigation} route={{ params: { addingAccount: true } }} />);
+  await act(() => currentState.login({ email: session.user.email, password: 'Senha123!' }));
+  const link = text => renderer.root.findAll(node => node.props.onPress && node.props.children?.props?.children === text)[0];
+  await act(() => link('Criar cadastro').props.onPress());
+  expect(navigation.navigate).toHaveBeenLastCalledWith('Register', { addingAccount: true });
+  await act(() => renderer.update(<OnboardingProvider><Observer /><RegisterScreen navigation={navigation} route={{ params: { addingAccount: true } }} /></OnboardingProvider>));
+  await act(() => link('Entrar').props.onPress());
+  expect(navigation.navigate).toHaveBeenLastCalledWith('Login', { addingAccount: true });
+  await act(() => renderer.update(<OnboardingProvider><Observer /><LoginScreen navigation={navigation} route={{ params: { addingAccount: true } }} /></OnboardingProvider>));
+  await act(() => button('Cancelar adição de conta').props.onPress());
+  expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Home' }] });
+  expect(currentState.session.accessToken).toBe('access-test');
+});
 
 test.each(['Ab1!', 'abcdef1!', 'Abcdefg!', 'Abcdefg1'])('cadastro bloqueia %s antes de enviar qualquer request', async password => {
   await renderScreen(<RegisterScreen navigation={navigation} />);

@@ -10,7 +10,7 @@ export default function AppHeader({ profile, onOpenProfile }) {
 
   return <View style={s.header}>
     <BrandLogo width={126} />
-    <Pressable accessibilityRole="button" accessibilityLabel="Abrir meu perfil" accessibilityHint={name}
+    <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfis" accessibilityHint={`${name}. Alternar contas ou acessar meu perfil.`}
       onPress={onOpenProfile} disabled={!onOpenProfile} hitSlop={6} style={({ pressed }) => [s.avatar, pressed && s.pressed]}>
       <Text style={s.initials}>{initials}</Text>
     </Pressable>

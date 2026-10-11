@@ -26,3 +26,29 @@ mensagem dentro da confirmação, permitindo cancelar ou tentar novamente.
 O formato segue português brasileiro, datas do mês de referência e moeda BRL.
 Controles têm nome acessível e semântica de botão; a confirmação reutiliza o
 comportamento de foco, Escape e redução de movimento do componente canônico.
+
+## Troca de perfis
+
+| Capacidade | Responsável canônico | Verificação |
+| --- | --- | --- |
+| Sessões e isolamento | `OnboardingContext`, `sessionStorage`, `secureStorage`, `apiClient` | `profileSessions.test.jsx`, `sessionStorage.test.js`, `refreshSession.test.jsx` |
+| Seletor de perfil | `ProfileSwitcherDrawer`, `AppHeader` | `profileSwitcher.test.jsx`, `mainTabs.test.jsx` |
+| Login adicional | `LoginScreen`, `AppNavigator`, `ProtectedScreen` | `onboarding.test.jsx`, `homeAuth.test.jsx` |
+| Painel e confirmação | `DrawerPanel`, `ConfirmationDialog` | Testes do seletor e inspeção no navegador |
+
+A origem das regras é a solicitação de manter sessões independentes no aparelho
+e o contrato existente em `AuthService` (`me`, `refreshToken`, `logout`) e
+`UserResponse.uuid`. O UUID autenticamente retornado pela API identifica o perfil;
+a autorização financeira continua sendo responsabilidade do servidor.
+
+O avatar abre “Seus perfis”. A seleção valida a sessão antes de abrir a Home do
+perfil escolhido. Enquanto valida, os controles do drawer ficam bloqueados. Falha
+de conexão mantém o perfil anterior e exibe erro no drawer. Sessão expirada abre
+login com o e-mail daquele perfil; os demais continuam salvos. Adicionar conta
+reutiliza o login e permite voltar sem encerrar a sessão atual.
+
+Sair usa a confirmação compartilhada e cita o perfil afetado. Revogação recusada
+ou falha de rede conserva a sessão; uma sessão já invalidada pode ser removida
+localmente. Nenhum fluxo mistura saldo, contas, cartões, listas ou formulários de
+usuários distintos. Troca e saída reiniciam a árvore protegida e cancelam pedidos
+antigos. Renovação de token do mesmo perfil mantém a tela atual.

@@ -114,7 +114,7 @@ test('redefinição bloqueia senhas diferentes e só envia após confirmação v
   await change('Confirmar nova senha', 'NovaSenha123!');
   await act(async () => button('Redefinir senha').props.onPress());
   expect(global.fetch.mock.calls[0][1].body).toBe(JSON.stringify({ token, newPassword: 'NovaSenha123!' }));
-  expect(clearSession).toHaveBeenCalledTimes(1);
+  expect(clearSession).not.toHaveBeenCalled();
   expect(texts()).toContain('Senha redefinida.');
   expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
 });
@@ -170,12 +170,12 @@ test('reset bloqueia envio duplicado, preserva campos em erro de conexão e perm
   expect(texts()).toContain('Senha redefinida.');
 });
 
-test('falha ao limpar armazenamento após sucesso não apresenta a senha como não redefinida', async () => {
-  clearSession.mockRejectedValueOnce(new Error('Storage unavailable'));
+test('redefinir senha por link não apaga as sessões de outros perfis do aparelho', async () => {
   await render(<ResetPasswordScreen token={token} onBack={jest.fn()} onRequestLink={jest.fn()} />);
   await passwords();
   await act(async () => button('Redefinir senha').props.onPress());
   expect(texts()).toContain('Senha redefinida.');
+  expect(clearSession).not.toHaveBeenCalled();
   expect(useToast().showToast).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'success' }));
 });
 

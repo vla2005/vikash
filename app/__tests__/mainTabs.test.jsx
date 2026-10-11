@@ -112,7 +112,8 @@ test('avatar abre perfil em todas as abas e voltar preserva a tela e o header', 
   const header = renderer.root.findByType(AppHeader);
   for (const label of ['Início', 'Extrato', 'Contas', 'Categorias']) {
     await act(async () => button(label).props.onPress());
-    await act(async () => button('Abrir meu perfil').props.onPress());
+    await act(async () => button('Abrir perfis').props.onPress());
+  await act(async () => button('Abrir meu perfil').props.onPress());
     expect(labels()).toContain('Meu perfil');
     expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
     expect(renderer.root.findByType(AppHeader)).toBe(header);
@@ -126,6 +127,7 @@ test('avatar abre perfil em todas as abas e voltar preserva a tela e o header', 
 
 test('perfil conecta os dois formulários e cancelar retorna ao perfil', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Abrir perfis').props.onPress());
   await act(async () => button('Abrir meu perfil').props.onPress());
   await act(async () => button('Editar perfil').props.onPress());
   expect(renderer.root.findByType(EditProfileScreen).props.profile.name).toBe('Viktor Lucena');

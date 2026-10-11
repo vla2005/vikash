@@ -12,10 +12,11 @@ import { validateRegistration } from '../utils/validation';
 import { PASSWORD_HINT } from '../utils/passwordValidation';
 import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 
-export default function RegisterScreen({ navigation }) {
+export default function RegisterScreen({ navigation, route }) {
   const [values, setValues] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
-  const { register } = useOnboarding();
+  const { register, session } = useOnboarding();
+  const adding = Boolean(route?.params?.addingAccount && session);
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [requestError, setRequestError] = useState('');
@@ -55,7 +56,7 @@ export default function RegisterScreen({ navigation }) {
     <View style={styles.nextStep}><View style={styles.nextIcon}><Icon name="user" color={colors.primary} size={23} /></View><Text style={styles.nextText}>Depois, você adiciona suas contas.</Text></View>
     <InlineNotice message={requestError} error />
     <PrimaryButton title="Criar cadastro" onPress={submit} loading={loading} style={styles.submit} />
-    <View style={styles.footer}><Text style={styles.footerText}>Já tem cadastro?</Text><Pressable accessibilityRole="button" onPress={() => navigation.navigate('Login')} hitSlop={8}><Text style={styles.link}>Entrar</Text></Pressable></View>
+    <View style={styles.footer}><Text style={styles.footerText}>Já tem cadastro?</Text><Pressable accessibilityRole="button" disabled={loading} onPress={() => navigation.navigate('Login', { addingAccount: adding })} hitSlop={8}><Text style={styles.link}>Entrar</Text></Pressable></View>
   </Screen>;
 }
 const styles = StyleSheet.create({

@@ -6,7 +6,7 @@ import { postJson } from '../src/services/apiClient';
 import { fetchCategories } from '../src/services/categories';
 
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
-jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}) }));
+jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}), loadProfileSessions: jest.fn(async () => []), expireProfileSession: jest.fn(async () => {}), removeProfileSession: jest.fn(async () => {}) }));
 const user = { name: 'Teste', email: 'teste@example.com' };
 const saved = { accessToken: 'old-access', refreshToken: 'old-refresh', expiresAt: Date.now() + 600000 };
 const rotated = { accessToken: 'new-access', refreshToken: 'new-refresh', expiresIn: 900, user };
@@ -155,6 +155,7 @@ test('segundo 401 apos renovacao encerra sessao sem loop', async () => {
 
 test('logout durante renovacao nao restaura sessao antiga', async () => {
   await render();
+  storeSession.mockClear();
   let finish;
   global.fetch.mockImplementation(url => url.endsWith('/refresh') ? new Promise(resolve => { finish = resolve; }) : Promise.resolve(response({}, 401)));
   let pending;

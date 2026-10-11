@@ -25,15 +25,17 @@ import useCreditCards from '../hooks/useCreditCards';
 import useToast from '../hooks/useToast';
 import BottomNavigator from '../components/BottomNavigator';
 import AppHeader from '../components/AppHeader';
+import ProfileSwitcherDrawer from '../components/ProfileSwitcherDrawer';
 import VoiceDrawer from '../components/VoiceDrawer';
 import ScreenTransition from '../components/ScreenTransition';
 import { createTransaction } from '../services/transactions';
 import { colors } from '../theme';
 
-export default function MainTabs() {
+export default function MainTabs({ navigation }) {
   const [selected, setSelected] = useState('Home');
   const [voiceVisible, setVoiceVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
+  const [profilesVisible, setProfilesVisible] = useState(false);
   const [profileForm, setProfileForm] = useState(null);
   const [accountForm, setAccountForm] = useState(null);
   const [cardUuid, setCardUuid] = useState(null);
@@ -162,7 +164,7 @@ export default function MainTabs() {
   return <View style={styles.background}>
     <View style={[styles.canvas, { paddingTop: insets.top }]}>
       <View testID="app-header" accessibilityElementsHidden={!showAppHeader} importantForAccessibility={showAppHeader ? 'auto' : 'no-hide-descendants'}
-        style={[styles.header, !showAppHeader && styles.hidden]}><AppHeader profile={onboarding?.profile} onOpenProfile={() => { setProfileForm(null); setProfileVisible(true); }} /></View>
+        style={[styles.header, !showAppHeader && styles.hidden]}><AppHeader profile={onboarding?.profile} onOpenProfile={() => setProfilesVisible(true)} /></View>
       <ScreenTransition sceneKey={scene.key} depth={scene.depth} order={scene.order}>
       <View accessibilityElementsHidden={profileVisible} importantForAccessibility={profileVisible ? 'no-hide-descendants' : 'auto'}
         style={[styles.content, (itemDetails || profileVisible) && styles.hidden]}>{renderContent()}</View>
@@ -174,6 +176,11 @@ export default function MainTabs() {
       {!itemEdit && !accountForm && !initialBalanceUuid && !profileVisible && <BottomNavigator selected={selected} onSelect={key => { setItemDetails(null); setInvoiceToOpen(null); setCategoryForm(null); setAccountForm(null); setCardUuid(null); setAccountUuid(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />}
     </View>
     <VoiceDrawer visible={voiceVisible} onClose={() => setVoiceVisible(false)} onConfirm={confirmTranscription} />
+    <ProfileSwitcherDrawer visible={profilesVisible} profiles={onboarding.profiles} activeProfileId={onboarding.activeProfileId}
+      onClose={() => setProfilesVisible(false)} onSelect={onboarding.switchProfile} onLogout={onboarding.logout}
+      onAdd={() => navigation.navigate('Login', { addingAccount: true })}
+      onRequireLogin={profile => navigation.navigate('Login', { addingAccount: true, email: profile.email })}
+      onOpenProfile={() => { setProfileForm(null); setProfileVisible(true); }} />
   </View>;
 }
 const styles = StyleSheet.create({

@@ -13,7 +13,7 @@ import { loadSession, clearSession } from '../src/services/sessionStorage';
 
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 jest.mock('../src/services/dashboard', () => ({ fetchDashboard: jest.fn(async () => ({ totalBalance: 0, incomes: 0, expenses: 0 })) }));
-jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}) }));
+jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}), loadProfileSessions: jest.fn(async () => []), expireProfileSession: jest.fn(async () => {}), removeProfileSession: jest.fn(async () => {}) }));
 jest.mock('../src/screens/LoginScreen', () => { const ReactModule = require('react'); const { Text: Label } = require('react-native'); return () => ReactModule.createElement(Label, null, 'LOGIN'); });
 jest.mock('../src/screens/RegisterScreen', () => () => null);
 jest.mock('../src/screens/CreateAccountScreen', () => () => null);
@@ -54,8 +54,9 @@ test('perfil usa os dados da sessão e logout confirmado revoga token e retorna 
     : { ok: true, status: 200, json: async () => user });
   await render();
   const button = label => renderer.root.findAll(node => node.props.accessibilityLabel === label && node.props.onPress)[0];
-  await act(async () => button('Abrir meu perfil').props.onPress());
+  await act(async () => button('Abrir perfis').props.onPress());
   expect(labels()).toContain(user.email);
+  await act(async () => button('Abrir meu perfil').props.onPress());
   expect(global.fetch).toHaveBeenCalledTimes(1);
   await act(async () => button('Sair da conta').props.onPress());
   const dialog = () => renderer.root.findAllByType(ConfirmationDialog).find(node => node.props.title === 'Sair da conta?');

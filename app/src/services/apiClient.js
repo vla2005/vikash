@@ -1,6 +1,13 @@
 import { API_BASE_URL } from '../config/api';
 
 let tokenResolver;
+let profileGeneration = 0;
+const pendingRequests = new Set();
+export function cancelAuthenticatedRequests() {
+  profileGeneration += 1;
+  for (const controller of pendingRequests) { controller.abort(); }
+  pendingRequests.clear();
+}
 export function configureAuth(resolver) {
   tokenResolver = resolver;
   return () => { if (tokenResolver === resolver) { tokenResolver = undefined; } };
@@ -8,19 +15,40 @@ export function configureAuth(resolver) {
 
 // Cada tentativa reconstrói os headers com o token atual, inclusive access_token.
 export async function authenticatedFetch(path, options = {}, accessToken) {
+  const version = profileGeneration;
+  const ensureCurrent = () => {
+    if (accessToken && version !== profileGeneration) {
+      throw new ApiError('O perfil ativo mudou. Abra a tela novamente.', 401);
+    }
+  };
   let token = accessToken && tokenResolver ? await tokenResolver(accessToken, false) : accessToken;
+  ensureCurrent();
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (options.signal?.aborted) { controller.abort(); }
+  options.signal?.addEventListener('abort', abort);
+  if (accessToken) { pendingRequests.add(controller); }
   const send = current => fetch(`${API_BASE_URL}${path}`, {
     ...options,
+    signal: controller.signal,
     headers: { ...options.headers, ...(current ? { Authorization: `Bearer ${current}` } : {}),
       ...(options.headers?.access_token ? { access_token: current } : {}) },
   });
-  let response = await send(token);
-  if (response.status === 401 && token && tokenResolver) {
-    token = await tokenResolver(token, true);
-    response = await send(token);
-    if (response.status === 401) { await tokenResolver(token, 'invalidate'); }
+  try {
+    let response = await send(token);
+    ensureCurrent();
+    if (response.status === 401 && token && tokenResolver) {
+      token = await tokenResolver(token, true);
+      ensureCurrent();
+      response = await send(token);
+      ensureCurrent();
+      if (response.status === 401) { await tokenResolver(token, 'invalidate'); }
+    }
+    return response;
+  } finally {
+    pendingRequests.delete(controller);
+    options.signal?.removeEventListener('abort', abort);
   }
-  return response;
 }
 
 export class ApiError extends Error {
@@ -48,6 +76,7 @@ export function deleteJson(path, accessToken, options = {}) {
 }
 
 async function requestJson(method, path, body, accessToken, options) {
+  const version = profileGeneration;
   let response;
   try {
     response = await authenticatedFetch(path, {
@@ -61,6 +90,9 @@ async function requestJson(method, path, body, accessToken, options) {
     throw new Error('Não foi possível conectar à API. Confira sua conexão e tente novamente.');
   }
   const data = await response.json().catch(() => null);
+  if (accessToken && version !== profileGeneration) {
+    throw new ApiError('O perfil ativo mudou. Abra a tela novamente.', 401);
+  }
   if (!response.ok) {
     const message = response.status === 409 ? options.conflictMessage || 'Esse e-mail já está cadastrado. Entre com sua senha.'
       : response.status === 401 ? 'Não foi possível autenticar. Confira seus dados ou entre novamente.'

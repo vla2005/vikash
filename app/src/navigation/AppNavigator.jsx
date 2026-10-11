@@ -27,12 +27,12 @@ function ProtectedCreateCreditCard(props) { return <ProtectedScreen component={C
 function ProtectedAccounts(props) { return <ProtectedScreen component={AccountsSummaryScreen} active={useIsFocused()} {...props} />; }
 
 export default function AppNavigator({ initialRouteName = 'Home' }) {
-  const { ready, restoreError, retryRestore } = useOnboarding();
+  const { ready, restoreError, retryRestore, sessionEpoch, session, sessionStartRoute } = useOnboarding();
   const reducedMotion = useReducedMotion();
   if (!ready) { return <AppSkeleton />; }
   if (restoreError) { return <SessionRetry message={restoreError} onRetry={retryRestore} />; }
-  return <NavigationContainer theme={theme}>
-    <Stack.Navigator initialRouteName={initialRouteName} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: reducedMotion ? 'none' : 'slide_from_right', animationDuration: 360 }}>
+  return <NavigationContainer key={sessionEpoch} theme={theme}>
+    <Stack.Navigator initialRouteName={session ? sessionStartRoute : initialRouteName} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background }, animation: reducedMotion ? 'none' : 'slide_from_right', animationDuration: 360 }}>
       <Stack.Screen name="Home" component={ProtectedHome} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />

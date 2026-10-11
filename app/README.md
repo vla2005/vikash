@@ -12,7 +12,33 @@ Expo SDK **57**, React Native **0.86.3**, React **19.2.3** e código de interfac
 - Resumo com saldo total, adicionar outra conta e editar as existentes.
 - Identidade visual baseada nas referências aprovadas, com a logo em `assets/brand`.
 
-**Somente o seletor de instituições está conectado à API.** Login, cadastro e criação de contas continuam visuais e sem persistência. O estado em `OnboardingContext` é perdido ao reiniciar. Entrar não verifica credenciais. Recuperação de senha exibe um aviso temporário. “Começar a usar” conclui a apresentação do resumo; o dashboard será implementado em outra etapa. Nenhuma senha é armazenada no contexto.
+Login, cadastro, recuperação de senha e dados financeiros estão conectados à API.
+O `OnboardingContext` valida a sessão antes de liberar as telas protegidas e renova
+os tokens quando necessário. Nenhuma senha é persistida.
+
+## Perfis salvos
+
+Toque no avatar para abrir **Seus perfis**. Use **Adicionar conta** para autenticar
+outro usuário; depois, toque no perfil desejado para alternar sem informar a senha
+novamente enquanto a sessão continuar válida. **Meu perfil** mantém o acesso aos
+dados pessoais e à alteração de senha. **Sair desta conta** remove apenas o perfil
+escolhido do aparelho, após confirmar a revogação na API. Sessões já invalidadas
+podem ser removidas localmente; falhas de conexão permitem tentar novamente.
+
+No Android e no iOS, cada perfil tem um registro independente no `expo-secure-store`,
+com tokens, validade, UUID, nome e e-mail. Um índice indica o perfil ativo. A sessão
+única das versões anteriores é migrada após validação, sem exigir um novo login.
+Na prévia web, o adaptador usa `sessionStorage`: as sessões ficam restritas à aba e
+não continuam salvas depois que ela é encerrada.
+
+Alternar valida `GET /api/auth/me` e, se necessário, usa `POST /api/auth/refresh`.
+Falhas de conexão preservam os perfis para tentar novamente. Uma sessão revogada
+pede login somente daquela conta. Os endpoints financeiros continuam identificando
+o usuário pelo JWT; não é enviado um UUID de perfil para escolher o dono dos dados.
+
+Ao trocar, a navegação, os formulários, as listas e os drawers são reiniciados.
+Requisições autenticadas pendentes são canceladas e respostas antigas são ignoradas;
+um token da conta anterior nunca é substituído pelo token de outro usuário.
 
 ## API de instituições
 
@@ -22,7 +48,7 @@ As logos WebP já incluídas no app são associadas pelo nome do arquivo em `log
 
 No Expo Go, o endereço padrão é o host do Metro na porta 8080. No web, é `http://localhost:8080`. Para outro endereço, copie `.env.example` para `.env` e configure `EXPO_PUBLIC_API_URL` (Expo Go e Expo web). A prévia Vite aceita essa variável e também `VITE_API_URL`, que tem prioridade no Vite. Reinicie o servidor após alterar as variáveis.
 
-O login visual ainda não fornece JWT. Se o backend exigir autenticação nessa rota, o seletor mostra o erro de acesso. A configuração de segurança do backend não foi alterada.
+As consultas autenticadas usam o JWT da conta ativa. A configuração de segurança do backend não foi alterada para permitir múltiplos perfis.
 
 ## Executar
 
@@ -65,7 +91,7 @@ npm run ios
 - `src/screens`: telas de login, cadastro, criação e resumo de contas.
 - `src/components`: campos, botões, logo, ícones e seletores compartilhados.
 - `src/theme`: cores e tipografia.
-- `src/contexts`: estado temporário do fluxo.
+- `src/contexts`: sessão ativa, perfis salvos e estado dos fluxos.
 - `src/navigation`: navegação nativa e adaptação para a prévia web.
 - `src/utils`: validação e formatação monetária.
 - `src/web`: entrada e adaptações usadas somente pela prévia.

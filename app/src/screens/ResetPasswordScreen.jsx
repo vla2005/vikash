@@ -7,7 +7,6 @@ import InlineNotice from '../components/InlineNotice';
 import useProfileForm from '../hooks/useProfileForm';
 import useToast from '../hooks/useToast';
 import { resetPassword } from '../services/auth';
-import { clearSession } from '../services/sessionStorage';
 import { PASSWORD_HINT } from '../utils/passwordValidation';
 import { RESET_TOKEN_PATTERN, validatePasswordReset } from '../utils/passwordRecovery';
 
@@ -20,8 +19,7 @@ export default function ResetPasswordScreen({ token, onBack, onRequestLink }) {
     validate: validatePasswordReset, toRequest: values => ({ token: values.token, newPassword: values.newPassword }),
     onSave: async values => {
       await resetPassword(values);
-      // A API já encerrou as sessões. Uma falha no armazenamento não desfaz o reset.
-      await clearSession().catch(() => {});
+      // A API revoga somente as sessões do dono do token. Não encerrar outro perfil salvo.
     },
     onSaved: () => { form.change('token', ''); form.change('newPassword', ''); form.change('confirmPassword', ''); setComplete(true); },
     successMessage: 'Senha redefinida. Entre novamente com sua nova senha.',

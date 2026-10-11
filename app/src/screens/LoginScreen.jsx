@@ -5,17 +5,20 @@ import BrandLogo from '../components/BrandLogo';
 import FormField from '../components/FormField';
 import PrimaryButton from '../components/PrimaryButton';
 import InlineNotice from '../components/InlineNotice';
+import ProfileSwitcherDrawer from '../components/ProfileSwitcherDrawer';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useToast from '../hooks/useToast';
 import { validateLogin } from '../utils/validation';
 import { fontFamilyMedium, colors, fontFamily, typography } from '../theme';
 
-export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
+export default function LoginScreen({ navigation, route }) {
+  const [email, setEmail] = useState(route?.params?.email || '');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const passwordRef = useRef(null);
-  const { login } = useOnboarding();
+  const { login, session, profiles = [], activeProfileId, switchProfile, logout } = useOnboarding();
+  const [profilesVisible, setProfilesVisible] = useState(false);
+  const adding = route?.params?.addingAccount && !!session;
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [requestError, setRequestError] = useState('');
@@ -41,9 +44,11 @@ export default function LoginScreen({ navigation }) {
   return (
     <Screen>
       <BrandLogo width={156} />
+      {adding && <Pressable accessibilityRole="button" accessibilityLabel="Cancelar adição de conta" disabled={loading}
+        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Home' }] })} style={styles.cancel}><Text style={styles.link}>Voltar para minha conta</Text></Pressable>}
       <View style={styles.heading}>
-        <Text accessibilityRole="header" style={typography.title}>Bom ter você de volta.</Text>
-        <Text style={typography.body}>Entre para acompanhar suas contas.</Text>
+        <Text accessibilityRole="header" style={typography.title}>{adding ? 'Adicionar outra conta.' : 'Bom ter você de volta.'}</Text>
+        <Text style={typography.body}>{adding ? 'Entre uma vez. Depois, alterne pelo seu avatar.' : 'Entre para acompanhar suas contas.'}</Text>
       </View>
       <View style={styles.form}>
         <FormField label="E-mail" placeholder="seu@email.com" value={email} onChangeText={value => { setEmail(value); setErrors(previous => ({ ...previous, email: undefined })); }}
@@ -56,8 +61,15 @@ export default function LoginScreen({ navigation }) {
       <PrimaryButton title="Entrar" onPress={submit} loading={loading} style={styles.submit} />
       <View style={styles.footer}>
         <Text style={styles.footerText}>Ainda não tem cadastro?</Text>
-        <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Register')} hitSlop={8}><Text style={styles.link}>Criar cadastro</Text></Pressable>
+        <Pressable accessibilityRole="button" disabled={loading} onPress={() => navigation.navigate('Register', { addingAccount: adding })} hitSlop={8}><Text style={styles.link}>Criar cadastro</Text></Pressable>
       </View>
+      {!!profiles.length && !adding && <Pressable accessibilityRole="button" accessibilityLabel="Abrir contas salvas" disabled={loading}
+        onPress={() => setProfilesVisible(true)} style={styles.saved}><Text style={styles.link}>Usar uma conta salva</Text></Pressable>}
+      <ProfileSwitcherDrawer visible={profilesVisible} profiles={profiles} activeProfileId={activeProfileId}
+        onClose={() => setProfilesVisible(false)} onLogout={logout}
+        onAdd={() => { setEmail(''); setPassword(''); setRequestError(''); }}
+        onRequireLogin={profile => { setEmail(profile.email); setPassword(''); setRequestError('Entre novamente nesta conta para continuar.'); }}
+        onSelect={async id => { await switchProfile(id); navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); }} />
     </Screen>
   );
 }
@@ -70,4 +82,6 @@ const styles = StyleSheet.create({
   submit: { marginTop: 28 },
   footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 7, marginTop: 28 },
   footerText: { color: colors.secondary, fontFamily, fontSize: 14, lineHeight: 20 },
+  cancel: { marginTop: 16, paddingVertical: 12, alignSelf: 'flex-start' },
+  saved: { alignItems: 'center', minHeight: 48, justifyContent: 'center', marginTop: 16 },
 });
