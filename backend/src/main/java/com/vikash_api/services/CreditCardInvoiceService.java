@@ -240,6 +240,23 @@ public class CreditCardInvoiceService {
     }
 
     @Transactional
+    public void delete(UUID uuid) {
+        var user = authenticatedUserService.getCurrentUser();
+        var invoice = getInvoice(uuid, user.getId());
+        // Usa a mesma ordem de bloqueio das compras e dos pagamentos.
+        lockCard(invoice.getCreditCard().getUuid(), user.getId());
+        invoice = creditCardInvoiceRepository.findOwnedForUpdate(uuid, user.getId())
+                .orElseThrow(() -> new CreditCardInvoiceNotFoundException("Fatura não encontrada."));
+        entityManager.refresh(invoice, LockModeType.PESSIMISTIC_WRITE);
+        if (invoice.getInitialAmount().signum() != 0
+                || creditCardInstallmentRepository.existsByCreditCardInvoiceId(invoice.getId())
+                || transactionRepository.existsByCreditCardInvoiceId(invoice.getId())) {
+            throw new InvalidCreditCardInvoiceException("Só é possível excluir uma fatura vazia, com total de R$ 0,00 e sem compras, parcelas ou pagamentos vinculados.");
+        }
+        creditCardInvoiceRepository.delete(invoice);
+    }
+
+    @Transactional
     public CreditCardInvoiceResponse update(UUID uuid, CreditCardInvoiceRequest request) {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         CreditCardInvoiceEntity invoice = getInvoice(uuid, currentUser.getId());

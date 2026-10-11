@@ -3,10 +3,11 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { FlatList, Text } from 'react-native';
 import CreditCardDetailsScreen from '../src/screens/CreditCardDetailsScreen';
-import { fetchCreditCardDetails } from '../src/services/creditCards';
+import ConfirmationDialog from '../src/components/ConfirmationDialog';
+import { fetchCreditCardDetails, deleteCreditCardInvoice } from '../src/services/creditCards';
 import { fetchTransactions } from '../src/services/transactions';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
-jest.mock('../src/services/creditCards', () => ({ fetchCreditCardDetails: jest.fn() }));
+jest.mock('../src/services/creditCards', () => ({ fetchCreditCardDetails: jest.fn(), deleteCreditCardInvoice: jest.fn() }));
 jest.mock('../src/services/transactions', () => ({ fetchTransactions: jest.fn() }));
 jest.mock('react-native-svg', () => {
   const ReactModule = require('react'); const { View } = require('react-native');
@@ -20,6 +21,7 @@ let renderer;
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
 function statement() { return renderer.root.findAllByType(FlatList).find(node => typeof node.props.onEndReached === 'function'); }
 beforeEach(() => {
+  deleteCreditCardInvoice.mockReset().mockResolvedValue(null);
   fetchCreditCardDetails.mockReset().mockResolvedValue(card);
   fetchTransactions.mockReset().mockResolvedValue({ rows: [row('a')], page: 0, hasNext: true });
 });
@@ -75,4 +77,78 @@ test('extrato identifica a parcela da compra na fatura selecionada', async () =>
   await open();
   const text = renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ');
   expect(text).toContain('Parcela 2/3');
+});
+
+const emptyInvoice = { ...invoices[0], total: 0, initialAmount: 0, deletable: true };
+const deletionDialog = () => renderer.root.findAllByType(ConfirmationDialog).find(node => node.props.title === 'Excluir fatura?');
+
+test.each([
+  { total: 600, deletable: false },
+  { total: 0, deletable: false },
+  { total: 0, deletable: undefined },
+  { total: 600, deletable: true },
+])('mostra exclusão apenas quando a API confirma fatura vazia e total zero: %p', async eligibility => {
+  fetchCreditCardDetails.mockResolvedValue({ ...card, invoices: [{ ...emptyInvoice, ...eligibility }] });
+  await open();
+  expect(button('Excluir fatura')).toBeUndefined();
+});
+
+test('excluir fatura exige confirmação e permite cancelar sem enviar requisição', async () => {
+  fetchCreditCardDetails.mockResolvedValue({ ...card, invoices: [emptyInvoice] });
+  await open();
+  await act(async () => button('Excluir fatura').props.onPress());
+  expect(deletionDialog().props.visible).toBe(true);
+  expect(deletionDialog().props.message).toContain('Out 2026');
+  expect(deletionDialog().props.message).toContain('limite do cartão permanecem iguais');
+  expect(deleteCreditCardInvoice).not.toHaveBeenCalled();
+  await act(async () => deletionDialog().props.onCancel());
+  expect(deletionDialog().props.visible).toBe(false);
+});
+
+test('exclusão recarrega faturas, seleciona outra e avisa o dashboard', async () => {
+  const onDeleted = jest.fn();
+  fetchCreditCardDetails.mockResolvedValueOnce({ ...card, invoices: [emptyInvoice, invoices[1]] });
+  await act(async () => { renderer = TestRenderer.create(<CreditCardDetailsScreen uuid="card" accessToken="token" onDeleted={onDeleted} />); });
+  await act(async () => button('Excluir fatura').props.onPress());
+  fetchCreditCardDetails.mockResolvedValue({ ...card, invoices: [invoices[1]], currentInvoiceUuid: null });
+  await act(async () => deletionDialog().props.onConfirm());
+  expect(deleteCreditCardInvoice).toHaveBeenCalledWith('invoice-0', 'token');
+  expect(onDeleted).toHaveBeenCalledTimes(1);
+  expect(button('Fatura Out 2026')).toBeUndefined();
+  expect(button('Fatura Set 2026').props.accessibilityState.selected).toBe(true);
+  expect(fetchTransactions).toHaveBeenLastCalledWith('token', 0, expect.anything(), '/api/credit-card/card/invoices/invoice-1/transactions');
+});
+
+test('excluir a última fatura mostra o estado vazio sem consultar a fatura removida', async () => {
+  fetchCreditCardDetails.mockResolvedValueOnce({ ...card, invoices: [emptyInvoice] });
+  await open();
+  await act(async () => button('Excluir fatura').props.onPress());
+  fetchCreditCardDetails.mockResolvedValue({ ...card, invoices: [], currentInvoiceUuid: null });
+  await act(async () => deletionDialog().props.onConfirm());
+  expect(button('Excluir fatura')).toBeUndefined();
+  expect(fetchTransactions).toHaveBeenCalledTimes(1);
+  expect(renderer.root.findAllByType(Text).some(node => node.props.children === 'Este cartão ainda não tem faturas. Elas aparecerão ao registrar compras no crédito.')).toBe(true);
+});
+
+test('impede exclusão duplicada e mantém a fatura e a confirmação em caso de falha', async () => {
+  let reject;
+  deleteCreditCardInvoice.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; }));
+  fetchCreditCardDetails.mockResolvedValue({ ...card, invoices: [emptyInvoice] });
+  await open();
+  await act(async () => button('Excluir fatura').props.onPress());
+  let pending;
+  await act(async () => { pending = deletionDialog().props.onConfirm(); deletionDialog().props.onConfirm(); });
+  expect(deleteCreditCardInvoice).toHaveBeenCalledTimes(1);
+  expect(deletionDialog().props.loading).toBe(true);
+  await act(async () => deletionDialog().props.onCancel());
+  expect(deletionDialog().props.visible).toBe(true);
+  await act(async () => { reject(new Error('Esta fatura agora possui compras.')); await pending; });
+  expect(deletionDialog().props.error).toBe('Esta fatura agora possui compras.');
+  expect(deletionDialog().props.loading).toBe(false);
+  expect(button('Fatura Out 2026')).toBeDefined();
+  expect(fetchCreditCardDetails).toHaveBeenCalledTimes(1);
+  fetchCreditCardDetails.mockResolvedValue({ ...card, invoices: [], currentInvoiceUuid: null });
+  await act(async () => deletionDialog().props.onConfirm());
+  expect(deleteCreditCardInvoice).toHaveBeenCalledTimes(2);
+  expect(button('Fatura Out 2026')).toBeUndefined();
 });

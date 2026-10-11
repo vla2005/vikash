@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -54,5 +55,11 @@ public class CreditCardInvoiceController {
     @PutMapping("/update/{uuid}")
     public ResponseEntity<CreditCardInvoiceResponse> updateInvoice(@PathVariable UUID uuid, @Valid @RequestBody CreditCardInvoiceRequest request) {
         return ResponseEntity.status(HttpStatus.OK).body(creditCardInvoiceService.update(uuid, request));
+    }
+
+    @DeleteMapping("/{uuid}")
+    public ResponseEntity<Void> deleteInvoice(@PathVariable UUID uuid) {
+        creditCardInvoiceService.delete(uuid);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -25,6 +25,8 @@ import com.vikash_api.entities.TransactionEntity;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
+    boolean existsByCreditCardInvoiceId(Long invoiceId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM TransactionEntity t WHERE t.uuid = :uuid AND t.user.id = :userId")
     Optional<TransactionEntity> findOwnedForUpdate(@Param("uuid") UUID uuid, @Param("userId") Long userId);

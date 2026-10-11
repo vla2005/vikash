@@ -1,5 +1,20 @@
 # Backend do Vikash
 
+## Excluir uma fatura vazia
+
+`DELETE /api/credit-card-invoice/{uuid}` exclui uma fatura do usuário autenticado
+e retorna `204`, sem corpo. A exclusão exige valor inicial zero e nenhuma parcela
+ou transação de pagamento vinculada. Ter total zero, sozinho, não basta.
+Faturas abertas ou fechadas podem ser removidas quando estiverem vazias.
+
+A operação não muda saldos, limite disponível ou valores a distribuir. A API
+confere a regra novamente sob bloqueio do cartão e da fatura, inclusive se outro
+lançamento ocorrer depois de abrir a confirmação. Faturas com vínculos retornam
+`400`; faturas inexistentes ou de outro usuário retornam `404`.
+
+Os resumos de fatura em `GET /api/credit-card` e `GET /api/credit-card/{uuid}`
+incluem `deletable`, usado pelo app para exibir o botão de exclusão.
+
 ## Qual Compose usar?
 
 O `compose.yaml` contém a configuração principal da API e do PostgreSQL. Ele é usado em produção, sem publicar portas diretamente no servidor.

@@ -1,4 +1,4 @@
-import { ApiError, authenticatedFetch, patchJson, postJson, putJson } from './apiClient';
+import { ApiError, authenticatedFetch, deleteJson, patchJson, postJson, putJson } from './apiClient';
 import { isValidLastFourDigits } from '../utils/creditCards';
 
 function initialAmount(value) {
@@ -20,6 +20,14 @@ export function payCreditCardInvoice(uuid, values, accessToken) {
   return postJson(`/api/credit-card-invoice/${encodeURIComponent(uuid)}/pay`, {
     accountUuid: values.accountUuid, paymentMethod: values.paymentMethod, occurredAt: values.occurredAt,
   }, accessToken, { headers: { access_token: accessToken } });
+}
+
+export function deleteCreditCardInvoice(uuid, accessToken) {
+  if (!accessToken) { throw new Error('Entre na sua conta antes de excluir uma fatura.'); }
+  return deleteJson(`/api/credit-card-invoice/${encodeURIComponent(uuid)}`, accessToken, {
+    headers: { access_token: accessToken },
+    conflictMessage: 'Esta fatura mudou. Atualize a tela antes de tentar excluí-la novamente.',
+  });
 }
 
 export async function fetchCreditCardDetails(uuid, accessToken, signal) {

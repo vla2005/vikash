@@ -3,6 +3,7 @@ package com.vikash_api.services;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -53,6 +54,7 @@ public class CreditCardService {
         var card = creditCardRepository.findByUuidAndUserId(uuid, user.getId())
                 .orElseThrow(() -> new CreditCardInvoiceNotFoundException("Cartão não encontrado."));
         var invoices = creditCardInvoiceRepository.findAmountsByCardUuidAndUserId(uuid, user.getId());
+        var emptyInvoiceUuids = new HashSet<>(creditCardInvoiceRepository.findEmptyUuidsByUserIdAndCardUuid(user.getId(), uuid));
         var pending = invoices.stream().filter(invoice -> invoice.status() != CreditCardInvoiceStatus.PAID).toList();
         var used = pending.stream().map(InvoiceAmountProjection::total)
                 .reduce(card.getUnallocatedUsedLimit(), BigDecimal::add);
@@ -65,7 +67,8 @@ public class CreditCardService {
                 new FinancialInstitutionResponse(institution.getId(), institution.getName(), institution.getLogoUrl()),
                 current.map(InvoiceAmountProjection::uuid).orElse(null), invoices.stream().map(invoice ->
                     new CreditCardInvoiceSummaryResponse(invoice.uuid(), invoice.referenceMonth(), invoice.total(),
-                            invoice.closingDate(), invoice.dueDate(), invoice.status(), invoice.initialAmount())).toList(),
+                            invoice.closingDate(), invoice.dueDate(), invoice.status(), invoice.initialAmount(),
+                            emptyInvoiceUuids.contains(invoice.uuid()))).toList(),
                 used, card.getUnallocatedUsedLimit(), allocatedInitial.add(card.getUnallocatedUsedLimit()), allocatedInitial);
     }
 
@@ -88,6 +91,7 @@ public class CreditCardService {
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         List<CreditCardEntity> cards = creditCardRepository.findByUserIdAndActiveTrue(currentUser.getId());
         var invoices = creditCardInvoiceRepository.findUnpaidAmountsByUserId(currentUser.getId());
+        var emptyInvoiceUuids = new HashSet<>(creditCardInvoiceRepository.findEmptyUuidsByUserIdAndCardUuid(currentUser.getId(), null));
         Map<Long, BigDecimal> usedLimits = invoices.stream().collect(Collectors.toMap(
                 InvoiceAmountProjection::creditCardId, InvoiceAmountProjection::total, BigDecimal::add));
         Map<Long, InvoiceAmountProjection> currentInvoices = new HashMap<>();
@@ -98,7 +102,7 @@ public class CreditCardService {
             var current = currentInvoices.get(card.getId());
             var invoiceResponse = current == null ? null : new CreditCardInvoiceSummaryResponse(current.uuid(),
                     current.referenceMonth(), current.total(), current.closingDate(), current.dueDate(), current.status(),
-                    current.initialAmount());
+                    current.initialAmount(), emptyInvoiceUuids.contains(current.uuid()));
             var used = usedLimits.getOrDefault(card.getId(), BigDecimal.ZERO).add(card.getUnallocatedUsedLimit());
             return new CreditCardSummaryResponse(card.getUuid(), card.getLastFourDigits(), card.getCreditLimit(),
                     card.getCreditLimit().subtract(used),

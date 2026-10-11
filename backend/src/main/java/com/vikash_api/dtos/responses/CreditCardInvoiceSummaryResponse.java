@@ -13,6 +13,7 @@ public record CreditCardInvoiceSummaryResponse(
     LocalDate closingDate,
     LocalDate dueDate,
     CreditCardInvoiceStatus status,
-    BigDecimal initialAmount
+    BigDecimal initialAmount,
+    boolean deletable
 ) {
 }

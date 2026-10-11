@@ -129,6 +129,144 @@ class CreditCardInitialBalanceIntegrationTest {
         return new CreditCardInvoicePaymentRequest(account.getUuid(), PaymentMethod.PIX, LocalDateTime.now().minusMinutes(1));
     }
 
+    CreditCardInvoiceEntity emptyInvoice(YearMonth month) {
+        var response = invoiceService.create(new CreditCardInvoiceRequest(card.getUuid(), month.toString(),
+                month.atDay(3), month.atDay(10)));
+        return invoices.findByUuidAndCreditCardUserId(response.uuid(), user.getId()).orElseThrow();
+    }
+
+    @Test
+    void deletesEmptyClosedInvoiceWithoutChangingBalancesOrReservedLimit() {
+        var account = account();
+        var empty = emptyInvoice(past);
+        empty.setStatus(CreditCardInvoiceStatus.CLOSED);
+        invoices.saveAndFlush(empty);
+        assertThat(cardService.getByUuid(card.getUuid()).invoices().getFirst().deletable()).isTrue();
+        assertThat(cardService.get().creditCards().getFirst().currentInvoice().deletable()).isTrue();
+
+        invoiceService.delete(empty.getUuid());
+
+        assertThat(invoices.findById(empty.getId())).isEmpty();
+        var details = cardService.getByUuid(card.getUuid());
+        assertThat(details.invoices()).isEmpty();
+        assertThat(details.currentInvoiceUuid()).isNull();
+        assertThat(details.availableLimit()).isEqualByComparingTo("2800");
+        assertThat(details.unallocatedUsedLimit()).isEqualByComparingTo("2200");
+        assertThat(accounts.findById(account.getId()).orElseThrow().getBalance()).isEqualByComparingTo("2000");
+        assertThat(transactions.count()).isZero();
+    }
+
+    @Test
+    void rejectsInvoiceWithInitialAmountAndPreservesIt() {
+        distribute(item(past, "800"));
+        var existing = invoice(past);
+        assertThat(cardService.getByUuid(card.getUuid()).invoices().getFirst().deletable()).isFalse();
+        assertThatThrownBy(() -> invoiceService.delete(existing.getUuid()))
+                .isInstanceOf(InvalidCreditCardInvoiceException.class).hasMessageContaining("vazia");
+        assertThat(invoice(past).getInitialAmount()).isEqualByComparingTo("800");
+        assertThat(cardService.getByUuid(card.getUuid()).availableLimit()).isEqualByComparingTo("2800");
+    }
+
+    @Test
+    void rejectsZeroTotalInvoiceThatStillHasAnInstallment() {
+        var empty = emptyInvoice(past);
+        var purchase = new CreditCardPurchaseEntity();
+        purchase.setCreditCard(card);
+        purchase.setDescription("Compra com parcela zerada");
+        purchase.setAmount(BigDecimal.ZERO);
+        purchase.setInstallmentCount(1);
+        purchase.setOccurredAt(past.atDay(1).atStartOfDay());
+        purchase.setTranscription("Teste");
+        purchase = purchases.saveAndFlush(purchase);
+        var part = new CreditCardInstallmentEntity();
+        part.setPurchase(purchase);
+        part.setCreditCardInvoice(empty);
+        part.setInstallmentNumber(1);
+        part.setAmount(BigDecimal.ZERO);
+        installments.saveAndFlush(part);
+
+        var summary = cardService.getByUuid(card.getUuid()).invoices().getFirst();
+        assertThat(summary.total()).isZero();
+        assertThat(summary.deletable()).isFalse();
+        assertThatThrownBy(() -> invoiceService.delete(empty.getUuid())).isInstanceOf(InvalidCreditCardInvoiceException.class);
+        assertThat(invoices.findById(empty.getId())).isPresent();
+        assertThat(installments.count()).isEqualTo(1);
+        assertThat(purchases.count()).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsZeroTotalInvoiceThatStillHasAPayment() {
+        var empty = emptyInvoice(past);
+        empty.setStatus(CreditCardInvoiceStatus.PAID);
+        invoices.saveAndFlush(empty);
+        var payment = new TransactionEntity();
+        payment.setUser(user);
+        payment.setAccount(account());
+        payment.setCreditCardInvoice(empty);
+        payment.setDescription("Pagamento anterior");
+        payment.setAmount(BigDecimal.TEN);
+        payment.setType(TransactionType.INVOICE_PAYMENT);
+        payment.setPaymentMethod(PaymentMethod.PIX);
+        payment.setOccurredAt(LocalDateTime.now().minusDays(1));
+        payment.setTranscription("Teste");
+        transactions.saveAndFlush(payment);
+
+        assertThat(cardService.getByUuid(card.getUuid()).invoices().getFirst().deletable()).isFalse();
+        assertThatThrownBy(() -> invoiceService.delete(empty.getUuid())).isInstanceOf(InvalidCreditCardInvoiceException.class);
+        assertThat(invoices.findById(empty.getId())).isPresent();
+        assertThat(transactions.count()).isEqualTo(1);
+    }
+
+    @Test
+    void cannotDeleteAnotherUsersInvoiceOrAMissingInvoice() {
+        var empty = emptyInvoice(past);
+        var other = users.save(UserEntity.builder().name("Outro").email("delete-invoice@test.local").password("test-only").build());
+        when(authenticatedUserService.getCurrentUser()).thenReturn(other);
+        assertThatThrownBy(() -> invoiceService.delete(empty.getUuid())).isInstanceOf(CreditCardInvoiceNotFoundException.class);
+        assertThat(cardService.get().creditCards()).isEmpty();
+        when(authenticatedUserService.getCurrentUser()).thenReturn(user);
+        assertThatThrownBy(() -> invoiceService.delete(UUID.randomUUID())).isInstanceOf(CreditCardInvoiceNotFoundException.class);
+        assertThat(invoices.findById(empty.getId())).isPresent();
+    }
+
+    @Test
+    void rechecksInvoiceAfterAnotherRequestAllocatesAnInitialAmount() {
+        var empty = emptyInvoice(past);
+        transaction.executeWithoutResult(status -> {
+            var loaded = invoices.findById(empty.getId()).orElseThrow();
+            assertThat(loaded.getInitialAmount()).isZero();
+            var independent = new TransactionTemplate(transactionManager);
+            independent.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            independent.executeWithoutResult(inner -> distribute(item(past, "100")));
+            assertThatThrownBy(() -> invoiceService.delete(empty.getUuid())).isInstanceOf(InvalidCreditCardInvoiceException.class);
+            status.setRollbackOnly();
+        });
+        assertThat(invoice(past).getInitialAmount()).isEqualByComparingTo("100");
+    }
+
+    @Test
+    void concurrentDeletionsReturnNotFoundForTheSecondRequest() throws Exception {
+        var empty = emptyInvoice(past);
+        var start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Boolean> deletion = () -> {
+                start.await();
+                try {
+                    invoiceService.delete(empty.getUuid());
+                    return true;
+                } catch (CreditCardInvoiceNotFoundException exception) {
+                    return false;
+                }
+            };
+            var first = pool.submit(deletion);
+            var second = pool.submit(deletion);
+            start.countDown();
+            assertThat(List.of(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true, false);
+        }
+        assertThat(invoices.findById(empty.getId())).isEmpty();
+    }
+
     @Test
     void newCardReservesDebtWithoutInvoicesPurchasesOrCashMovements() {
         var details = cardService.getByUuid(card.getUuid());

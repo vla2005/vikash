@@ -47,6 +47,21 @@ class RequestValidationTest {
     void closeValidator() { validator.close(); }
 
     @Test
+    void deletesEmptyInvoiceAndReturnsNoContent() throws Exception {
+        mvc.perform(delete("/api/credit-card-invoice/" + UUID))
+                .andExpect(status().isNoContent()).andExpect(content().string(""));
+        verify(invoices).delete(java.util.UUID.fromString(UUID));
+    }
+
+    @Test
+    void returnsValidationMessageWhenInvoiceCannotBeDeleted() throws Exception {
+        doThrow(new com.vikash_api.exceptions.InvalidCreditCardInvoiceException("Só é possível excluir uma fatura vazia."))
+                .when(invoices).delete(java.util.UUID.fromString(UUID));
+        mvc.perform(delete("/api/credit-card-invoice/" + UUID))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Só é possível excluir uma fatura vazia."));
+    }
+
+    @Test
     void createsCardWithAvailableLimitAndDistributesInvoicesWithEmptyResponses() throws Exception {
         mvc.perform(post("/api/credit-card").contentType(MediaType.APPLICATION_JSON).content("""
                 {"financialInstitutionId":1,"lastFourDigits":32,"creditLimit":5000,

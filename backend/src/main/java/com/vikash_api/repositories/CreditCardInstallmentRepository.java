@@ -17,6 +17,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CreditCardInstallmentRepository extends JpaRepository<CreditCardInstallmentEntity, Long> {
+    boolean existsByCreditCardInvoiceId(Long invoiceId);
+
     @Query("SELECT i FROM CreditCardInstallmentEntity i JOIN FETCH i.creditCardInvoice WHERE i.purchase.id = :purchaseId")
     List<CreditCardInstallmentEntity> findByPurchaseId(@Param("purchaseId") Long purchaseId);
 

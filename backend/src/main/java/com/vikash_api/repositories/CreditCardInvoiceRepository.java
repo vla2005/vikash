@@ -9,6 +9,8 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -19,6 +21,20 @@ import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInvoiceEntity, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT invoice FROM CreditCardInvoiceEntity invoice WHERE invoice.uuid = :uuid AND invoice.creditCard.user.id = :userId")
+    Optional<CreditCardInvoiceEntity> findOwnedForUpdate(@Param("uuid") UUID uuid, @Param("userId") Long userId);
+
+    @Query("""
+        SELECT invoice.uuid FROM CreditCardInvoiceEntity invoice
+        WHERE invoice.creditCard.user.id = :userId
+            AND (:cardUuid IS NULL OR invoice.creditCard.uuid = :cardUuid)
+            AND invoice.initialAmount = 0
+            AND NOT EXISTS (SELECT part.id FROM CreditCardInstallmentEntity part WHERE part.creditCardInvoice = invoice)
+            AND NOT EXISTS (SELECT payment.id FROM TransactionEntity payment WHERE payment.creditCardInvoice = invoice)
+    """)
+    List<UUID> findEmptyUuidsByUserIdAndCardUuid(@Param("userId") Long userId, @Param("cardUuid") UUID cardUuid);
+
     @Query("""
         SELECT new com.vikash_api.repositories.projections.CreditDashboardInvoiceProjection(
             invoice.uuid, invoice.referenceMonth, invoice.initialAmount + COALESCE(SUM(part.amount), 0),

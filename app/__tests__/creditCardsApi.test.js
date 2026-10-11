@@ -1,9 +1,25 @@
-import { createCreditCard, fetchCreditCards, fetchCreditCardDetails, updateCreditCard, payCreditCardInvoice, distributeCreditCardInitialInvoices } from '../src/services/creditCards';
+import { createCreditCard, fetchCreditCards, fetchCreditCardDetails, updateCreditCard, payCreditCardInvoice, distributeCreditCardInitialInvoices, deleteCreditCardInvoice } from '../src/services/creditCards';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
 beforeEach(() => { global.fetch = jest.fn(); });
 afterEach(() => { global.fetch = originalFetch; });
 const values = { financialInstitutionId: 42, lastFourDigits: 32, creditLimit: 5000, closingDay: 3, dueDay: 10 };
+
+test('exclusão da fatura usa DELETE autenticado, sem enviar valores ou pagamentos', async () => {
+  global.fetch.mockResolvedValue({ ok: true, status: 204, json: async () => { throw new SyntaxError('sem corpo'); } });
+  await expect(deleteCreditCardInvoice('invoice/id', 'token')).resolves.toBeNull();
+  expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/credit-card-invoice/invoice%2Fid', expect.objectContaining({
+    method: 'DELETE', body: undefined, headers: expect.objectContaining({ access_token: 'token', Authorization: 'Bearer token' }),
+  }));
+  global.fetch.mockClear();
+  expect(() => deleteCreditCardInvoice('invoice', null)).toThrow('Entre na sua conta');
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('exclusão mostra a regra do servidor quando a fatura deixou de estar vazia', async () => {
+  global.fetch.mockResolvedValue({ ok: false, status: 400, json: async () => ({ message: 'Só é possível excluir uma fatura vazia.' }) });
+  await expect(deleteCreditCardInvoice('invoice', 'token')).rejects.toMatchObject({ status: 400, message: 'Só é possível excluir uma fatura vazia.' });
+});
 
 test.each([null, 0, 32, 9999])('GET mantém cartões legados e finais válidos: %s', async lastFourDigits => {
   global.fetch.mockResolvedValue({ ok: true, json: async () => ({ creditCards: [{ uuid: 'card', lastFourDigits,
