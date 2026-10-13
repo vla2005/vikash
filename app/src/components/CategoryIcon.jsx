@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 
 import React from 'react';
@@ -83,5 +84,5 @@ export default function CategoryIcon({ name, size = 28, color, solid = false }) 
   color ??= colors.text;
   const stroke = { stroke: color, strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shape = name === 'ellipsis' ? ellipsis : (solid && solidShapes[name]) || shapes[name] || shapes.paw;
-  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>{shape({ stroke, color, colors })}</Svg>;
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>{shape({ stroke, color, colors })}</Svg>;
 }

@@ -5,7 +5,7 @@
   // Babel/Expo use presets and helpers; the existing local Gradle project uses
   // the React Native CLI via autolinkLibrariesFromCommand() in settings.gradle.
   "ignoreDependencies": [
-    "@babel/core", "@babel/runtime", "@react-native/babel-preset",
+    "@babel/core", "@babel/runtime",
     "@react-native-community/cli", "@react-native-community/cli-platform-android", "@react-native-community/cli-platform-ios"
   ],
   // `colors` intentionally aliases `lightColors` for compatibility in tests.

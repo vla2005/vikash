@@ -38,6 +38,9 @@ import com.vikash_api.entities.UserEntity;
 import com.vikash_api.enums.PaymentMethod;
 import com.vikash_api.enums.TransactionType;
 import com.vikash_api.exceptions.InvalidTransactionException;
+import com.vikash_api.exceptions.VoiceAnalysisValidationException;
+import com.vikash_api.exceptions.AiAnalysisUnavailableException;
+import com.vikash_api.enums.VoiceAnalysisField;
 import com.vikash_api.repositories.CreditCardRepository;
 import com.vikash_api.repositories.AccountRepository;
 import com.vikash_api.repositories.CustomCategoryRepository;
@@ -48,6 +51,7 @@ import lombok.RequiredArgsConstructor;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 
+@lombok.extern.slf4j.Slf4j
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
@@ -135,10 +139,14 @@ public class TransactionService {
         try (var permit = aiUsageService.acquire(userId)) {
             var read = new TransactionTemplate(transactionManager);
             read.setReadOnly(true);
+            log.info("event=voice.context.read-start");
             AiAnalysisContext context = read.execute(status -> getAnalysisContext());
+            log.info("event=voice.context.loaded accounts={} cards={} invoices={} defaultCategories={} customCategories={}", context.accounts().size(), context.creditCards().size(), context.creditCardInvoices().size(), context.defaultCategories().size(), context.customCategories().size());
             AiAnalysisResponse analysis = aiAnalysisService.analyze(request.transcription(), context);
             var write = new TransactionTemplate(transactionManager);
+            log.info("event=voice.transaction.write-start");
             write.executeWithoutResult(status -> saveAnalysis(request, analysis));
+            log.info("event=voice.transaction.committed");
         }
     }
 
@@ -176,7 +184,9 @@ public class TransactionService {
     private void saveAnalysis(TransactionRequest request, AiAnalysisResponse analysis) {
         // Reconsulta o usuário e os dados escolhidos após a análise; nenhuma entidade vem do contexto.
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
+        log.info("event=voice.analysis.validate-start");
         validateAnalysis(analysis);
+        log.info("event=voice.analysis.valid");
         if (analysis.type() == TransactionType.INVOICE_PAYMENT) {
             var paymentRequest = new CreditCardInvoicePaymentRequest(
                     analysis.accountUuid(), analysis.paymentMethod(), analysis.occurredAt());
@@ -233,7 +243,9 @@ public class TransactionService {
         transaction.setTranscription(request.transcription());
 
         transactionRepository.save(transaction);
+        log.info("event=voice.transaction.entity-saved");
         updateBalances(account, destinationAccount, analysis.type(), analysis.amount());
+        log.info("event=voice.transaction.balances-updated");
     }
 
     private AccountEntity getAccountForUpdate(UUID uuid, Long userId) {
@@ -281,18 +293,43 @@ public class TransactionService {
     }
 
     private void validateAnalysis(AiAnalysisResponse analysis) {
-        if (analysis == null) { throw new InvalidTransactionException("Não foi possível identificar o lançamento."); }
-        if (analysis.missingFields() != null && !analysis.missingFields().isEmpty()) {
-            if (analysis.missingFields().contains("partialInvoicePayment")) {
-                throw new InvalidTransactionException("Pagamentos parciais de faturas ainda não são suportados.");
+        if (analysis == null) { throw new AiAnalysisUnavailableException("A IA não retornou uma análise."); }
+        // Uma forma de parcelamento não suportada precisa ser corrigida antes de identificar a conta.
+        if (analysis.type() != TransactionType.INVOICE_PAYMENT && analysis.installmentCount() != null
+                && analysis.installmentCount() > 1 && analysis.paymentMethod() != null
+                && analysis.paymentMethod() != PaymentMethod.CREDIT_CARD) {
+            throw new InvalidTransactionException("Parcelamentos são permitidos somente no cartão de crédito.");
+        }
+        var missing = new java.util.LinkedHashSet<VoiceAnalysisField>();
+        if (analysis.missingFields() != null) {
+            for (String field : analysis.missingFields()) {
+                try { missing.add(VoiceAnalysisField.fromField(field)); }
+                catch (IllegalArgumentException ex) { throw new AiAnalysisUnavailableException("A IA retornou um campo de análise desconhecido.", ex); }
             }
-            if (analysis.missingFields().contains("creditCardInvoiceUuid")) {
-                throw new InvalidTransactionException("Informe o cartão e o mês/ano da fatura sem ambiguidades.");
-            }
-            if (analysis.missingFields().contains("installmentCount")) {
-                throw new InvalidTransactionException("Informe a quantidade de parcelas da compra.");
-            }
-            throw new InvalidTransactionException("Faltam informações para registrar o lançamento. Informe valor, forma de pagamento e conta ou cartão sem ambiguidades.");
+        }
+        // A validação do backend complementa a lista da IA antes de qualquer gravação.
+        boolean invoicePayment = analysis.type() == TransactionType.INVOICE_PAYMENT;
+        if (!invoicePayment) {
+            if (analysis.description() == null || analysis.description().isBlank()) { missing.add(VoiceAnalysisField.DESCRIPTION); }
+            if (analysis.amount() == null) { missing.add(VoiceAnalysisField.AMOUNT); }
+        }
+        if (analysis.type() == null) { missing.add(VoiceAnalysisField.TYPE); }
+        if (analysis.paymentMethod() == null) { missing.add(VoiceAnalysisField.PAYMENT_METHOD); }
+        if (analysis.occurredAt() == null) { missing.add(VoiceAnalysisField.OCCURRED_AT); }
+        if (analysis.installmentCount() == null) { missing.add(VoiceAnalysisField.INSTALLMENT_COUNT); }
+        if (invoicePayment) {
+            if (analysis.accountUuid() == null) { missing.add(VoiceAnalysisField.ACCOUNT); }
+            if (analysis.creditCardUuid() == null) { missing.add(VoiceAnalysisField.CREDIT_CARD); }
+            if (analysis.creditCardInvoiceUuid() == null) { missing.add(VoiceAnalysisField.CREDIT_CARD_INVOICE); }
+        } else if (analysis.paymentMethod() == PaymentMethod.CREDIT_CARD) {
+            if (analysis.creditCardUuid() == null) { missing.add(VoiceAnalysisField.CREDIT_CARD); }
+        } else if (analysis.accountUuid() == null) { missing.add(VoiceAnalysisField.ACCOUNT); }
+        if (analysis.type() == TransactionType.TRANSFER && analysis.destinationAccountUuid() == null) {
+            missing.add(VoiceAnalysisField.DESTINATION_ACCOUNT);
+        }
+        if (!missing.isEmpty()) {
+            log.info("event=voice.analysis.requires-review fields={}", missing.stream().map(VoiceAnalysisField::field).toList());
+            throw new VoiceAnalysisValidationException(missing);
         }
         if (analysis.type() == TransactionType.INVOICE_PAYMENT) {
             validateInvoicePayment(analysis);

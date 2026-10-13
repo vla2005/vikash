@@ -1,13 +1,34 @@
-import { useInputTheme, useTheme, useThemeStyles } from '../contexts/ThemeContext';
+import { pointerEventsStyles } from '../theme/interaction';
+import {
+  useInputTheme,
+  useTheme,
+  useThemeStyles,
+} from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AnimatedMicButton from './AnimatedMicButton';
-import VoiceWaveform from './VoiceWaveform';
+import ListeningOrb from './ListeningOrb';
+import ListeningWave from './ListeningWave';
+import VoiceMicButton from './VoiceMicButton';
+import VoiceScene from './VoiceScene';
+import GlassBackButton from './GlassBackButton';
 import Icon from './Icon';
+import VoiceAnalysisFeedback from './VoiceAnalysisFeedback';
+import voiceAnalysisFeedback from '../utils/voiceAnalysisFeedback';
 import useVoiceTranscription from '../hooks/useVoiceTranscription';
 import DrawerModal from './DrawerModal';
 import DrawerPanel from './DrawerPanel';
+import AmbientLight from './silver/AmbientLight';
 import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 
 export default function VoiceDrawer({ visible, onClose, onConfirm }) {
@@ -15,110 +36,477 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const { colors } = useTheme();
   const styles = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const compact = height < 700;
   const voice = useVoiceTranscription(visible);
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState(null);
   const [sending, setSending] = useState(false);
+  const [transcriptHeight, setTranscriptHeight] = useState(66);
+  const [sceneHeight, setSceneHeight] = useState(Math.max(280, height - 210));
   const submitting = useRef(false);
   const input = useRef(null);
   const review = voice.phase === 'review';
   const listening = voice.phase === 'listening';
+  const failed = voice.phase === 'error';
+  const preparing = voice.phase === 'starting' || voice.phase === 'stopping';
+  const busy = sending || preparing;
   useEffect(() => {
-    if (visible) { setFeedback(''); }
+    if (visible) {
+      setFeedback(null);
+      setTranscriptHeight(66);
+    }
   }, [visible]);
-  function close() { if (submitting.current) { return; } voice.cancel(); onClose(); }
+  function close() {
+    if (submitting.current) {
+      return;
+    }
+    voice.cancel();
+    onClose();
+  }
+  function restart() {
+    if (submitting.current || preparing) {
+      return;
+    }
+    setFeedback(null);
+    input.current?.blur();
+    setTranscriptHeight(66);
+    voice.start();
+  }
   async function confirm() {
-    if (!voice.text.trim() || submitting.current) { return; }
-    if (!onConfirm) { setFeedback('A análise estará disponível quando a integração com a API estiver pronta.'); return; }
-    setFeedback('');
+    if (!voice.text.trim() || submitting.current) {
+      return;
+    }
+    if (!onConfirm) {
+      setFeedback(voiceAnalysisFeedback(new Error(
+        'A análise estará disponível quando a integração com a API estiver pronta.',
+      )));
+      return;
+    }
+    setFeedback(null);
     submitting.current = true;
     setSending(true);
-    try { await onConfirm(voice.text.trim()); submitting.current = false; close(); }
-    catch (failure) { setFeedback(failure.message || 'Não foi possível analisar o texto. Tente novamente.'); }
-    finally { submitting.current = false; setSending(false); }
+    try {
+      await onConfirm(voice.text.trim());
+      submitting.current = false;
+      close();
+    } catch (failure) {
+      setFeedback(voiceAnalysisFeedback(failure));
+    } finally {
+      submitting.current = false;
+      setSending(false);
+    }
   }
-  const time = `${String(Math.floor(voice.seconds / 60)).padStart(2, '0')}:${String(voice.seconds % 60).padStart(2, '0')}`;
-  return <DrawerModal visible={visible} onRequestClose={close}>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
-      <Pressable style={styles.backdrop} accessibilityRole="button" accessibilityLabel="Fechar registro por voz" onPress={close} />
-      <DrawerPanel style={[styles.drawer, { maxHeight: height - insets.top - 16, paddingBottom: Math.max(insets.bottom, 12) + 12 }]}>
-        <View style={styles.handle} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Fechar microfone" onPress={close} hitSlop={12} style={styles.close}><Icon name="close" size={18} color={colors.secondary} /></Pressable>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          {review ? <>
-            <Text accessibilityRole="header" style={styles.reviewTitle}>Confira o que você disse</Text>
-            <Text style={styles.subtitle}>Edite o texto se precisar.</Text>
-            <View style={styles.reviewMic}><Icon name="microphone" size={34} color={colors.secondary} /></View>
-            <View style={styles.editor}>
-              <TextInput {...inputTheme} ref={input} accessibilityLabel="Texto transcrito" multiline value={voice.text} onChangeText={voice.setText} style={styles.input} textAlignVertical="top" editable={!sending} />
-              <Pressable accessibilityRole="button" accessibilityLabel="Editar transcrição" onPress={() => input.current?.focus()} style={styles.edit}><Icon name="edit" size={20} color={colors.secondary} /></Pressable>
+  const time = `${String(Math.floor(voice.seconds / 60)).padStart(
+    2,
+    '0',
+  )}:${String(voice.seconds % 60).padStart(2, '0')}`;
+  const liveText =
+    voice.text.length > 180
+      ? `…${voice.text.slice(-180).replace(/^\S*\s/, '')}`
+      : voice.text;
+  const orbSize = Math.min(
+    compact ? 200 : 300,
+    width - 40,
+    Math.max(compact ? 144 : 216, height * (compact ? 0.28 : 0.34)),
+  );
+  const reviewLabel = feedback?.type === 'warn'
+    ? 'Confirmar novamente'
+    : feedback ? 'Tentar novamente' : 'Confirmar e analisar';
+  const microphoneLabel = review
+    ? reviewLabel
+    : voice.phase === 'error'
+    ? 'Tentar novamente'
+    : 'Parar e revisar';
+  const travel = sceneHeight * (compact ? 0.42 : 0.4);
+  const visualOffset = -travel * (compact ? 0.46 : 0.32);
+  return (
+    <DrawerModal
+      visible={visible}
+      onRequestClose={close}
+      navigationBarTranslucent
+    >
+      <DrawerPanel fullScreen testID="voice-fullscreen" style={styles.drawer}>
+        <AmbientLight />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboard}
+        >
+          <View
+            style={[
+              styles.frame,
+              {
+                paddingTop: insets.top + 8,
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
+            ]}
+          >
+            <View style={styles.header}>
+              <GlassBackButton
+                accessibilityLabel="Voltar do registro por voz"
+                onPress={close}
+                disabled={sending}
+              />
+              <View style={styles.headerMark}>
+                <Icon name="microphone" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.headerCopy}>
+                <Text style={styles.headerTitle}>Registro por voz</Text>
+                <Text style={styles.headerSubtitle}>
+                  {review
+                    ? 'Revise antes de confirmar'
+                    : failed
+                    ? 'Não foi possível ouvir'
+                    : 'Novo lançamento'}
+                </Text>
+              </View>
             </View>
-          </> : <>
-            <View style={styles.microphone}><AnimatedMicButton large diameter={112} animate={listening} /></View>
-            <Text accessibilityRole="header" style={styles.title}>{listening ? 'Ouvindo você' : voice.phase === 'starting' ? 'Preparando microfone' : voice.phase === 'stopping' ? 'Finalizando transcrição' : 'Não foi possível ouvir'}</Text>
-            <Text style={styles.timer}>{time}</Text>
-            <VoiceWaveform active={listening} />
-            <View style={styles.transcription}>
-              <Text style={styles.label}>Transcrição em tempo real</Text>
-              <Text accessibilityLiveRegion="polite" style={[styles.transcript, !voice.text && styles.placeholder]}>{voice.text || (listening ? 'Fale sobre seu lançamento…' : 'Sua fala aparecerá aqui.')}{listening && <Text style={styles.cursor}> ▎</Text>}</Text>
+            <VoiceScene
+              review={review || failed}
+              distance={travel}
+              visualOffset={visualOffset}
+              onLayout={event =>
+                setSceneHeight(event.nativeEvent.layout.height)
+              }
+              visual={
+                <>
+                  <ListeningOrb active={visible && listening} size={orbSize} />
+                  <ListeningWave
+                    active={visible && listening}
+                    compact={compact}
+                  />
+                  <Text accessibilityRole="header" style={styles.title}>
+                    {listening
+                      ? 'Ouvindo você'
+                      : voice.phase === 'starting'
+                      ? 'Preparando microfone'
+                      : voice.phase === 'stopping'
+                      ? 'Finalizando transcrição'
+                      : review
+                      ? 'Transcrição pronta'
+                      : 'Não foi possível ouvir'}
+                  </Text>
+                  <Text style={styles.timer}>{time}</Text>
+                </>
+              }
+            >
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.transcriptContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {review ? (
+                  <View style={styles.transcriptEditor}>
+                    <Text
+                      accessible={false}
+                      accessibilityElementsHidden
+                      importantForAccessibility="no-hide-descendants"
+                      aria-hidden
+                      onLayout={event =>
+                        setTranscriptHeight(
+                          Math.max(
+                            66,
+                            Math.ceil(event.nativeEvent.layout.height) + 4,
+                          ),
+                        )
+                      }
+                      style={[[
+                        styles.transcript,
+                        compact && styles.transcriptCompact,
+                        styles.measurement,
+                      ], pointerEventsStyles.none]}
+                    >{`${voice.text}\u200b`}</Text>
+                    <TextInput
+                      {...inputTheme}
+                      ref={input}
+                      accessibilityLabel="Texto transcrito"
+                      multiline
+                      scrollEnabled={false}
+                      value={voice.text}
+                      onChangeText={text => {
+                        setFeedback(null);
+                        voice.setText(text);
+                      }}
+                      editable={!sending}
+                      textAlignVertical="top"
+                      style={[
+                        styles.transcript,
+                        styles.input,
+                        compact && styles.transcriptCompact,
+                        { height: transcriptHeight },
+                      ]}
+                    />
+                  </View>
+                ) : (
+                  <Text
+                    accessibilityLiveRegion="polite"
+                    accessibilityLabel={voice.text || undefined}
+                    numberOfLines={3}
+                    style={[
+                      styles.transcript,
+                      !voice.text && styles.placeholder,
+                      compact && styles.transcriptCompact,
+                    ]}
+                  >
+                    {liveText ||
+                      (listening
+                        ? 'Conte seu lançamento.\nVocê revisa antes de enviar.'
+                        : failed
+                        ? 'Você pode tentar novamente.'
+                        : 'Sua fala aparecerá aqui.')}
+                  </Text>
+                )}
+                <View style={styles.reviewTools}>
+                  {review && (
+                    <>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Editar transcrição"
+                        disabled={sending}
+                        onPress={() => input.current?.focus()}
+                        style={({ pressed }) => [
+                          styles.editButton,
+                          pressed && styles.iconPressed,
+                        ]}
+                      >
+                        <Icon name="edit" size={18} color={colors.secondary} />
+                        <Text style={styles.editLabel}>Editar texto</Text>
+                      </Pressable>
+                      {!feedback && <Text style={styles.notice}>
+                        A análise começa após sua confirmação.
+                      </Text>}
+                    </>
+                  )}
+                </View>
+                {!!feedback && review && (
+                  <VoiceAnalysisFeedback
+                    feedback={feedback}
+                    disabled={sending}
+                    onEdit={() => input.current?.focus()}
+                  />
+                )}
+                {!!voice.error && !review && (
+                  <Text accessibilityRole="alert" style={styles.error}>
+                    {voice.error}
+                  </Text>
+                )}
+                {voice.phase === 'error' && !!voice.text.trim() && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Revisar texto capturado"
+                    onPress={voice.review}
+                    style={styles.recovery}
+                  >
+                    <Text style={styles.recoveryText}>
+                      Revisar texto capturado
+                    </Text>
+                  </Pressable>
+                )}
+              </ScrollView>
+            </VoiceScene>
+            <View style={[styles.footer, compact && styles.footerCompact]}>
+              <View style={styles.controls}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Gravar novamente"
+                  disabled={busy}
+                  onPress={restart}
+                  hitSlop={4}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    pressed && styles.iconPressed,
+                    busy && styles.disabled,
+                  ]}
+                >
+                  <Icon name="restart" size={25} color={colors.text} />
+                </Pressable>
+                <VoiceMicButton
+                  active={visible && listening}
+                  review={review}
+                  label={microphoneLabel}
+                  disabled={busy || (review && !voice.text.trim())}
+                  onPress={
+                    review
+                      ? confirm
+                      : voice.phase === 'error'
+                      ? restart
+                      : voice.stop
+                  }
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Fechar microfone"
+                  disabled={sending}
+                  onPress={close}
+                  hitSlop={4}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    pressed && styles.iconPressed,
+                    sending && styles.disabled,
+                  ]}
+                >
+                  <Icon name="close" size={25} color={colors.text} />
+                </Pressable>
+              </View>
+              <Text style={styles.caption}>
+                {review
+                  ? sending
+                    ? 'Analisando…'
+                    : reviewLabel
+                  : listening
+                  ? 'Toque no microfone para parar e revisar'
+                  : voice.phase === 'error'
+                  ? 'Toque no microfone para tentar novamente'
+                  : 'Aguarde o microfone'}
+              </Text>
             </View>
-            {!!voice.error && <Text accessibilityRole="alert" style={styles.error}>{voice.error}</Text>}
-          </>}
-        </ScrollView>
-        <View style={styles.footer}>
-          {review ? <>
-            <Pressable accessibilityRole="button" accessibilityLabel="Confirmar e analisar" disabled={!voice.text.trim() || sending} onPress={confirm} style={({ pressed }) => [styles.primary, pressed && styles.pressed, (!voice.text.trim() || sending) && styles.disabled]}><Text style={styles.primaryText}>{sending ? 'Analisando…' : 'Confirmar e analisar'}</Text></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Gravar novamente" disabled={sending} onPress={() => { setFeedback(''); voice.start(); }} style={styles.outlined}><Text style={styles.outlinedText}>Gravar novamente</Text></Pressable>
-            {!!feedback && <Text accessibilityRole="alert" style={styles.feedback}>{feedback}</Text>}
-            <View style={styles.notice}><Icon name="info" size={15} color={colors.secondary} /><Text style={styles.noticeText}>A análise começa após sua confirmação.</Text></View>
-          </> : <>
-            <Pressable accessibilityRole="button" accessibilityLabel={voice.phase === 'error' ? 'Tentar novamente' : 'Parar e revisar'} disabled={voice.phase === 'starting' || voice.phase === 'stopping'} onPress={voice.phase === 'error' ? voice.start : voice.stop} style={({ pressed }) => [styles.primary, pressed && styles.pressed, (voice.phase === 'starting' || voice.phase === 'stopping') && styles.disabled]}>
-              {voice.phase !== 'error' && <View style={styles.stopIcon} />}<Text style={styles.primaryText}>{voice.phase === 'error' ? 'Tentar novamente' : 'Parar e revisar'}</Text>
-            </Pressable>
-            {voice.phase === 'error' && !!voice.text.trim() && <Pressable accessibilityRole="button" onPress={voice.review} style={styles.outlined}><Text style={styles.outlinedText}>Revisar texto capturado</Text></Pressable>}
-            <Pressable accessibilityRole="button" accessibilityLabel="Cancelar gravação" onPress={close} style={styles.cancel}><Text style={styles.cancelText}>Cancelar</Text></Pressable>
-            <Text style={styles.caption}>Você revisa o texto antes de enviar.</Text>
-          </>}
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </DrawerPanel>
-    </KeyboardAvoidingView>
-  </DrawerModal>;
+    </DrawerModal>
+  );
 }
-const createStyles = (colors) => StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: colors.dialogBackdrop },
-  backdrop: { ...StyleSheet.absoluteFill },
-  drawer: { width: '100%', maxWidth: 460, backgroundColor: colors.surface, borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 12, paddingHorizontal: 20 },
-  handle: { width: 40, height: 4, borderRadius: 3, backgroundColor: colors.handle, alignSelf: 'center' },
-  close: { position: 'absolute', right: 12, top: 6, width: 36, height: 36, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
-  scroll: { flexShrink: 1 },
-  content: { alignItems: 'center' },
-  microphone: { marginTop: 46, marginBottom: 30 },
-  title: { fontFamily: fontFamilyBold, color: colors.text, fontWeight: '700', fontSize: 23, lineHeight: 30, textAlign: 'center' },
-  timer: { fontFamily, fontSize: 14, color: colors.secondary, marginTop: 3, fontVariant: ['tabular-nums'] },
-  transcription: { width: '100%', marginTop: 3, marginBottom: 20, minHeight: 92 },
-  label: { fontFamily, fontSize: 12, color: colors.secondary, marginBottom: 9 },
-  transcript: { fontFamily, fontSize: 24, lineHeight: 31, color: colors.text, letterSpacing: -0.4 },
-  placeholder: { color: colors.secondary, fontSize: 21 },
-  cursor: { color: colors.primary },
-  error: { fontFamily, fontSize: 13, lineHeight: 19, color: colors.error, width: '100%', marginBottom: 18 },
-  reviewTitle: { fontFamily: fontFamilyBold, color: colors.text, fontWeight: '700', fontSize: 25, lineHeight: 31, letterSpacing: -0.8, textAlign: 'center', marginTop: 30 },
-  subtitle: { fontFamily, fontSize: 17, lineHeight: 24, color: colors.secondary, marginTop: 5, textAlign: 'center' },
-  reviewMic: { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', marginTop: 20, marginBottom: 18 },
-  editor: { width: '100%', backgroundColor: colors.surfaceMuted, borderRadius: 20, marginBottom: 24, minHeight: 116 },
-  input: { fontFamily, fontSize: 19, lineHeight: 26, color: colors.text, padding: 16, paddingRight: 42, minHeight: 116 },
-  edit: { position: 'absolute', right: 8, top: 10, padding: 5 },
-  footer: { width: '100%' },
-  primary: { backgroundColor: colors.brandPrimary, borderRadius: 18, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 13 },
-  primaryText: { fontFamily: fontFamilyMedium, color: colors.onBrand, fontSize: 16, fontWeight: '600' },
-  pressed: { backgroundColor: colors.primaryPressed },
-  disabled: { opacity: 0.5 },
-  stopIcon: { width: 15, height: 15, borderRadius: 2, backgroundColor: colors.surface },
-  cancel: { height: 44, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  cancelText: { fontFamily: fontFamilyMedium, color: colors.text, fontSize: 15, fontWeight: '500' },
-  outlined: { height: 46, borderRadius: 18, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  outlinedText: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.primary },
-  caption: { fontFamily, fontSize: 12, color: colors.secondary, textAlign: 'center', marginTop: 8 },
-  notice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 15 },
-  noticeText: { fontFamily, fontSize: 12, color: colors.secondary },
-  feedback: { fontFamily, fontSize: 13, lineHeight: 18, color: colors.secondary, marginTop: 12, textAlign: 'center' },
-});
+const createStyles = colors =>
+  StyleSheet.create({
+    drawer: { flex: 1, width: '100%' },
+    keyboard: { flex: 1 },
+    frame: {
+      flex: 1,
+      width: '100%',
+      maxWidth: 520,
+      alignSelf: 'center',
+      paddingHorizontal: 24,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 52,
+      gap: 10,
+    },
+    headerMark: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.surfaceMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerCopy: { flex: 1 },
+    headerTitle: {
+      fontFamily: fontFamilyBold,
+      fontSize: 16,
+      lineHeight: 22,
+      color: colors.text,
+    },
+    headerSubtitle: {
+      fontFamily,
+      fontSize: 12,
+      lineHeight: 18,
+      color: colors.secondary,
+    },
+    scroll: { flex: 1 },
+    transcriptContent: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 24,
+      paddingBottom: 24,
+    },
+    title: {
+      fontFamily: fontFamilyMedium,
+      fontSize: 18,
+      lineHeight: 26,
+      color: colors.text,
+      marginTop: 8,
+      textAlign: 'center',
+    },
+    timer: {
+      fontFamily,
+      fontSize: 13,
+      color: colors.secondary,
+      marginTop: 4,
+      fontVariant: ['tabular-nums'],
+    },
+    transcript: {
+      fontFamily: fontFamilyMedium,
+      fontSize: 24,
+      lineHeight: 33,
+      letterSpacing: -0.5,
+      color: colors.text,
+      textAlign: 'center',
+      width: '100%',
+    },
+    placeholder: { color: colors.secondary, fontSize: 21, lineHeight: 30 },
+    transcriptCompact: { fontSize: 20, lineHeight: 27 },
+    error: {
+      fontFamily,
+      fontSize: 14,
+      lineHeight: 21,
+      color: colors.error,
+      textAlign: 'center',
+      marginTop: 20,
+    },
+    input: {
+      padding: 0,
+      minHeight: 66,
+      borderWidth: 0,
+      backgroundColor: 'transparent',
+      ...(Platform.OS === 'web'
+        ? { outlineWidth: 0, outlineStyle: 'none' }
+        : {}),
+    },
+    transcriptEditor: { width: '100%', position: 'relative' },
+    measurement: { position: 'absolute', top: 0, left: 0, opacity: 0 },
+    reviewTools: { minHeight: 84, alignItems: 'center', width: '100%' },
+    editButton: {
+      minHeight: 48,
+      flexDirection: 'row',
+      gap: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      borderRadius: 24,
+    },
+    editLabel: { fontFamily, fontSize: 13, color: colors.secondary },
+    notice: {
+      fontFamily,
+      fontSize: 12,
+      lineHeight: 18,
+      color: colors.secondary,
+      marginTop: 4,
+    },
+    footer: { paddingTop: 24, paddingBottom: 6 },
+    footerCompact: { paddingTop: 16 },
+    controls: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-evenly',
+      gap: 24,
+    },
+    iconButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconPressed: {
+      backgroundColor: colors.surfaceMuted,
+      transform: [{ scale: 0.96 }],
+    },
+    disabled: { opacity: 0.45 },
+    caption: {
+      fontFamily,
+      fontSize: 12,
+      lineHeight: 18,
+      color: colors.secondary,
+      textAlign: 'center',
+      marginTop: 20,
+    },
+    recovery: { padding: 12, marginTop: 12 },
+    recoveryText: {
+      fontFamily: fontFamilyMedium,
+      fontSize: 14,
+      color: colors.primary,
+    },
+  });

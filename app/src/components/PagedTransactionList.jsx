@@ -1,4 +1,5 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
+import useDockPadding from '../hooks/useDockPadding';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ListSkeleton } from './Skeleton';
@@ -13,6 +14,7 @@ import { fontFamilyMedium, fontFamily } from '../theme';
 const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 export default function PagedTransactionList({ accessToken, endpoint, revision = 0, preserveScrollPosition = false, header, emptyMessage, showSigns = false, onOpenTransaction, onDeleted }) {
   const s = useThemeStyles(createStyles);
+  const dockPadding = useDockPadding(s.content);
   const { rows, loading, error, hasNext, loadMore, retry, reload } = useTransactions(accessToken, endpoint, revision);
   const scrollPosition = useRef({ offset: 0, height: 0, contentHeight: 0 });
   const [contentFloor, setContentFloor] = useState(0);
@@ -29,7 +31,7 @@ export default function PagedTransactionList({ accessToken, endpoint, revision =
   }, [endpoint, revision, preserveScrollPosition]);
   const [openRow, setOpenRow] = useState(null);
   const deletion = useTransactionDeletion(accessToken, () => { reload(); onDeleted?.(); });
-  return <><FlatList data={rows} keyExtractor={item => item.id} contentContainerStyle={[s.content, preserveScrollPosition && { minHeight: contentFloor }]}
+  return <><FlatList data={rows} keyExtractor={item => item.id} contentContainerStyle={[s.content, preserveScrollPosition && { minHeight: contentFloor }, dockPadding]}
     style={preserveScrollPosition && Platform.OS === 'web' && s.stableScroll} showsVerticalScrollIndicator={false}
     onLayout={event => { scrollPosition.current.height = event.nativeEvent.layout.height; }}
     onContentSizeChange={(_, height) => {

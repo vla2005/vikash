@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
 import Icon from '../components/Icon';
+import GlassBackButton from '../components/GlassBackButton';
 import InstitutionLogo from '../components/InstitutionLogo';
 import FormField from '../components/FormField';
 import SelectionField from '../components/SelectionField';
@@ -28,7 +29,7 @@ export default function CreditCardInitialInvoicesScreen({ uuid, accessToken, onB
     return () => subscription.remove();
   }, [saving, onBack]);
   return <Screen contentStyle={s.content}>
-    <View style={s.nav}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para o cartão" disabled={saving} onPress={onBack} style={s.back}><View style={{ transform: [{ rotate: '180deg' }] }}><Icon name="chevron" /></View></Pressable><Text style={s.navTitle}>Valores iniciais</Text><View style={s.back} /></View>
+    <View style={s.nav}><GlassBackButton accessibilityLabel="Voltar para o cartão" disabled={saving} onPress={onBack} /><Text style={s.navTitle}>Valores iniciais</Text><View style={s.back} /></View>
     {loading ? <DetailsSkeleton card label="Carregando valores iniciais" /> : error ? <View style={s.feedback}><InlineNotice error message={error} /><PrimaryButton title="Tentar novamente" onPress={retry} outlined icon={null} /></View> : card && <DistributionForm card={card} accessToken={accessToken} saving={saving} setSaving={setSaving} onBack={onBack} onSaved={onSaved} />}
   </Screen>;
 }

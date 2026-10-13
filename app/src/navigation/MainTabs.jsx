@@ -1,6 +1,16 @@
-import { useThemeStyles } from '../contexts/ThemeContext';
+import { ThemeVariant, useTheme, useThemeStyles } from '../contexts/ThemeContext';
+import AmbientLight from '../components/silver/AmbientLight';
+import { header } from '../theme/silver';
+import DockProvider from '../components/silver/DockProvider';
+import DockBackdrop from '../components/silver/DockBackdrop';
 import React, { useEffect, useState } from 'react';
-import { BackHandler, Platform, StyleSheet, View } from 'react-native';
+import {
+  BackHandler,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import StatementScreen from '../screens/StatementScreen';
@@ -25,15 +35,15 @@ import useAccounts from '../hooks/useAccounts';
 import useCreditCards from '../hooks/useCreditCards';
 import useToast from '../hooks/useToast';
 import BottomNavigator from '../components/BottomNavigator';
-import AppHeader from '../components/AppHeader';
+import FloatingAppHeader from '../components/silver/FloatingAppHeader';
 import ProfileSwitcherDrawer from '../components/ProfileSwitcherDrawer';
 import VoiceDrawer from '../components/VoiceDrawer';
 import ScreenTransition from '../components/ScreenTransition';
 import { createTransaction } from '../services/transactions';
 
-
 export default function MainTabs({ navigation }) {
   const styles = useThemeStyles(createStyles);
+  const { colors, scheme } = useTheme();
   const [selected, setSelected] = useState('Home');
   const [voiceVisible, setVoiceVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
@@ -53,148 +63,592 @@ export default function MainTabs({ navigation }) {
   const [invoiceToOpen, setInvoiceToOpen] = useState(null);
   const { showToast } = useToast();
   const onboarding = useOnboarding();
-  const { categories, defaultCategories, loading, error, retry, saving, saveCategory: persistCategory, removeCategory } = useCategories(onboarding?.session?.accessToken, selected === 'Categories');
+  const {
+    categories,
+    defaultCategories,
+    loading,
+    error,
+    retry,
+    saving,
+    saveCategory: persistCategory,
+    removeCategory,
+  } = useCategories(
+    onboarding?.session?.accessToken,
+    selected === 'Categories',
+  );
   const [categoryForm, setCategoryForm] = useState(null);
-  const accountList = useAccounts(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
-  const cardList = useCreditCards(onboarding?.session?.accessToken, selected === 'AccountManagement' && !accountForm && !cardUuid && !accountUuid);
+  const accountList = useAccounts(
+    onboarding?.session?.accessToken,
+    selected === 'AccountManagement' &&
+      !accountForm &&
+      !cardUuid &&
+      !accountUuid,
+  );
+  const cardList = useCreditCards(
+    onboarding?.session?.accessToken,
+    selected === 'AccountManagement' &&
+      !accountForm &&
+      !cardUuid &&
+      !accountUuid,
+  );
   const insets = useSafeAreaInsets();
-  const showAppHeader = !profileVisible && !itemDetails
-    && !(selected === 'AccountManagement' && (accountForm || cardUuid || accountUuid))
-    && !(selected === 'Categories' && categoryForm);
+  const showAppHeader =
+    !profileVisible &&
+    !itemDetails &&
+    !(
+      selected === 'AccountManagement' &&
+      (accountForm || cardUuid || accountUuid)
+    ) &&
+    !(selected === 'Categories' && categoryForm);
   useEffect(() => {
-    if (Platform.OS !== 'android') { return; }
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (profileVisible && profileForm) { setProfileForm(null); return true; }
-      if (profileVisible) { setProfileVisible(false); return true; }
-      if (itemEdit) { if (!itemSaving) { setItemEdit(null); } return true; }
-      if (itemDetails) { setItemDetails(null); return true; }
-      if (initialBalanceUuid) { return false; }
-      if (accountForm) { setAccountForm(null); return true; }
-      if (cardUuid) { setCardUuid(null); return true; }
-      if (accountUuid) { setAccountUuid(null); return true; }
-      if (categoryForm) { setCategoryForm(null); return true; }
-      if (selected === 'Home') { return false; }
-      setSelected('Home'); return true;
-    });
+    if (Platform.OS !== 'android') {
+      return;
+    }
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (profileVisible && profileForm) {
+          setProfileForm(null);
+          return true;
+        }
+        if (profileVisible) {
+          setProfileVisible(false);
+          return true;
+        }
+        if (itemEdit) {
+          if (!itemSaving) {
+            setItemEdit(null);
+          }
+          return true;
+        }
+        if (itemDetails) {
+          setItemDetails(null);
+          return true;
+        }
+        if (initialBalanceUuid) {
+          return false;
+        }
+        if (accountForm) {
+          setAccountForm(null);
+          return true;
+        }
+        if (cardUuid) {
+          setCardUuid(null);
+          return true;
+        }
+        if (accountUuid) {
+          setAccountUuid(null);
+          return true;
+        }
+        if (categoryForm) {
+          setCategoryForm(null);
+          return true;
+        }
+        if (selected === 'Home') {
+          return false;
+        }
+        setSelected('Home');
+        return true;
+      },
+    );
     return () => subscription.remove();
-  }, [selected, categoryForm, accountForm, cardUuid, accountUuid, itemDetails, itemEdit, itemSaving, profileVisible, profileForm, initialBalanceUuid]);
+  }, [
+    selected,
+    categoryForm,
+    accountForm,
+    cardUuid,
+    accountUuid,
+    itemDetails,
+    itemEdit,
+    itemSaving,
+    profileVisible,
+    profileForm,
+    initialBalanceUuid,
+  ]);
   function openDetails(row, invoiceUuid) {
     setInvoiceToOpen(null);
-    setItemDetails({ uuid: row.purchaseUuid || row.id, purchase: !!row.purchaseUuid, invoiceUuid });
+    setItemDetails({
+      uuid: row.purchaseUuid || row.id,
+      purchase: !!row.purchaseUuid,
+      invoiceUuid,
+    });
   }
   function refreshAfterDeletion() {
     setDashboardRevision(value => value + 1);
     setStatementRevision(value => value + 1);
     setCardRevision(value => value + 1);
     setAccountRevision(value => value + 1);
-    accountList.retry(); cardList.retry();
+    accountList.retry();
+    cardList.retry();
   }
-  function closeDeletedDetails() { setItemDetails(null); refreshAfterDeletion(); }
+  function closeDeletedDetails() {
+    setItemDetails(null);
+    refreshAfterDeletion();
+  }
   function openInvoice(card, invoice) {
-    setItemDetails(null); setAccountUuid(null); setSelected('AccountManagement');
-    setCardUuid(card); setInvoiceToOpen(invoice);
+    setItemDetails(null);
+    setAccountUuid(null);
+    setSelected('AccountManagement');
+    setCardUuid(card);
+    setInvoiceToOpen(invoice);
   }
   function openAccount(uuid) {
-    setItemDetails(null); setCardUuid(null); setInvoiceToOpen(null); setAccountForm(null);
-    setAccountUuid(uuid); setSelected('AccountManagement');
+    setItemDetails(null);
+    setCardUuid(null);
+    setInvoiceToOpen(null);
+    setAccountForm(null);
+    setAccountUuid(uuid);
+    setSelected('AccountManagement');
   }
   async function saveCategory(values) {
     const saved = await persistCategory(values, categoryForm.category);
-    if (saved) { setCategoryForm(null); }
+    if (saved) {
+      setCategoryForm(null);
+    }
   }
   async function deleteCategory(category) {
-    if (!await removeCategory(category)) { throw new Error('Aguarde a alteração em andamento.'); }
+    if (!(await removeCategory(category))) {
+      throw new Error('Aguarde a alteração em andamento.');
+    }
     setCategoryForm(null);
     setDashboardRevision(value => value + 1);
     setStatementRevision(value => value + 1);
     setCardRevision(value => value + 1);
     setAccountRevision(value => value + 1);
-    showToast({ type: 'success', message: 'Categoria excluída. Seus lançamentos foram preservados.' });
+    showToast({
+      type: 'success',
+      message: 'Categoria excluída. Seus lançamentos foram preservados.',
+    });
   }
   async function confirmTranscription(transcription) {
-    try {
-      await createTransaction(transcription, onboarding?.session?.accessToken);
-      setDashboardRevision(value => value + 1);
-      showToast({ type: 'success', title: 'Transação registrada!', message: 'Seu lançamento foi salvo com sucesso.' });
-      if (selected === 'AccountManagement') { accountList.retry(); cardList.retry(); }
-      if (cardUuid) { setCardRevision(value => value + 1); }
-      if (accountUuid) { setAccountRevision(value => value + 1); }
-    } catch (failure) {
-      showToast({ type: 'error', title: 'Não foi possível registrar', message: failure.message });
-      throw failure;
+    await createTransaction(transcription, onboarding?.session?.accessToken);
+    setDashboardRevision(value => value + 1);
+    showToast({
+      type: 'success',
+      title: 'Transação registrada!',
+      message: 'Seu lançamento foi salvo com sucesso.',
+    });
+    if (selected === 'AccountManagement') {
+      accountList.retry();
+      cardList.retry();
+    }
+    if (cardUuid) {
+      setCardRevision(value => value + 1);
+    }
+    if (accountUuid) {
+      setAccountRevision(value => value + 1);
     }
   }
   function renderContent() {
-    if (selected === 'Home') { return <HomeScreen profile={onboarding?.profile} accessToken={onboarding?.session?.accessToken} revision={dashboardRevision} onOpenAccount={openAccount} onOpenCard={openInvoice} onViewCards={() => setSelected('AccountManagement')} onOpenTransaction={openDetails} onViewStatement={() => setSelected('Statement')} />; }
-    if (selected === 'Statement') { return <StatementScreen accessToken={onboarding?.session?.accessToken} onOpenTransaction={openDetails} revision={statementRevision} onDeleted={refreshAfterDeletion} />; }
+    if (selected === 'Home') {
+      return (
+        <HomeScreen
+          profile={onboarding?.profile}
+          accessToken={onboarding?.session?.accessToken}
+          revision={dashboardRevision}
+          onOpenAccount={openAccount}
+          onOpenCard={openInvoice}
+          onViewCards={() => setSelected('AccountManagement')}
+          onOpenTransaction={openDetails}
+          onViewStatement={() => setSelected('Statement')}
+        />
+      );
+    }
+    if (selected === 'Statement') {
+      return (
+        <StatementScreen
+          accessToken={onboarding?.session?.accessToken}
+          onOpenTransaction={openDetails}
+          revision={statementRevision}
+          onDeleted={refreshAfterDeletion}
+        />
+      );
+    }
     if (selected === 'AccountManagement') {
-      if (initialBalanceUuid) { return <CreditCardInitialInvoicesScreen key={initialBalanceUuid} uuid={initialBalanceUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setInitialBalanceUuid(null)} onSaved={() => { setInitialBalanceUuid(null); setCardRevision(value => value + 1); setDashboardRevision(value => value + 1); cardList.retry(); }} />; }
+      if (initialBalanceUuid) {
+        return (
+          <CreditCardInitialInvoicesScreen
+            key={initialBalanceUuid}
+            uuid={initialBalanceUuid}
+            accessToken={onboarding?.session?.accessToken}
+            onBack={() => setInitialBalanceUuid(null)}
+            onSaved={() => {
+              setInitialBalanceUuid(null);
+              setCardRevision(value => value + 1);
+              setDashboardRevision(value => value + 1);
+              cardList.retry();
+            }}
+          />
+        );
+      }
       if (accountForm) {
         const close = () => setAccountForm(null);
-        if (accountForm.kind === 'card') { return <CreateCreditCardScreen key={accountForm.card?.uuid || 'new-card'} card={accountForm.card} onCancel={close} onCreated={() => { close(); setCardRevision(value => value + 1); setDashboardRevision(value => value + 1); }} />; }
-        return <CreateAccountScreen key={accountForm.account?.uuid || 'new-account'} route={{ params: { fromManagement: true, account: accountForm.account } }} navigation={{ goBack: close, reset: () => { close(); setAccountRevision(value => value + 1); } }} />;
+        if (accountForm.kind === 'card') {
+          return (
+            <CreateCreditCardScreen
+              key={accountForm.card?.uuid || 'new-card'}
+              card={accountForm.card}
+              onCancel={close}
+              onCreated={() => {
+                close();
+                setCardRevision(value => value + 1);
+                setDashboardRevision(value => value + 1);
+              }}
+            />
+          );
+        }
+        return (
+          <CreateAccountScreen
+            key={accountForm.account?.uuid || 'new-account'}
+            route={{
+              params: { fromManagement: true, account: accountForm.account },
+            }}
+            navigation={{
+              goBack: close,
+              reset: () => {
+                close();
+                setAccountRevision(value => value + 1);
+              },
+            }}
+          />
+        );
       }
-      if (cardUuid) { return <CreditCardDetailsScreen key={cardUuid} uuid={cardUuid} accessToken={onboarding?.session?.accessToken} onBack={() => { setCardUuid(null); setInvoiceToOpen(null); }} onDistribute={() => setInitialBalanceUuid(cardUuid)} onEdit={card => setAccountForm({ kind: 'card', card })} revision={cardRevision} onPayment={() => { accountList.retry(); cardList.retry(); }} onOpenTransaction={openDetails} initialInvoiceUuid={invoiceToOpen} onDeleted={refreshAfterDeletion} />; }
-      if (accountUuid) { return <AccountDetailsScreen key={accountUuid} uuid={accountUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setAccountUuid(null)} onEdit={account => setAccountForm({ kind: 'account', account })} revision={accountRevision} onOpenTransaction={openDetails} onDeleted={refreshAfterDeletion} />; }
-      return <AccountsScreen {...accountList} profile={onboarding?.profile} cards={cardList.cards} cardsLoading={cardList.loading} cardsError={cardList.error} onRetryCards={cardList.retry} onOpenCard={openInvoice} onRetry={accountList.retry} onCreate={() => setAccountForm({ kind: 'account', account: null })} onCreateCard={() => setAccountForm({ kind: 'card' })} onEdit={account => setAccountUuid(account.uuid)} />;
+      if (cardUuid) {
+        return (
+          <CreditCardDetailsScreen
+            key={cardUuid}
+            uuid={cardUuid}
+            accessToken={onboarding?.session?.accessToken}
+            onBack={() => {
+              setCardUuid(null);
+              setInvoiceToOpen(null);
+            }}
+            onDistribute={() => setInitialBalanceUuid(cardUuid)}
+            onEdit={card => setAccountForm({ kind: 'card', card })}
+            revision={cardRevision}
+            onPayment={() => {
+              accountList.retry();
+              cardList.retry();
+            }}
+            onOpenTransaction={openDetails}
+            initialInvoiceUuid={invoiceToOpen}
+            onDeleted={refreshAfterDeletion}
+          />
+        );
+      }
+      if (accountUuid) {
+        return (
+          <AccountDetailsScreen
+            key={accountUuid}
+            uuid={accountUuid}
+            accessToken={onboarding?.session?.accessToken}
+            onBack={() => setAccountUuid(null)}
+            onEdit={account => setAccountForm({ kind: 'account', account })}
+            revision={accountRevision}
+            onOpenTransaction={openDetails}
+            onDeleted={refreshAfterDeletion}
+          />
+        );
+      }
+      return (
+        <AccountsScreen
+          {...accountList}
+          profile={onboarding?.profile}
+          cards={cardList.cards}
+          cardsLoading={cardList.loading}
+          cardsError={cardList.error}
+          onRetryCards={cardList.retry}
+          onOpenCard={openInvoice}
+          onRetry={accountList.retry}
+          onCreate={() => setAccountForm({ kind: 'account', account: null })}
+          onCreateCard={() => setAccountForm({ kind: 'card' })}
+          onEdit={account => setAccountUuid(account.uuid)}
+        />
+      );
     }
     if (categoryForm) {
-      return <CategoryFormScreen key={categoryForm.category?.uuid ?? categoryForm.category?.name ?? 'new-category'} category={categoryForm.category} existingCategories={[...defaultCategories, ...categories]} saving={saving} onSave={saveCategory} onDelete={deleteCategory} onCancel={() => setCategoryForm(null)} />;
+      return (
+        <CategoryFormScreen
+          key={
+            categoryForm.category?.uuid ??
+            categoryForm.category?.name ??
+            'new-category'
+          }
+          category={categoryForm.category}
+          existingCategories={[...defaultCategories, ...categories]}
+          saving={saving}
+          onSave={saveCategory}
+          onDelete={deleteCategory}
+          onCancel={() => setCategoryForm(null)}
+        />
+      );
     }
-    return <CategoriesScreen categories={categories} defaultCategories={defaultCategories} loading={loading} error={error} onRetry={retry} onCreate={() => setCategoryForm({ category: null })} onEdit={category => setCategoryForm({ category })} onDelete={deleteCategory} />;
+    return (
+      <CategoriesScreen
+        categories={categories}
+        defaultCategories={defaultCategories}
+        accessToken={onboarding?.session?.accessToken}
+        revision={dashboardRevision + statementRevision}
+        loading={loading}
+        error={error}
+        onRetry={retry}
+        onCreate={() => setCategoryForm({ category: null })}
+        onEdit={category => setCategoryForm({ category })}
+        onDelete={deleteCategory}
+      />
+    );
   }
   function renderProfile() {
     const backToProfile = () => setProfileForm(null);
-    if (profileForm === 'edit') { return <EditProfileScreen profile={onboarding?.profile} onSave={onboarding?.updateProfile} onBack={backToProfile} />; }
-    if (profileForm === 'password') { return <ChangePasswordScreen onSave={onboarding?.changePassword} onBack={backToProfile} onForgotPassword={() => setProfileForm('recovery')} />; }
-    if (profileForm === 'recovery') { return <ForgotPasswordScreen initialEmail={onboarding?.profile?.email} onBack={() => setProfileForm('password')} backLabel="Voltar para alterar senha" />; }
-    return <ProfileScreen profile={onboarding?.profile} onBack={() => setProfileVisible(false)} onLogout={onboarding.logout}
-      onEdit={() => setProfileForm('edit')} onPassword={() => setProfileForm('password')}
-      onSupport={() => showToast({ type: 'info', message: 'O suporte estará disponível em breve.' })} />;
+    if (profileForm === 'edit') {
+      return (
+        <EditProfileScreen
+          profile={onboarding?.profile}
+          onSave={onboarding?.updateProfile}
+          onBack={backToProfile}
+        />
+      );
+    }
+    if (profileForm === 'password') {
+      return (
+        <ChangePasswordScreen
+          onSave={onboarding?.changePassword}
+          onBack={backToProfile}
+          onForgotPassword={() => setProfileForm('recovery')}
+        />
+      );
+    }
+    if (profileForm === 'recovery') {
+      return (
+        <ForgotPasswordScreen
+          initialEmail={onboarding?.profile?.email}
+          onBack={() => setProfileForm('password')}
+          backLabel="Voltar para alterar senha"
+        />
+      );
+    }
+    return (
+      <ProfileScreen
+        profile={onboarding?.profile}
+        onBack={() => setProfileVisible(false)}
+        onLogout={onboarding.logout}
+        onEdit={() => setProfileForm('edit')}
+        onPassword={() => setProfileForm('password')}
+
+      />
+    );
   }
   function getScene() {
-    const order = ['Home', 'Statement', 'AccountManagement', 'Categories'].indexOf(selected);
+    const order = [
+      'Home',
+      'Statement',
+      'AccountManagement',
+      'Categories',
+    ].indexOf(selected);
     const base = { key: selected, depth: 0, order };
     if (selected === 'AccountManagement') {
-      if (initialBalanceUuid) { base.key += `:initial:${initialBalanceUuid}`; base.depth = 3; }
-      else if (accountForm) { base.key += `:form:${accountForm.kind}:${accountForm.card?.uuid || accountForm.account?.uuid || 'new'}`; base.depth = cardUuid || accountUuid ? 2 : 1; }
-      else if (cardUuid || accountUuid) { base.key += `:details:${cardUuid || accountUuid}`; base.depth = 1; }
+      if (initialBalanceUuid) {
+        base.key += `:initial:${initialBalanceUuid}`;
+        base.depth = 3;
+      } else if (accountForm) {
+        base.key += `:form:${accountForm.kind}:${
+          accountForm.card?.uuid || accountForm.account?.uuid || 'new'
+        }`;
+        base.depth = cardUuid || accountUuid ? 2 : 1;
+      } else if (cardUuid || accountUuid) {
+        base.key += `:details:${cardUuid || accountUuid}`;
+        base.depth = 1;
+      }
     } else if (selected === 'Categories' && categoryForm) {
-      base.key += `:form:${categoryForm.category?.uuid || categoryForm.category?.name || 'new'}`; base.depth = 1;
+      base.key += `:form:${
+        categoryForm.category?.uuid || categoryForm.category?.name || 'new'
+      }`;
+      base.depth = 1;
     }
-    if (profileVisible) { return { key: `profile:${profileForm || 'overview'}`, depth: profileForm === 'recovery' ? 3 : profileForm ? 2 : 1, order }; }
-    if (itemEdit) { return { key: `edit:${itemEdit.details.uuid}`, depth: base.depth + 2, order }; }
-    if (itemDetails) { return { key: `transaction:${itemDetails.purchase}:${itemDetails.uuid}`, depth: base.depth + 1, order }; }
+    if (profileVisible) {
+      return {
+        key: `profile:${profileForm || 'overview'}`,
+        depth: profileForm === 'recovery' ? 3 : profileForm ? 2 : 1,
+        order,
+      };
+    }
+    if (itemEdit) {
+      return {
+        key: `edit:${itemEdit.details.uuid}`,
+        depth: base.depth + 2,
+        order,
+      };
+    }
+    if (itemDetails) {
+      return {
+        key: `transaction:${itemDetails.purchase}:${itemDetails.uuid}`,
+        depth: base.depth + 1,
+        order,
+      };
+    }
     return base;
   }
   const scene = getScene();
-  return <View style={styles.background}>
-    <View style={[styles.canvas, { paddingTop: insets.top }]}>
-      <View testID="app-header" accessibilityElementsHidden={!showAppHeader} importantForAccessibility={showAppHeader ? 'auto' : 'no-hide-descendants'}
-        style={[styles.header, !showAppHeader && styles.hidden]}><AppHeader profile={onboarding?.profile} onOpenProfile={() => setProfilesVisible(true)} /></View>
-      <ScreenTransition sceneKey={scene.key} depth={scene.depth} order={scene.order}>
-      <View accessibilityElementsHidden={profileVisible} importantForAccessibility={profileVisible ? 'no-hide-descendants' : 'auto'}
-        style={[styles.content, (itemDetails || profileVisible) && styles.hidden]}>{renderContent()}</View>
-      {profileVisible && <View style={styles.profile}>{renderProfile()}</View>}
-      {itemEdit ? <View style={styles.content}><EditTransactionScreen key={itemEdit.details.uuid} details={itemEdit.details} purchase={itemEdit.purchase} accessToken={onboarding?.session?.accessToken} onSavingChange={setItemSaving} onBack={() => setItemEdit(null)} onSaved={() => { setItemEdit(null); closeDeletedDetails(); }} /></View> : itemDetails && <View style={styles.content}>{itemDetails.purchase
-        ? <CreditCardPurchaseDetailsScreen key={itemDetails.uuid} uuid={itemDetails.uuid} selectedInvoiceUuid={itemDetails.invoiceUuid} accessToken={onboarding?.session?.accessToken} onBack={() => setItemDetails(null)} onOpenInvoice={openInvoice} onDeleted={closeDeletedDetails} onEdit={details => setItemEdit({ details, purchase: true })} />
-        : <TransactionDetailsScreen key={itemDetails.uuid} uuid={itemDetails.uuid} accessToken={onboarding?.session?.accessToken} onBack={() => setItemDetails(null)} onDeleted={closeDeletedDetails} onEdit={details => setItemEdit({ details, purchase: false })} />}</View>}
-      </ScreenTransition>
-      {!itemEdit && !accountForm && !initialBalanceUuid && !profileVisible && <BottomNavigator selected={selected} onSelect={key => { setItemDetails(null); setInvoiceToOpen(null); setCategoryForm(null); setAccountForm(null); setCardUuid(null); setAccountUuid(null); setSelected(key); }} onMicrophone={() => setVoiceVisible(true)} microphoneOpen={voiceVisible} />}
-    </View>
-    <VoiceDrawer visible={voiceVisible} onClose={() => setVoiceVisible(false)} onConfirm={confirmTranscription} />
-    <ProfileSwitcherDrawer visible={profilesVisible} profiles={onboarding.profiles} activeProfileId={onboarding.activeProfileId}
-      onClose={() => setProfilesVisible(false)} onSelect={onboarding.switchProfile} onLogout={onboarding.logout}
-      onAdd={() => navigation.navigate('Login', { addingAccount: true })}
-      onRequireLogin={profile => navigation.navigate('Login', { addingAccount: true, email: profile.email })}
-      onOpenProfile={() => { setProfileForm(null); setProfileVisible(true); }} />
-  </View>;
+  const showDock =
+    !itemEdit &&
+    !accountForm &&
+    !initialBalanceUuid &&
+    !profileVisible &&
+    !categoryForm;
+  return (
+    <ThemeVariant>
+      <DockProvider
+        sceneKey={scene.key}
+        bottomInset={insets.bottom}
+        headerHeight={showAppHeader ? header.height : 0}
+      >
+        <View
+          style={[
+            styles.background,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <StatusBar
+            barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
+            backgroundColor={colors.background}
+          />
+          <View style={[styles.canvas, { paddingTop: insets.top }]}>
+            {Platform.OS === 'android' && <AmbientLight />}
+            <DockBackdrop style={styles.backdrop}>
+              {/* No Android, a luz do topo não precisa entrar na amostra do dock. */}
+              {Platform.OS !== 'android' && <AmbientLight />}
+              <ScreenTransition
+                sceneKey={scene.key}
+                depth={scene.depth}
+                order={scene.order}
+              >
+                <View
+                  accessibilityElementsHidden={profileVisible}
+                  importantForAccessibility={
+                    profileVisible ? 'no-hide-descendants' : 'auto'
+                  }
+                  style={[
+                    styles.content,
+                    (itemDetails || profileVisible) && styles.hidden,
+                  ]}
+                >
+                  {renderContent()}
+                </View>
+                {profileVisible && (
+                  <View style={styles.profile}>{renderProfile()}</View>
+                )}
+                {itemEdit ? (
+                  <View style={styles.content}>
+                    <EditTransactionScreen
+                      key={itemEdit.details.uuid}
+                      details={itemEdit.details}
+                      purchase={itemEdit.purchase}
+                      accessToken={onboarding?.session?.accessToken}
+                      onSavingChange={setItemSaving}
+                      onBack={() => setItemEdit(null)}
+                      onSaved={() => {
+                        setItemEdit(null);
+                        closeDeletedDetails();
+                      }}
+                    />
+                  </View>
+                ) : (
+                  itemDetails && (
+                    <View style={styles.content}>
+                      {itemDetails.purchase ? (
+                        <CreditCardPurchaseDetailsScreen
+                          key={itemDetails.uuid}
+                          uuid={itemDetails.uuid}
+                          selectedInvoiceUuid={itemDetails.invoiceUuid}
+                          accessToken={onboarding?.session?.accessToken}
+                          onBack={() => setItemDetails(null)}
+                          onOpenInvoice={openInvoice}
+                          onDeleted={closeDeletedDetails}
+                          onEdit={details =>
+                            setItemEdit({ details, purchase: true })
+                          }
+                        />
+                      ) : (
+                        <TransactionDetailsScreen
+                          key={itemDetails.uuid}
+                          uuid={itemDetails.uuid}
+                          accessToken={onboarding?.session?.accessToken}
+                          onBack={() => setItemDetails(null)}
+                          onDeleted={closeDeletedDetails}
+                          onEdit={details =>
+                            setItemEdit({ details, purchase: false })
+                          }
+                        />
+                      )}
+                    </View>
+                  )
+                )}
+              </ScreenTransition>
+            </DockBackdrop>
+            <FloatingAppHeader
+              visible={showAppHeader}
+              topInset={insets.top}
+              profile={onboarding?.profile}
+              onOpenProfile={() => setProfilesVisible(true)}
+            />
+            {showDock && (
+              <BottomNavigator
+                selected={selected}
+                onSelect={key => {
+                  setItemDetails(null);
+                  setInvoiceToOpen(null);
+                  setCategoryForm(null);
+                  setAccountForm(null);
+                  setCardUuid(null);
+                  setAccountUuid(null);
+                  setSelected(key);
+                }}
+                onAssistant={() =>
+                  showToast({
+                    type: 'info',
+                    message: 'Essa função estará disponível em breve.',
+                  })
+                }
+                onMicrophone={() => setVoiceVisible(true)}
+                microphoneOpen={voiceVisible}
+              />
+            )}
+          </View>
+          <VoiceDrawer
+            visible={voiceVisible}
+            onClose={() => setVoiceVisible(false)}
+            onConfirm={confirmTranscription}
+          />
+          <ProfileSwitcherDrawer
+            visible={profilesVisible}
+            profiles={onboarding.profiles}
+            activeProfileId={onboarding.activeProfileId}
+            onClose={() => setProfilesVisible(false)}
+            onSelect={onboarding.switchProfile}
+            onLogout={onboarding.logout}
+            onAdd={() => navigation.navigate('Login', { addingAccount: true })}
+            onRequireLogin={profile =>
+              navigation.navigate('Login', {
+                addingAccount: true,
+                email: profile.email,
+              })
+            }
+            onOpenProfile={() => {
+              setProfileForm(null);
+              setProfileVisible(true);
+            }}
+          />
+        </View>
+      </DockProvider>
+    </ThemeVariant>
+  );
 }
-const createStyles = (colors) => StyleSheet.create({
-  background: { flex: 1, backgroundColor: colors.background },
-  canvas: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
-  content: { flex: 1, paddingBottom: 18 },
-  profile: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 20 },
-  hidden: { display: 'none' },
-});
+const createStyles = colors =>
+  StyleSheet.create({
+    background: { flex: 1, backgroundColor: colors.background },
+    canvas: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
+    backdrop: { flex: 1 },
+    content: { flex: 1, paddingBottom: 18 },
+    profile: { flex: 1 },
+    hidden: { display: 'none' },
+  });

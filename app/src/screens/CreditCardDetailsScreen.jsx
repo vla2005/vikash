@@ -1,9 +1,11 @@
+import ScrollView from '../components/silver/DockScrollView';
 import { useThemeStyles, useTheme } from '../contexts/ThemeContext';
 import { creditCardLabel, formatInvoiceDate } from '../utils/creditCards';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { DetailsSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
+import GlassBackButton from '../components/GlassBackButton';
 import InstitutionLogo from '../components/InstitutionLogo';
 import HorizontalScroll from '../components/HorizontalScroll';
 import InvoicePaymentDrawer from '../components/InvoicePaymentDrawer';
@@ -61,7 +63,7 @@ export default function CreditCardDetailsScreen({ uuid, accessToken, onBack, onE
     onDeleted?.();
   };
   const top = <>
-    <View style={s.nav}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para contas e cartões" onPress={onBack} style={s.back}><View style={{ transform: [{ rotate: '180deg' }] }}><Icon name="chevron" size={24} /></View></Pressable><Text accessibilityRole="header" style={s.navTitle}>Detalhes do cartão</Text><View style={s.back} /></View>
+    <View style={s.nav}><GlassBackButton accessibilityLabel="Voltar para contas e cartões" onPress={onBack} /><Text accessibilityRole="header" style={s.navTitle}>Detalhes do cartão</Text><View style={s.back} /></View>
     {card && <>
       <View style={s.identity}><InstitutionLogo institution={card.financialInstitution} size={52} /><View style={s.identityText}><Text style={s.title}>{creditCardLabel(card)}</Text><Text style={s.muted}>{card.financialInstitution?.name} · Cartão de crédito</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Editar cartão" onPress={() => onEdit?.(card)} style={({ pressed }) => [s.action, pressed && s.pressed]}><Icon name="edit" size={25} color={colors.text} /></Pressable></View>
       <View style={s.panel}><View style={[s.metrics, stackLimits && s.stackedMetrics]}><View style={[s.metric, s.totalMetric]}><Text style={s.limitLabel}>Limite total</Text><Text adjustsFontSizeToFit numberOfLines={1} style={[s.value, s.totalValue]}>{formatCurrency(card.creditLimit)}</Text></View><View style={[s.metric, card.availableLimit < 0 ? s.negativeMetric : s.availableMetric]}><Text style={[s.limitLabel, card.availableLimit < 0 ? s.negative : s.green]}>Limite disponível</Text><Text adjustsFontSizeToFit numberOfLines={1} style={[s.value, card.availableLimit < 0 ? s.negative : s.green]}>{formatCurrency(card.availableLimit)}</Text></View></View><View style={s.dates}><Text style={s.date}>Fecha dia {card.closingDay}</Text><Text style={s.date}>Vence dia {card.dueDay}</Text></View></View>

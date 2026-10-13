@@ -1,5 +1,6 @@
 package com.vikash_api.services;
 
+import com.vikash_api.logging.SafeDiagnostics;
 import com.vikash_api.dtos.requests.LoginRequest;
 import com.vikash_api.dtos.requests.RefreshTokenRequest;
 import com.vikash_api.dtos.requests.RegisterRequest;
@@ -74,11 +75,11 @@ public class AuthService {
     @Transactional
     public void requestPasswordReset(ForgotPasswordRequest request) {
         UserEntity user = userRepository.findByEmailForUpdate(request.email()).orElse(null);
-        if (user == null || !user.isActive()) { return; }
+        if (user == null || !user.isActive()) { log.info("event=auth.password-reset outcome=not-eligible"); return; }
 
         Instant now = Instant.now();
         // Evita enviar vários links para o mesmo usuário em menos de um minuto.
-        if (passwordResetTokenRepository.existsByUserAndCreatedAtAfter(user, now.minusSeconds(60))) { return; }
+        if (passwordResetTokenRepository.existsByUserAndCreatedAtAfter(user, now.minusSeconds(60))) { log.info("event=auth.password-reset outcome=throttled"); return; }
 
         byte[] randomBytes = new byte[32];
         new SecureRandom().nextBytes(randomBytes);
@@ -92,6 +93,7 @@ public class AuthService {
                 .expiresAt(now.plusSeconds(15 * 60))
                 .build());
 
+        log.info("event=auth.password-reset.token-saved");
         sendPasswordResetEmail(user, token);
     }
 
@@ -122,6 +124,8 @@ public class AuthService {
     }
 
     private void sendPasswordResetEmail(UserEntity user, String token) {
+        long started = System.nanoTime();
+        log.info("event=email.password-reset.start");
         String link = UriComponentsBuilder.fromUriString(passwordResetUrl)
                 .queryParam("token", token).build().toUriString();
         String greeting = user.getName() == null || user.getName().isBlank()
@@ -144,8 +148,11 @@ public class AuthService {
             helper.setSubject("Redefina sua senha no Vikash");
             helper.setText(text, html);
             helper.addInline("vikash-logo", new ClassPathResource("email/vikash-logo.png"), "image/png");
+            log.info("event=email.password-reset.message-prepared");
             mailSender.send(message);
+            log.info("event=email.password-reset.sent durationMs={}", SafeDiagnostics.elapsedMs(started));
         } catch (MailException | MessagingException | IOException ex) {
+            SafeDiagnostics.failure(log, "email.password-reset.failed", "smtp.send", ex, SafeDiagnostics.elapsedMs(started), false);
             throw new EmailDeliveryException("Não foi possível enviar o e-mail de recuperação.", ex);
         }
     }
@@ -166,7 +173,7 @@ public class AuthService {
                 .build();
 
         UserEntity savedUser = userRepository.save(user);
-        log.info("User registered successfully: uuid={}, email={}", savedUser.getUuid(), savedUser.getEmail());
+        log.info("event=auth.register.user-saved");
 
         String familyId = UUID.randomUUID().toString();
 
@@ -191,7 +198,7 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(normalizedEmail, request.getPassword()));
 
             UserEntity user = (UserEntity) authentication.getPrincipal();
-            log.info("User logged in successfully: uuid={}, email={}", user.getUuid(), user.getEmail());
+            log.info("event=auth.login.credentials-accepted");
 
             String familyId = UUID.randomUUID().toString();
             return createAuthResponse(user, familyId);
@@ -224,8 +231,7 @@ public class AuthService {
         // 🚨 REUSE DETECTION: If this token is already revoked, potential token theft
         // occurred!
         if (storedToken.isRevoked()) {
-            log.warn("SECURITY ALERT: Attempt to reuse revoked refresh token. Invalidating token family {}",
-                    storedToken.getFamilyId());
+            log.info("event=auth.refresh.session-reuse outcome=revoking-session-family");
             refreshTokenRepository.revokeAllByFamilyId(storedToken.getFamilyId());
             throw new TokenCompromisedException(
                     "Security Alert: Token reuse detected. This session has been invalidated.");
@@ -260,7 +266,7 @@ public class AuthService {
         }
 
         refreshTokenRepository.revokeAllByFamilyId(familyId);
-        log.info("Session revoked for user {}", user.getEmail());
+        log.info("event=auth.logout.session-revoked");
     }
 
     private UserEntity lockTokenUser(Claims claims) {
@@ -287,6 +293,7 @@ public class AuthService {
     }
 
     private AuthResponse createAuthResponse(UserEntity user, String familyId) {
+        log.info("event=auth.session.create-start");
         String accessToken = jwtService.generateAccessToken(user, familyId);
         String refreshToken = jwtService.generateRefreshToken(user, familyId);
 
@@ -302,6 +309,7 @@ public class AuthService {
                 .build();
 
         refreshTokenRepository.save(refreshTokenEntity);
+        log.info("event=auth.session.persisted");
 
         return AuthResponse.builder()
                 .accessToken(accessToken)

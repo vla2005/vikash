@@ -63,7 +63,7 @@ export default function AnimatedSplash({ ready, onFinish }) {
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  overlay: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   symbol: { width: 180, height: 180 },
   wordmark: { position: 'absolute', top: '50%', marginTop: 92 },
   name: { fontFamily: fontFamilyBold, fontSize: 36, lineHeight: 48, letterSpacing: -1.6, color: colors.text },

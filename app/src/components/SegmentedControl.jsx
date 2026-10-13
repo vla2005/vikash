@@ -1,3 +1,4 @@
+import { pointerEventsStyles } from '../theme/interaction';
 import { useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -18,7 +19,7 @@ export default function SegmentedControl({ options, value, onChange, style }) {
     return () => movement.stop();
   }, [index, itemWidth, reduced, position]);
   return <View style={[styles.track, style]} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
-    {!!width && <Animated.View pointerEvents="none" style={[styles.indicator, { width: itemWidth, transform: [{ translateX: position }] }]} />}
+    {!!width && <Animated.View style={[[styles.indicator, { width: itemWidth, transform: [{ translateX: position }] }], pointerEventsStyles.none]} />}
     {options.map(option => <Pressable key={option.value} accessibilityRole="tab" accessibilityLabel={option.accessibilityLabel || option.label} accessibilityState={{ selected: value === option.value }} aria-selected={value === option.value}
       onPress={() => onChange(option.value)} style={({ pressed }) => [styles.option, pressed && styles.pressed]}>
       <Text numberOfLines={1} style={[styles.label, value === option.value && styles.selected]}>{option.label}</Text>

@@ -1,6 +1,8 @@
+import GlassPanel from '../components/silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import ScrollView from '../components/silver/DockScrollView';
 import Skeleton, { CreditCardSkeleton, ListSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
 import InstitutionLogo from '../components/InstitutionLogo';
@@ -40,18 +42,21 @@ export default function AccountsScreen({ accounts, loading, error, onRetry, onCr
     return <View style={s.feedback}>{message ? <><Text accessibilityRole="alert" style={s.caption}>{message}</Text><Pressable accessibilityRole="button" accessibilityLabel={retryLabel} onPress={retry} style={s.retry}><Text style={s.link}>Tentar novamente</Text></Pressable></> : <><Icon name="wallet" size={30} color={colors.primary} /><Text style={s.emptyTitle}>{title}</Text><Text style={s.caption}>{description}</Text></>}</View>;
   }
   function creditCards() {
-    return <View style={s.panel}>
+    return <GlassPanel style={s.panel}>
       <View style={s.sectionHeader}><View style={s.sectionCopy}><Text accessibilityRole="header" style={s.sectionTitle}>Cartões de crédito</Text><Text style={s.caption}>Suas faturas e limites</Text></View>
         <Pressable accessibilityRole="button" accessibilityLabel="Novo cartão" onPress={onCreateCard} style={({ pressed }) => [s.add, pressed && s.pressed]}><Icon name="plus" size={21} color={colors.primary} /><Text style={s.link}>Novo cartão</Text></Pressable>
       </View>
       {cardsLoading ? <CreditCardSkeleton /> : cardsError || !cards.length ? feedback(cardsError, onRetryCards, 'Tentar carregar cartões novamente', 'Seu primeiro cartão começa aqui', 'Organize suas faturas e seu limite de crédito.')
-        : section === 'cards' ? <HomeCreditCards cards={cards} profile={profile} onOpenCard={onOpenCard} title="Meus cartões" compactHeading />
-          : cards.map(card => <CreditCardSummary key={card.uuid} card={card} onInvoice={() => onOpenCard?.(card.uuid)} />)}
-    </View>;
+        : <>
+          <HomeCreditCards cards={cards} profile={profile} onOpenCard={onOpenCard} title="Meus cartões" compactHeading />
+          <View style={s.listHeading}><Text accessibilityRole="header" style={s.sectionTitle}>Todos os cartões</Text><Text style={s.caption}>{cards.length} {cards.length === 1 ? 'cartão' : 'cartões'}</Text></View>
+          {cards.map(card => <CreditCardSummary key={card.uuid} card={card} onOpen={() => onOpenCard?.(card.uuid)} onInvoice={() => onOpenCard?.(card.uuid, card.currentInvoice?.uuid)} />)}
+        </>}
+    </GlassPanel>;
   }
   return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" />}>
     <Text accessibilityRole="header" style={s.title}>Contas e cartões</Text><Text style={s.subtitle}>Seu dinheiro, do seu jeito.</Text>
-    <View style={s.workspace}>
+    <GlassPanel style={s.workspace}>
       <SegmentedControl value={section} onChange={setSection} options={[{ value: 'accounts', label: 'Contas', accessibilityLabel: 'Mostrar contas' }, { value: 'cards', label: 'Cartões', accessibilityLabel: 'Mostrar cartões' }]} />
       {section === 'accounts' ? <>
         <View style={s.total}><View style={s.sectionCopy}><Text style={s.sectionTitle}>Seu dinheiro</Text><Text style={s.caption}>Saldo em contas</Text></View>{loading ? <Skeleton width="40%" height={26} /> : <Text accessibilityLabel="Saldo total em contas" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={s.totalAmount}>{error ? '—' : formatCurrency(total)}</Text>}</View>
@@ -65,8 +70,7 @@ export default function AccountsScreen({ accounts, loading, error, onRetry, onCr
         })}
         <Pressable accessibilityRole="button" accessibilityLabel="Nova conta" onPress={onCreate} style={({ pressed }) => [s.create, pressed && s.pressed]}><Icon name="plus" size={23} color={colors.onBrand} /><Text style={s.createText}>Nova conta</Text></Pressable>
       </> : <View style={s.cardsOnly}>{creditCards()}</View>}
-    </View>
-    {section === 'accounts' && creditCards()}
+    </GlassPanel>
   </ScrollView>;
 }
 const createStyles = (colors) => StyleSheet.create({
@@ -94,4 +98,5 @@ const createStyles = (colors) => StyleSheet.create({
   emptyTitle: { fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '600', color: colors.text, textAlign: 'center' },
   retry: { padding: 12 }, pressed: { opacity: 0.72, transform: [{ scale: 0.99 }] },
   cardsOnly: { marginHorizontal: -12, marginBottom: -12, marginTop: 8 },
+  listHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 24, marginBottom: 12 },
 });

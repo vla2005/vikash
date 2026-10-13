@@ -116,7 +116,7 @@ export default function ProfileSwitcherDrawer({ visible, profiles = [], activePr
 
 const createStyles = (colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: colors.dialogBackdrop },
-  sheet: { width: '100%', maxWidth: 460, maxHeight: '85%', paddingHorizontal: 24, paddingTop: 12, backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  sheet: { width: '100%', maxWidth: 460, maxHeight: '85%', paddingHorizontal: 24, paddingTop: 12, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
   handle: { width: 42, height: 5, borderRadius: 3, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 18 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   title: { fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 25, lineHeight: 33, color: colors.text },

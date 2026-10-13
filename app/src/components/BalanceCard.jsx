@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 import Icon from './Icon';
 import Skeleton from './Skeleton';
+import GlassPanel from './silver/GlassPanel';
 
 export default function BalanceCard({
   label = 'Saldo total',
@@ -13,7 +14,7 @@ export default function BalanceCard({
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.card, { backgroundColor: colors.balanceSurface }]}>
+    <GlassPanel style={[styles.card, { backgroundColor: colors.balanceSurface }]}>
       <View style={styles.heading}>
         <Text style={[styles.label, { color: colors.onBalance }]}>{label}</Text>
         <Icon name="wallet" color={colors.balanceSecondary} size={23} />
@@ -39,7 +40,7 @@ export default function BalanceCard({
           {caption}
         </Text>
       )}
-    </View>
+    </GlassPanel>
   );
 }
 const styles = StyleSheet.create({

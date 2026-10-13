@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import React from 'react';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
@@ -5,6 +6,7 @@ import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 
 // Drawing factories create only the selected SVG, without allocating the full catalog.
 const shapes = {
+    sparkles: ({ props }) => <><Path d="M10 6.5c.9 4.8 2.7 6.6 7.5 7.5-4.8.9-6.6 2.7-7.5 7.5-.9-4.8-2.7-6.6-7.5-7.5 4.8-.9 6.6-2.7 7.5-7.5Z" {...props} /><Path d="M17.5 4.5v6M14.5 7.5h6M4 19v3M2.5 20.5h3" {...props} /></>,
     sun: ({ props }) => <><Circle cx="12" cy="12" r="4" {...props} /><Path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" {...props} /></>,
     moon: ({ props }) => <Path d="M20 15.5A9 9 0 018.5 4 9 9 0 1020 15.5z" {...props} />,
     device: ({ props }) => <><Rect x="5" y="2" width="14" height="20" rx="3" {...props} /><Line x1="10" y1="18" x2="14" y2="18" {...props} /></>,
@@ -32,6 +34,7 @@ const shapes = {
     investment: ({ color }) => <><Rect x="3" y="13" width="4" height="8" rx="1" fill={color} /><Rect x="10" y="8" width="4" height="13" rx="1" fill={color} /><Rect x="17" y="3" width="4" height="18" rx="1" fill={color} /></>,
     user: ({ props }) => <><Circle cx="12" cy="7" r="4" {...props} /><Path d="M4 21v-2a8 8 0 0116 0v2" {...props} /></>,
     close: ({ props }) => <><Line x1="6" y1="6" x2="18" y2="18" {...props} /><Line x1="18" y1="6" x2="6" y2="18" {...props} /></>,
+    restart: ({ props }) => <><Path d="M4 10a8 8 0 118 10M4 4v6h6" {...props} /></>,
     info: ({ props, color }) => <><Circle cx="12" cy="12" r="9" {...props} /><Line x1="12" y1="11" x2="12" y2="16" {...props} /><Circle cx="12" cy="7" r="1" fill={color} /></>,
     chevron: ({ props }) => <Polyline points="9,5 16,12 9,19" {...props} />,
     chevronDown: ({ props }) => <Polyline points="5,9 12,16 19,9" {...props} />,
@@ -44,5 +47,5 @@ export default function Icon({ name, size = 24, color }) {
   color ??= colors.text;
   const props = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shape = shapes[name] || shapes.wallet;
-  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>{shape({ props, color, colors })}</Svg>;
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>{shape({ props, color, colors })}</Svg>;
 }

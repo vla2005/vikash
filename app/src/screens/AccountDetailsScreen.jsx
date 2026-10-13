@@ -1,8 +1,10 @@
+import ScrollView from '../components/silver/DockScrollView';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DetailsSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
+import GlassBackButton from '../components/GlassBackButton';
 import InstitutionLogo from '../components/InstitutionLogo';
 import PagedTransactionList from '../components/PagedTransactionList';
 import useAccountDetails from '../hooks/useAccountDetails';
@@ -16,7 +18,7 @@ export default function AccountDetailsScreen({ uuid, accessToken, onBack, onEdit
   const { account, loading, error, retry } = useAccountDetails(uuid, accessToken, revision);
   const type = account ? getAccountType(account.type) : null;
   const header = <>
-    <View style={s.nav}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para contas e cartões" onPress={onBack} style={s.action}><Icon name="back" size={24} /></Pressable><Text accessibilityRole="header" style={s.navTitle}>Detalhes da conta</Text><View style={s.action} /></View>
+    <View style={s.nav}><GlassBackButton accessibilityLabel="Voltar para contas e cartões" onPress={onBack} /><Text accessibilityRole="header" style={s.navTitle}>Detalhes da conta</Text><View style={s.action} /></View>
     {account && <>
       <View style={s.identity}><InstitutionLogo institution={account.financialInstitution} size={52} fallbackIcon={type.icon} /><View style={s.info}><Text style={s.title}>{account.description}</Text><Text style={s.muted}>{account.financialInstitution?.name || type.label}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Editar conta" onPress={() => onEdit(account)} style={({ pressed }) => [s.action, pressed && s.pressed]}><Icon name="edit" size={25} color={colors.text} /></Pressable></View>
       <View style={s.panel}><Text style={s.muted}>Saldo atual</Text><Text numberOfLines={1} adjustsFontSizeToFit style={[s.balance, account.balance > 0 && s.green, account.balance < 0 && s.negative]}>{formatCurrency(account.balance)}</Text><View style={s.detailRow}><Text style={s.muted}>Tipo de conta</Text><Text style={s.detail}>{type.label}</Text></View>{account.type !== 'CARTEIRA' && <View style={s.detailRow}><Text style={s.muted}>Instituição</Text><Text style={s.detail}>{account.financialInstitution?.name || 'Não informada'}</Text></View>}</View>

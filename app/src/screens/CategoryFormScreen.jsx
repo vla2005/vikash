@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import CategoryIcon from '../components/CategoryIcon';
 import Icon from '../components/Icon';
+import GlassBackButton from '../components/GlassBackButton';
 import SelectionField from '../components/SelectionField';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import useToast from '../hooks/useToast';
@@ -58,7 +59,7 @@ export default function CategoryFormScreen({ category, existingCategories, onSav
   }
   return <><KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar às categorias" onPress={onCancel} style={styles.back}><Icon name="back" /></Pressable><Text accessibilityRole="header" style={styles.title}>{category ? 'Editar categoria' : 'Nova categoria'}</Text><View style={styles.back} /></View>
+      <View style={styles.header}><GlassBackButton accessibilityLabel="Voltar às categorias" onPress={onCancel} /><Text accessibilityRole="header" style={styles.title}>{category ? 'Editar categoria' : 'Nova categoria'}</Text><View style={styles.back} /></View>
       <Text style={styles.subtitle}>{category ? 'Ajuste sua categoria como preferir.' : 'Crie uma categoria com a sua cara.'}</Text>
       <View style={styles.preview}><View style={[styles.previewIcon, { backgroundColor: palette.accent }]}><CategoryIcon name={icon} size={42} color={palette.onAccent} /></View><Text numberOfLines={2} style={styles.previewName}>{name.trim() || 'Sua categoria'}</Text><Text style={styles.previewLabel}>Prévia</Text></View>
       <Text style={styles.label}>Nome da categoria</Text>

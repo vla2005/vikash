@@ -1,8 +1,10 @@
+import ScrollView from './silver/DockScrollView';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { DetailsSkeleton } from './Skeleton';
 import Icon from './Icon';
+import GlassBackButton from './GlassBackButton';
 import CategoryIcon from './CategoryIcon';
 import InstitutionLogo from './InstitutionLogo';
 import { formatCurrency } from '../utils/money';
@@ -41,7 +43,7 @@ export default function TransactionDetailsLayout({ title, details, loading, erro
   const occurred = details ? dateParts(details.occurredAt) : null;
   const tone = amountTone || (sign === '+ ' ? 'positive' : sign === '− ' ? 'negative' : 'primary');
   return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
-    <View style={s.nav}><Pressable accessibilityRole="button" accessibilityLabel="Voltar à lista" onPress={onBack} style={({ pressed }) => [s.action, pressed && s.pressed]}><Icon name="back" size={24} /></Pressable><Text accessibilityRole="header" style={s.navTitle}>{title}</Text><View style={s.action} /></View>
+    <View style={s.nav}><GlassBackButton accessibilityLabel="Voltar à lista" onPress={onBack} /><Text accessibilityRole="header" style={s.navTitle}>{title}</Text><View style={s.action} /></View>
     {loading ? <DetailsSkeleton label="Carregando detalhes do lançamento" />
       : error ? <View style={s.feedback}><Icon name="warning" size={32} color={colors.error} /><Text accessibilityRole="alert" style={s.errorText}>{error}</Text><Pressable accessibilityRole="button" onPress={retry} style={({ pressed }) => [s.retry, pressed && s.pressed]}><Text style={s.link}>Tentar novamente</Text></Pressable></View>
         : details && <>

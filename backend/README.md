@@ -256,3 +256,40 @@ A edição reverte o efeito anterior e aplica o novo valor na conta escolhida. U
 Compras que continuam no crédito preservam a quantidade de parcelas. Alterar o valor recalcula as parcelas, distribuindo os centavos restantes nas últimas. Trocar o cartão refaz as parcelas conforme os ciclos do novo cartão; se a fatura de destino não estiver aberta, a alteração inteira é revertida. Totais e limites são calculados pelas parcelas restantes; valores iniciais e outras compras são preservados.
 
 Se alguma parcela estiver em fatura paga, só descrição e categoria podem mudar. Alterações financeiras exigem desfazer o pagamento primeiro. Pagamentos de fatura podem mudar descrição, conta e forma de pagamento, mantendo o valor integral, a fatura e seu status pago. A conta escolhida deve ter saldo para o pagamento. Recursos de outros usuários não são aceitos. Falhas de validação retornam `400`, com `fieldErrors`; lançamentos inexistentes ou de outros usuários retornam `404`. Todas as mudanças de cada edição são atômicas.
+
+O contrato de análise por voz, os campos faltantes e a localização do prompt estão em [VOICE_ANALYSIS.md](./VOICE_ANALYSIS.md).
+
+
+## Diagnóstico por logs
+
+Todas as requisições recebem um requestId UUID gerado pelo servidor, devolvido no header X-Request-Id. Os erros tratados também o incluem no JSON. O header fica exposto ao navegador por CORS. Cabeçalhos enviados pelo cliente não determinam o ID.
+
+O console inclui data/hora, nível, requestId, thread e componente. Os eventos da aplicação usam log.info. Controllers, serviços e repositórios registram início, fim, duração e falhas por operação. A cobertura acompanha métodos públicos novos nesses pacotes. Etapas privadas importantes de autenticação, sessão, análise por voz, gravação, atualização de saldos, controle de limites e envio de e-mail têm eventos próprios. A conclusão de uma operação externa transacional inclui commit; um retorno HTTP do pedido de recuperação não significa que o e-mail já foi entregue.
+
+| Evento | Utilidade |
+| --- | --- |
+| request.start / request.complete | Método, área, template da rota, status e duração total |
+| operation.start / operation.complete / operation.failed | Controller, serviço ou repositório em execução |
+| error.handled / response.error | Exceção tratada e status devolvido |
+| gemini.request.prepare / send / failed | Modelo, tamanho do contexto, limite de tokens e falha do provedor |
+| gemini.response.received / invalid / analysis.parsed | Finalização, bloqueio, parsing e nomes de campos faltantes |
+| voice.context.loaded / transaction.write-start / transaction.committed | Leitura do contexto e gravação efetivamente concluída |
+| ai.permit.acquired / rejected / released | Vagas concorrentes e limitações de uso |
+| email.password-reset.start / message-prepared / sent / failed | Preparação e entrega de e-mail |
+| async.start / async.finished / async.failed | Trabalho em segundo plano, mantendo o requestId original |
+
+Falhas contêm errorType, causeType, reason, providerStatus quando houver, sqlState/sqlCode quando houver e durationMs. TIMEOUT, CONNECTION_FAILED, DNS_FAILURE, TLS_FAILURE e HTTP_503 distinguem causas técnicas. O Gemini também é classificado como HIGH_DEMAND, PROVIDER_QUOTA, API_KEY_REJECTED, MODEL_UNAVAILABLE ou REQUEST_SCHEMA_REJECTED sem emitir sua mensagem bruta. Stack traces preservam classes, métodos e linhas, removendo mensagens e detalhes suprimidos que possam conter SQL, JSON ou credenciais.
+
+Os logs não serializam argumentos, DTOs, entidades, resultados, bodies, headers, parâmetros de URL ou transcrições. Não registram e-mails, nomes, tokens, chaves, valores, saldos, limites financeiros, dados dos cartões nem UUIDs dos usuários/contas. Só o template da rota é emitido. A camada de console mascara adicionalmente segredos conhecidos do ambiente, padrões de JWT/chave, e-mails e campos privados. SQL e bind de parâmetros ficam desativados. Essa proteção adicional não autoriza novos loggers a despejar payloads.
+
+A configuração está em src/main/resources/logback-spring.xml e application.properties; as classes estão em com.vikash_api.logging. O TaskDecorator propaga apenas o requestId para tarefas do Spring e restaura o contexto da thread ao terminar. O handler de exceções assíncronas evita registrar parâmetros do método.
+
+Depois de recompilar e publicar a imagem pelo processo habitual, acompanhe:
+
+```sh
+docker compose logs --since=15m --tail=300 -f api
+```
+
+Para investigar uma falha, copie X-Request-Id da resposta e procure esse UUID nos logs. Siga request.start, as operações e o primeiro evento failed/rejected até request.complete. Procure também eventos async após a resposta HTTP. Nenhum corpo de requisição é necessário para correlacionar as etapas.
+
+O Compose mantém a rotação já configurada de 3 arquivos de 10 MB por container. O driver json-file armazena esses logs no host Docker. Não há endpoint público de leitura dos logs nesta implementação.

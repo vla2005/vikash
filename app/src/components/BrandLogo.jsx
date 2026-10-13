@@ -4,12 +4,12 @@ import logo from '../assets/brand';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function BrandLogo({ centered = false, width = 188 }) {
-  const { scheme, colors } = useTheme();
+  const { scheme, colors, variant } = useTheme();
   const ratio = width / 188;
   return (
     <View style={[styles.frame, { width, height: 54 * ratio }, centered && styles.centered]} accessibilityRole="image" accessibilityLabel="Vikash">
-      <Image source={logo} style={[styles.image, { width: 260 * ratio, height: 87 * ratio, left: -40 * ratio, top: -17 * ratio }, scheme === 'dark' && { tintColor: colors.text }]} resizeMode="contain" />
-      {scheme === 'dark' && <View accessible={false} style={[styles.mark, { width: 59 * ratio, height: 54 * ratio }]}>
+      <Image source={logo} style={[styles.image, { width: 260 * ratio, height: 87 * ratio, left: -40 * ratio, top: -17 * ratio }]} tintColor={scheme === 'dark' || variant === 'silver' ? colors.text : undefined} resizeMode="contain" />
+      {scheme === 'dark' && variant !== 'silver' && <View accessible={false} style={[styles.mark, { width: 59 * ratio, height: 54 * ratio }]}>
         <Image source={logo} style={[styles.image, { width: 260 * ratio, height: 87 * ratio, left: -40 * ratio, top: -17 * ratio }]} resizeMode="contain" />
       </View>}
     </View>

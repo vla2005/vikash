@@ -1,3 +1,4 @@
+import { pointerEventsStyles } from '../theme/interaction';
 import { useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,7 +11,7 @@ export default function AppHeader({ profile, onOpenProfile }) {
   const name = profile?.name?.trim() || '';
   const initials = getProfileInitials(name);
 
-  return <View style={s.header}>
+  return <View style={[s.header, pointerEventsStyles["box-none"]]}>
     <BrandLogo width={126} />
     <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfis" accessibilityHint={`${name}. Alternar contas ou acessar meu perfil.`}
       onPress={onOpenProfile} disabled={!onOpenProfile} hitSlop={6} style={({ pressed }) => [s.avatar, pressed && s.pressed]}>

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../components/Screen';
 import BrandLogo from '../components/BrandLogo';
 import Icon from '../components/Icon';
+import GlassBackButton from '../components/GlassBackButton';
 import IconTile from '../components/IconTile';
 import { fontFamilyMedium, fontFamily } from '../theme';
 
@@ -12,7 +13,7 @@ export default function AddFinancialItemScreen({ navigation, route, onChoose, on
   const styles = useThemeStyles(createStyles);
   const choose = kind => onChoose ? onChoose(kind) : navigation.navigate(kind === 'account' ? 'CreateAccount' : 'CreateCreditCard', { ...route?.params, fromChoice: true });
   return <Screen contentStyle={styles.content}>
-    <View style={styles.top}><Pressable accessibilityRole="button" accessibilityLabel="Voltar" hitSlop={12} onPress={onCancel || (() => navigation.goBack())}><Icon name="back" /></Pressable><Text style={styles.topTitle}>Adicionar</Text><View style={styles.spacer} /></View>
+    <View style={styles.top}><GlassBackButton onPress={onCancel || (() => navigation.goBack())} /><Text style={styles.topTitle}>Adicionar</Text><View style={styles.spacer} /></View>
     <View style={styles.brand}><BrandLogo /></View>
     <View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>O que você quer adicionar?</Text><Text style={typography.body}>Organize seu dinheiro e seus cartões.</Text></View>
     <View style={styles.options}>

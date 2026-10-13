@@ -52,7 +52,7 @@ export default function StatementFilters({ visible, initial, accounts, categorie
 }
 const createStyles = (colors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' }, backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.dialogBackdrop },
-  sheet: { width: '100%', maxWidth: 460, backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22 }, handle: { width: 40, height: 4, borderRadius: 4, backgroundColor: colors.handle, alignSelf: 'center', marginBottom: 14 },
+  sheet: { width: '100%', maxWidth: 460, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22 }, handle: { width: 40, height: 4, borderRadius: 4, backgroundColor: colors.handle, alignSelf: 'center', marginBottom: 14 },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, title: { fontFamily: fontFamilyBold, fontSize: 25, fontWeight: '700', color: colors.text }, close: { padding: 10 },
   label: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 17, marginTop: 18, marginBottom: 8, color: colors.text }, hint: { fontFamily, fontSize: 12, color: colors.secondary, marginBottom: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }, chip: { borderWidth: 1, borderColor: colors.border, borderRadius: 13, paddingHorizontal: 14, minHeight: 40, alignSelf: 'flex-start', justifyContent: 'center' }, selected: { backgroundColor: colors.primarySoft, borderColor: colors.primary }, chipText: { fontFamily, color: colors.secondary, fontSize: 14 }, blue: { fontFamily, color: colors.primary, fontSize: 15 },

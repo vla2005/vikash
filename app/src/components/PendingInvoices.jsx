@@ -1,3 +1,4 @@
+import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
@@ -19,10 +20,10 @@ export default function PendingInvoices({ invoices = [], loading, error, onRetry
       {!!onViewAll && <Pressable accessibilityRole="button" accessibilityLabel="Ver todos os cartões" onPress={onViewAll} style={s.linkButton}><Text style={s.link}>Ver todas</Text></Pressable>}
     </View>
     <Text style={s.caption}>Pendentes atuais · atrasadas primeiro</Text>
-    {loading ? <ListSkeleton label="Carregando faturas" count={3} /> : error ? <View style={s.panel}>
+    {loading ? <ListSkeleton label="Carregando faturas" count={3} /> : error ? <GlassPanel style={s.panel}>
       <Text accessibilityRole="alert" style={s.caption}>{error}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Tentar carregar crédito novamente" onPress={onRetry} style={s.linkButton}><Text style={s.link}>Tentar novamente</Text></Pressable>
-    </View> : <View style={s.panel}>
+    </GlassPanel> : <GlassPanel style={s.panel}>
       {invoices.length ? invoices.slice(0, 3).map((invoice, index) => {
         const overdue = invoice.dueDate < todayKey;
         const dueDate = new Date(invoice.dueDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -35,7 +36,7 @@ export default function PendingInvoices({ invoices = [], loading, error, onRetry
           <Icon name="chevron" size={16} color={colors.secondary} />
         </Pressable>;
       }) : <View style={s.empty}><Icon name="check" size={22} color={colors.positive} /><Text style={s.caption}>Nenhuma fatura pendente nos seus cartões.</Text></View>}
-    </View>}
+    </GlassPanel>}
   </View>;
 }
 const createStyles = (colors) => StyleSheet.create({

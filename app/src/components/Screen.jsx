@@ -1,4 +1,6 @@
-import { useThemeStyles } from '../contexts/ThemeContext';
+import { pointerEventsStyles } from '../theme/interaction';
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
+import AmbientLight from './silver/AmbientLight';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FormFocusContext from '../contexts/FormFocusContext';
 
 export default function Screen({ children, contentStyle, decoration }) {
+  const { variant } = useTheme();
   const styles = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef(null);
@@ -35,7 +38,8 @@ export default function Screen({ children, contentStyle, decoration }) {
     <View style={styles.background}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboard}>
         <View style={styles.canvas}>
-          {decoration && <View pointerEvents="none" style={styles.decoration}>{decoration}</View>}
+          {variant === 'silver' && <AmbientLight />}
+          {decoration && <View style={[styles.decoration, pointerEventsStyles.none]}>{decoration}</View>}
           <ScrollView ref={scrollRef} style={styles.scroll} onLayout={revealInput} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
             contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 16) + 20, paddingBottom: Math.max(insets.bottom, 18) + 12 }, contentStyle, keyboardOpen && styles.editing]}>
             <FormFocusContext.Provider value={focus}>{children}</FormFocusContext.Provider>

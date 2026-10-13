@@ -1,3 +1,4 @@
+import { pointerEventsStyles } from '../theme/interaction';
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +24,7 @@ export function ToastProvider({ children }) {
   const value = useMemo(() => ({ showToast, hideToast }), [showToast, hideToast]);
   return <ToastContext.Provider value={value}>
     {children}
-    {!!toast && <View pointerEvents="box-none" style={[styles.overlay, { top: insets.top + 12 }]}><Toast key={toast.id} {...toast} onClose={hideToast} /></View>}
+    {!!toast && <View style={[[styles.overlay, { top: insets.top + 12 }], pointerEventsStyles["box-none"]]}><Toast key={toast.id} {...toast} onClose={hideToast} /></View>}
   </ToastContext.Provider>;
 }
 const styles = StyleSheet.create({ overlay: { position: 'absolute', left: 16, right: 16, zIndex: 1000, elevation: 20 } });

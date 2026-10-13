@@ -66,7 +66,7 @@ export default function InvoicePaymentDrawer({ visible = true, invoice, accessTo
 const createStyles = (colors) => StyleSheet.create({
   dateFields: { flexDirection: 'row', gap: 12 }, dateField: { flex: 2 }, timeField: { flex: 1 }, input: { fontFamily, fontSize: 16, backgroundColor: colors.surface, color: colors.text, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginTop: 6 },
   overlay: { flex: 1, backgroundColor: colors.dialogBackdrop, justifyContent: 'flex-end' },
-  drawer: { maxHeight: '85%', backgroundColor: colors.background, padding: 22, paddingBottom: 30, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  drawer: { maxHeight: '85%', padding: 22, paddingBottom: 30, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
   handle: { width: 44, height: 5, borderRadius: 3, backgroundColor: colors.handle, alignSelf: 'center', marginBottom: 20 },
   title: { fontFamily: fontFamilyBold, fontSize: 25, fontWeight: '700', color: colors.text }, amount: { fontFamily: fontFamilyBold, fontSize: 34, fontWeight: '700', color: colors.text, marginVertical: 10 },
   note: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary }, label: { fontFamily: fontFamilyMedium, fontSize: 16, fontWeight: '600', color: colors.text, marginTop: 22, marginBottom: 12 },

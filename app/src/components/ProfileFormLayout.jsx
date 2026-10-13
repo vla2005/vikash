@@ -1,7 +1,7 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
+import GlassBackButton from './GlassBackButton';
 import { Info } from 'phosphor-react-native/src/icons/Info';
 import { LockSimple } from 'phosphor-react-native/src/icons/LockSimple';
 import Screen from './Screen';
@@ -15,7 +15,7 @@ export default function ProfileFormLayout({ title, children, notice, secure = fa
   const NoticeIcon = secure ? LockSimple : Info;
   return <Screen contentStyle={styles.content}>
     <View style={styles.nav}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Voltar ao perfil" disabled={saving} onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]}><CaretLeft size={25} color={colors.text} /></Pressable>
+      <GlassBackButton accessibilityLabel="Voltar ao perfil" disabled={saving} onPress={onBack} />
       <Text accessibilityRole="header" style={styles.navTitle}>{title}</Text><View style={styles.back} />
     </View>
     {children}

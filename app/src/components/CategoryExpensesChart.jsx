@@ -1,6 +1,8 @@
+import { pointerEventsStyles } from '../theme/interaction';
+import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Defs, G, Mask } from 'react-native-svg';
 import SegmentedControl from './SegmentedControl';
 import { ListSkeleton } from './Skeleton';
@@ -29,7 +31,7 @@ function Donut({ slices, hidden, periodLabel }) {
     return () => drawing.stop();
   }, [progress, reduced, hidden, slices, periodLabel]);
   let offset = 0;
-  return <Svg width="100%" height="100%" viewBox="0 0 200 200" accessible={false}>
+  return <Svg width="100%" height="100%" viewBox="0 0 200 200" accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>
     <Circle cx={100} cy={100} r={radius} fill="none" stroke={colors.border} strokeWidth={22} />
     {!hidden && <><Defs><Mask id={maskId} x="0" y="0" width="200" height="200" maskUnits="userSpaceOnUse">
       <AnimatedCircle cx={100} cy={100} r={radius} fill="none" stroke="white" strokeWidth={26}
@@ -70,7 +72,7 @@ function CategoryExpensesChart({ categories = [], creditCategories = [], periodL
   const money = value => hidden ? hiddenAmount : formatCurrency(value);
   const loading = scope === 'credit' && creditLoading;
   const error = scope === 'credit' && creditError;
-  return <View style={s.card}>
+  return <GlassPanel style={s.card}>
     <View style={s.heading}><Text accessibilityRole="header" style={s.title}>Gastos do mês</Text>
       {!!onChangeScope && <SegmentedControl style={s.tabs} value={scope} onChange={onChangeScope}
         options={[{ value: 'accounts', label: 'Contas', accessibilityLabel: 'Mostrar gastos das contas' }, { value: 'credit', label: 'Crédito', accessibilityLabel: 'Mostrar gastos no crédito' }]} />}
@@ -83,7 +85,7 @@ function CategoryExpensesChart({ categories = [], creditCategories = [], periodL
         <View style={[s.chart, stacked && s.centerChart]} accessible accessibilityRole="image"
           accessibilityLabel={hidden ? 'Gastos do mês. Valores ocultos.' : `Gastos do mês. Total: ${formatCurrency(total)}. ${slices.map(slice => `${slice.name}: ${percentage(slice.fraction)}, ${formatCurrency(slice.total)}`).join('. ')}`}>
           <Donut slices={slices} hidden={hidden} periodLabel={periodLabel} />
-          <View style={s.center} pointerEvents="none" accessible={false} importantForAccessibility="no-hide-descendants">
+          <View style={[s.center, pointerEventsStyles.none]} accessible={false} importantForAccessibility="no-hide-descendants">
             <Text numberOfLines={1} adjustsFontSizeToFit style={[s.total, !stacked && width < 430 && s.smallTotal]}>{money(total)}</Text><Text style={s.subtitle}>total</Text>
           </View>
         </View>
@@ -98,7 +100,7 @@ function CategoryExpensesChart({ categories = [], creditCategories = [], periodL
         onPress={() => setExpanded(value => !value)} style={s.linkButton}><Text style={s.link}>{expanded ? 'Ver menos' : 'Ver todas as categorias'}</Text></Pressable>}
     </> : <View style={s.empty}><Text style={s.emptyTitle}>Nenhum gasto neste período</Text><Text style={s.subtitle}>Os gastos aparecerão aqui quando houver movimentações.</Text></View>}
     <Text style={s.note}>{scope === 'credit' ? 'Valor integral das compras no crédito feitas no mês.' : 'Gastos registrados nas contas neste mês.'}</Text>
-  </View>;
+  </GlassPanel>;
 }
 const createStyles = (colors) => StyleSheet.create({
   card: { marginTop: 24, backgroundColor: colors.surface, borderRadius: 24, padding: 18 },

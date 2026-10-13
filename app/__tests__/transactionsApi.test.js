@@ -101,3 +101,15 @@ test('renovação atualiza access_token e Authorization antes do envio', async (
     }));
   } finally { disconnect(); }
 });
+
+test('erro da análise preserva código, campos faltantes e orientações da API', async () => {
+  const body = { code: 'VOICE_INFORMATION_REQUIRED', message: 'Complete o lançamento.', missingFields: ['paymentMethod', 'accountUuid'],
+    fieldErrors: { paymentMethod: 'Informe a forma de pagamento.', accountUuid: 'Informe a conta ou banco.' } };
+  global.fetch = jest.fn(async () => ({ ok: false, status: 400, json: async () => body }));
+  await expect(createTransaction('Gastei cinquenta na farmácia', 'test-access')).rejects.toMatchObject({ status: 400, ...body });
+});
+
+test('indisponibilidade do Gemini mantém código técnico e não revela detalhes internos', async () => {
+  global.fetch = jest.fn(async () => ({ ok: false, status: 503, json: async () => ({ code: 'VOICE_ANALYSIS_UNAVAILABLE', message: 'private-provider-detail' }) }));
+  await expect(createTransaction('Almoço de cinquenta', 'test-access')).rejects.toMatchObject({ status: 503, code: 'VOICE_ANALYSIS_UNAVAILABLE', missingFields: [], message: 'Não foi possível concluir agora. Tente novamente.' });
+});

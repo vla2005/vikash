@@ -1,82 +1,211 @@
+import { pointerEventsStyles } from '../theme/interaction';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Animated, PanResponder, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Icon from './Icon';
 import useReducedMotion from '../hooks/useReducedMotion';
-
+import { fontFamilyMedium } from '../theme';
 
 const actionWidth = 72;
-export default function SwipeableRow({ children, open, onOpenChange, onPress, onAction, label, actionLabel, style, containerStyle }) {
+export default function SwipeableRow({
+  children,
+  open,
+  onOpenChange,
+  onPress,
+  onAction,
+  label,
+  actionLabel,
+  style,
+  containerStyle,
+}) {
   const { colors } = useTheme();
   const styles = useThemeStyles(createStyles);
   const translation = useRef(new Animated.Value(0)).current;
+  // Keep the action's leading edge beside the row, even while closing the swipe.
+  const actionTranslation = useMemo(
+    () => Animated.add(translation, actionWidth),
+    [translation],
+  );
   const position = useRef(0);
   const origin = useRef(0);
   const lastSwipe = useRef(0);
   const reducedMotion = useReducedMotion();
-  const settle = useCallback(shouldOpen => {
-    position.current = shouldOpen ? -actionWidth : 0;
-    translation.stopAnimation();
-    if (reducedMotion) { translation.setValue(position.current); return; }
-    Animated.spring(translation, { toValue: position.current, stiffness: 280, damping: 30, mass: 1, useNativeDriver: true }).start();
-  }, [reducedMotion, translation]);
+  const settle = useCallback(
+    shouldOpen => {
+      position.current = shouldOpen ? -actionWidth : 0;
+      translation.stopAnimation();
+      if (reducedMotion) {
+        translation.setValue(position.current);
+        return;
+      }
+      Animated.spring(translation, {
+        toValue: position.current,
+        stiffness: 280,
+        damping: 30,
+        mass: 1,
+        useNativeDriver: true,
+      }).start();
+    },
+    [reducedMotion, translation],
+  );
   useEffect(() => {
     settle(open);
     return () => translation.stopAnimation();
   }, [open, settle, translation]);
-  const responder = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponderCapture: (_, gesture) => Math.abs(gesture.dx) > 8
-      && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.3 && (gesture.dx < 0 || open),
-    onPanResponderGrant: () => {
-      origin.current = position.current;
-      translation.stopAnimation(value => { origin.current = value; });
-    },
-    onPanResponderMove: (_, gesture) => {
-      position.current = Math.max(-actionWidth, Math.min(0, origin.current + gesture.dx));
-      translation.setValue(position.current);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      lastSwipe.current = Date.now();
-      const shouldOpen = gesture.vx < -0.5 || (gesture.vx <= 0.5 && position.current < -actionWidth / 2);
-      settle(shouldOpen);
-      onOpenChange(shouldOpen);
-    },
-    onPanResponderTerminate: () => { lastSwipe.current = Date.now(); settle(open); },
-    onPanResponderTerminationRequest: () => false,
-  }), [open, onOpenChange, settle, translation]);
+  const responder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (_, gesture) =>
+          Math.abs(gesture.dx) > 8 &&
+          Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.3 &&
+          (gesture.dx < 0 || open),
+        onPanResponderGrant: () => {
+          origin.current = position.current;
+          translation.stopAnimation(value => {
+            origin.current = value;
+          });
+        },
+        onPanResponderMove: (_, gesture) => {
+          position.current = Math.max(
+            -actionWidth,
+            Math.min(0, origin.current + gesture.dx),
+          );
+          translation.setValue(position.current);
+        },
+        onPanResponderRelease: (_, gesture) => {
+          lastSwipe.current = Date.now();
+          const shouldOpen =
+            gesture.vx < -0.5 ||
+            (gesture.vx <= 0.5 && position.current < -actionWidth / 2);
+          settle(shouldOpen);
+          onOpenChange(shouldOpen);
+        },
+        onPanResponderTerminate: () => {
+          lastSwipe.current = Date.now();
+          settle(open);
+        },
+        onPanResponderTerminationRequest: () => false,
+      }),
+    [open, onOpenChange, settle, translation],
+  );
   function press() {
-    if (Date.now() - lastSwipe.current < 250) { return; }
-    if (open) { onOpenChange(false); return; }
+    if (Date.now() - lastSwipe.current < 250) {
+      return;
+    }
+    if (open) {
+      onOpenChange(false);
+      return;
+    }
     onPress();
   }
-  return <View style={[styles.container, containerStyle]}>
-    <Animated.View pointerEvents={open ? 'auto' : 'none'} style={[styles.action, {
-      opacity: translation.interpolate({ inputRange: [-actionWidth, -1, 0], outputRange: [1, 1, 0], extrapolate: 'clamp' }),
-    }]}>
-    <Pressable accessibilityRole="button" accessibilityLabel={actionLabel} disabled={!open}
-      accessible={open} aria-hidden={!open} accessibilityElementsHidden={!open} importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
-      onPress={onAction} style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}>
-      <Icon name="trash" size={23} color={colors.onDanger} />
-    </Pressable>
-    </Animated.View>
-    <Animated.View {...responder.panHandlers} style={{ transform: [{ translateX: translation }] }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityHint="Arraste para a esquerda para excluir."
-        accessibilityActions={[{ name: 'delete', label: actionLabel }]}
-        onAccessibilityAction={event => { if (event.nativeEvent.actionName === 'delete') { onAction(); } }}
-        onPress={press} onKeyDown={event => {
-          if (event.key === 'ArrowLeft') { event.preventDefault(); settle(true); onOpenChange(true); }
-          if (event.key === 'ArrowRight' || event.key === 'Escape') { event.preventDefault(); settle(false); onOpenChange(false); }
-        }} style={({ pressed }) => [styles.foreground, style, pressed && styles.pressed]}>
-        {children}
-      </Pressable>
-    </Animated.View>
-  </View>;
+  return (
+    <View style={[styles.container, containerStyle]}>
+      <Animated.View
+        style={[[
+          styles.action,
+          {
+            transform: [{ translateX: actionTranslation }],
+            opacity: translation.interpolate({
+              inputRange: [-actionWidth, -1, 0],
+              outputRange: [1, 1, 0],
+              extrapolate: 'clamp',
+            }),
+          },
+        ], pointerEventsStyles[open ? 'auto' : 'none']]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+          disabled={!open}
+          accessible={open}
+          aria-hidden={!open}
+          accessibilityElementsHidden={!open}
+          importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
+          onPress={onAction}
+          style={({ pressed }) => [
+            styles.actionButton,
+            pressed && styles.actionPressed,
+          ]}
+        >
+          <Icon name="trash" size={20} color={colors.onDanger} />
+          <Text style={styles.actionText}>Excluir</Text>
+        </Pressable>
+      </Animated.View>
+      <Animated.View
+        {...responder.panHandlers}
+        style={{ transform: [{ translateX: translation }] }}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityHint="Arraste para a esquerda para excluir."
+          accessibilityActions={[{ name: 'delete', label: actionLabel }]}
+          onAccessibilityAction={event => {
+            if (event.nativeEvent.actionName === 'delete') {
+              onAction();
+            }
+          }}
+          onPress={press}
+          onKeyDown={event => {
+            if (event.key === 'ArrowLeft') {
+              event.preventDefault();
+              settle(true);
+              onOpenChange(true);
+            }
+            if (event.key === 'ArrowRight' || event.key === 'Escape') {
+              event.preventDefault();
+              settle(false);
+              onOpenChange(false);
+            }
+          }}
+          style={({ pressed }) => [
+            styles.foreground,
+            style,
+            pressed && styles.pressed,
+          ]}
+        >
+          {children}
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
 }
-const createStyles = (colors) => StyleSheet.create({
-  container: { overflow: 'hidden' },
-  foreground: { backgroundColor: colors.surface },
-  pressed: { backgroundColor: colors.surfaceMuted },
-  action: { position: 'absolute', top: 0, bottom: 0, right: 0, width: actionWidth, paddingLeft: 12, backgroundColor: colors.surface },
-  actionButton: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.dangerButton },
-  actionPressed: { backgroundColor: colors.dangerPressed },
-});
+const createStyles = colors =>
+  StyleSheet.create({
+    container: { overflow: 'hidden' },
+    foreground: { backgroundColor: colors.surface },
+    pressed: { backgroundColor: colors.surfaceMuted },
+    action: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      right: 0,
+      width: actionWidth,
+      paddingLeft: 12,
+    },
+    actionButton: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 3,
+      marginVertical: 6,
+      marginRight: 6,
+      borderRadius: 14,
+      backgroundColor: colors.dangerButton,
+    },
+    actionText: {
+      fontFamily: fontFamilyMedium,
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: '600',
+      color: colors.onDanger,
+    },
+    actionPressed: { backgroundColor: colors.dangerPressed },
+  });

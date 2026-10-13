@@ -7,6 +7,7 @@ import SelectionField from '../components/SelectionField';
 import PrimaryButton from '../components/PrimaryButton';
 import InlineNotice from '../components/InlineNotice';
 import Icon from '../components/Icon';
+import GlassBackButton from '../components/GlassBackButton';
 import InstitutionLogo from '../components/InstitutionLogo';
 import CategoryIcon from '../components/CategoryIcon';
 import Skeleton, { SkeletonGroup } from '../components/Skeleton';
@@ -100,7 +101,7 @@ export default function EditTransactionScreen({ details, purchase = false, acces
     return <CategoryIcon name={option.icon || 'ellipsis'} color={palette?.foreground || colors.secondary} size={24} />;
   };
   return <Screen contentStyle={s.content}>
-    <View style={s.nav}><Pressable accessibilityRole="button" accessibilityLabel="Voltar aos detalhes" disabled={saving} onPress={onBack} style={s.back}><View style={{ transform: [{ rotate: '180deg' }] }}><Icon name="chevron" size={24} /></View></Pressable><Text accessibilityRole="header" style={s.navTitle}>{purchase ? 'Editar compra' : 'Editar transação'}</Text><View style={s.back} /></View>
+    <View style={s.nav}><GlassBackButton accessibilityLabel="Voltar aos detalhes" disabled={saving} onPress={onBack} /><Text accessibilityRole="header" style={s.navTitle}>{purchase ? 'Editar compra' : 'Editar transação'}</Text><View style={s.back} /></View>
     <Text style={s.subtitle}>Ajuste seu lançamento. Os valores serão recalculados ao salvar.</Text>
     <View style={s.form}>
       <FormField label="Valor" value={amount} onChangeText={text => { setAmount(maskCurrency(text)); clear('amount'); }} large keyboardType="number-pad" maxLength={25} editable={!saving && !paidPurchase && !isPayment} error={errors.amount} testID="edit-entry-amount" />

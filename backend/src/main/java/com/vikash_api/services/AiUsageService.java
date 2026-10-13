@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.vikash_api.exceptions.RequestLimitException;
 
+@lombok.extern.slf4j.Slf4j
 @Service
 public class AiUsageService {
     private final Map<Long, Usage> users = new HashMap<>();
@@ -66,10 +67,12 @@ public class AiUsageService {
         dailyCount++;
         usage.active++;
         active++;
+        log.info("event=ai.permit.acquired activeGlobal={} activeForUser={}", active, usage.active);
         return new Permit(usage);
     }
 
     private RequestLimitException limited(long seconds) {
+        log.info("event=ai.permit.rejected retryAfterSeconds={}", Math.max(1, seconds));
         return new RequestLimitException("Limite de análises atingido. Aguarde e tente novamente.", seconds);
     }
 
@@ -85,6 +88,7 @@ public class AiUsageService {
                 closed = true;
                 usage.active--;
                 active--;
+                log.info("event=ai.permit.released activeGlobal={}", active);
             }
         }
     }

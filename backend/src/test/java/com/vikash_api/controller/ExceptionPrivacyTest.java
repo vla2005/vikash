@@ -47,7 +47,7 @@ class ExceptionPrivacyTest {
     }
 
     @Test
-    void operatorLogsStillContainTheExceptionForDiagnosis() throws Exception {
+    void operatorLogsKeepSafeCauseAndStackWithoutOriginalMessage() throws Exception {
         var logger = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);
         var appender = new ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
         appender.start(); logger.addAppender(appender);
@@ -55,8 +55,9 @@ class ExceptionPrivacyTest {
             controller.failure = new IllegalStateException("server-only-diagnostic");
             mvc.perform(get("/test/unexpected")).andExpect(status().isInternalServerError());
             assertThat(appender.list).anySatisfy(event -> {
-                assertThat(event.getFormattedMessage()).contains("/test/unexpected");
-                assertThat(event.getThrowableProxy().getMessage()).isEqualTo("server-only-diagnostic");
+                assertThat(event.getFormattedMessage()).contains("event=response.unexpected-error", "errorType=IllegalStateException");
+                assertThat(event.getThrowableProxy().getMessage()).contains("IllegalStateException").doesNotContain("server-only-diagnostic");
+                assertThat(event.getThrowableProxy().getStackTraceElementProxyArray()).isNotEmpty();
             });
         } finally { logger.detachAppender(appender); appender.stop(); }
     }

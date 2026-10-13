@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Text, TextInput, StyleSheet } from 'react-native';
+import { Text, TextInput, StyleSheet, Switch } from 'react-native';
 import {
   ThemeProvider,
+  ThemeVariant,
   useTheme,
   useThemeStyles,
 } from '../src/contexts/ThemeContext';
@@ -13,6 +14,7 @@ import {
   writeAppearance,
 } from '../src/services/appearanceStorage';
 import { themes } from '../src/theme';
+import { silverThemes } from '../src/theme/silver';
 import { categoryPalettes } from '../src/theme/categoryPalette';
 
 jest.mock('../src/services/appearanceStorage', () => ({
@@ -45,19 +47,16 @@ function Probe() {
 }
 const tree = () => (
   <ThemeProvider>
-    <Probe />
+    <ThemeVariant>
+      <Probe />
+    </ThemeVariant>
   </ThemeProvider>
 );
 const mount = async () =>
   act(async () => {
     renderer = TestRenderer.create(tree());
   });
-const button = label =>
-  renderer.root.findAll(
-    node =>
-      node.props.accessibilityLabel === `Aparência: ${label}` &&
-      node.props.onPress,
-  )[0];
+const toggle = () => renderer.root.findByType(Switch);
 beforeEach(() => {
   jest.clearAllMocks();
   mockSystemScheme = 'light';
@@ -70,58 +69,61 @@ afterEach(async () => {
   renderer = null;
 });
 
-test.each(['light', 'dark'])(
-  'sem preferência segue o sistema %s e responde à mudança ao vivo',
-  async scheme => {
-    mockSystemScheme = scheme;
-    await mount();
-    expect(current.preference).toBe('system');
-    expect(current.scheme).toBe(scheme);
-    expect(button('Sistema').props.accessibilityState.selected).toBe(true);
-    mockSystemScheme = scheme === 'dark' ? 'light' : 'dark';
-    await act(async () => renderer.update(tree()));
-    expect(current.scheme).toBe(mockSystemScheme);
-  },
-);
+test('sem preferência usa escuro e oferece apenas um toggle', async () => {
+  await mount();
+  expect(current.preference).toBe('dark');
+  expect(current.scheme).toBe('dark');
+  expect(renderer.root.findAllByType(Switch)).toHaveLength(1);
+  expect(toggle().props.value).toBe(true);
+  expect(
+    renderer.root
+      .findAllByType(Text)
+      .some(node => node.props.children === 'Sistema'),
+  ).toBe(false);
+  mockSystemScheme = 'dark';
+  await act(async () => renderer.update(tree()));
+  expect(current.scheme).toBe('dark');
+});
 
 test.each(['light', 'dark'])(
-  'restaura %s e mantém escolha ao mudar o tema do sistema',
+  'restaura %s independentemente do sistema',
   async saved => {
     readAppearance.mockResolvedValue(saved);
     await mount();
     mockSystemScheme = saved === 'dark' ? 'light' : 'dark';
     await act(async () => renderer.update(tree()));
-    expect(current.preference).toBe(saved);
     expect(current.scheme).toBe(saved);
+    expect(current.colors).toBe(silverThemes[saved].colors);
+    expect(current.effects).toBe(silverThemes[saved].effects);
   },
 );
 
-test('troca pelo perfil persiste, atualiza estilos e preserva o formulário montado', async () => {
+test('toggle persiste e atualiza o tema sem perder o formulário montado', async () => {
   await mount();
   await act(async () =>
     renderer.root.findByType(TextInput).props.onChangeText('Nome em edição'),
   );
-  await act(async () => button('Escuro').props.onPress());
-  expect(writeAppearance).toHaveBeenCalledWith('dark');
-  expect(current.colors).toBe(themes.dark.colors);
+  await act(async () => toggle().props.onValueChange(false));
+  expect(writeAppearance).toHaveBeenCalledWith('light');
+  expect(current.colors).toBe(silverThemes.light.colors);
   expect(
     StyleSheet.flatten(
       renderer.root.findByProps({ testID: 'theme-text' }).props.style,
     ).color,
-  ).toBe(themes.dark.colors.text);
+  ).toBe(silverThemes.light.colors.text);
   expect(renderer.root.findByType(TextInput).props.value).toBe(
     'Nome em edição',
   );
   expect(renderer.root.findByType(TextInput).props.keyboardAppearance).toBe(
-    'dark',
+    'light',
   );
   expect(renderer.root.findByType(TextInput).props.selectionColor).toBe(
-    themes.dark.colors.primary,
+    silverThemes.light.colors.primary,
   );
-  expect(button('Escuro').props.accessibilityState.selected).toBe(true);
-  await act(async () => button('Sistema').props.onPress());
-  expect(current.scheme).toBe('light');
-  expect(writeAppearance).toHaveBeenLastCalledWith('system');
+  expect(toggle().props.value).toBe(false);
+  await act(async () => toggle().props.onValueChange(true));
+  expect(current.scheme).toBe('dark');
+  expect(writeAppearance).toHaveBeenLastCalledWith('dark');
 });
 
 test('não mostra conteúdo com tema incorreto antes de restaurar a escolha salva', async () => {
@@ -141,8 +143,8 @@ test('não mostra conteúdo com tema incorreto antes de restaurar a escolha salv
 test('falha ao salvar conserva tema e campo, informa erro e permite repetir', async () => {
   await mount();
   writeAppearance.mockRejectedValueOnce(new Error('storage'));
-  await act(async () => button('Escuro').props.onPress());
-  expect(current.scheme).toBe('light');
+  await act(async () => toggle().props.onValueChange(false));
+  expect(current.scheme).toBe('dark');
   expect(
     renderer.root
       .findAllByType(Text)
@@ -152,8 +154,8 @@ test('falha ao salvar conserva tema e campo, informa erro e permite repetir', as
           'Não foi possível salvar a aparência. Tente novamente.',
       ),
   ).toBe(true);
-  await act(async () => button('Escuro').props.onPress());
-  expect(current.scheme).toBe('dark');
+  await act(async () => toggle().props.onValueChange(false));
+  expect(current.scheme).toBe('light');
 });
 
 test('serializa cliques e só muda após persistir, evitando escolha não salva', async () => {
@@ -167,20 +169,20 @@ test('serializa cliques e só muda após persistir, evitando escolha não salva'
   await mount();
   let pending;
   await act(async () => {
-    pending = current.setPreference('dark');
+    pending = current.setPreference('light');
   });
-  expect(current.scheme).toBe('light');
-  await act(async () => current.setPreference('light'));
+  expect(current.scheme).toBe('dark');
+  await act(async () => current.setPreference('dark'));
   expect(writeAppearance).toHaveBeenCalledTimes(1);
   await act(async () => {
     finish();
     await pending;
   });
-  expect(current.scheme).toBe('dark');
+  expect(current.scheme).toBe('light');
 });
 
-test.each(['cor-inválida', null])(
-  'preferência inválida %s usa sistema e falha de leitura não bloqueia',
+test.each(['system', 'cor-inválida', null])(
+  'preferência inválida %s usa escuro e falha de leitura não bloqueia',
   async saved => {
     mockSystemScheme = 'dark';
     readAppearance.mockResolvedValueOnce(saved);
@@ -254,5 +256,66 @@ test.each(['light', 'dark'])(
       expect(contrast(item.onAccent, item.accent)).toBeGreaterThanOrEqual(3);
       expect(contrast(item.accent, c.surface)).toBeGreaterThanOrEqual(3);
     });
+  },
+);
+
+// Contraste sobre a superfície translúcida já composta contra o fundo do tema.
+function composite(color, background) {
+  if (color.startsWith('#')) return color;
+  const [r, g, b, alpha] = color.match(/[\d.]+/g).map(Number);
+  const backdrop = [1, 3, 5].map(offset =>
+    parseInt(background.slice(offset, offset + 2), 16),
+  );
+  return (
+    '#' +
+    [r, g, b]
+      .map((value, index) =>
+        Math.round(value * alpha + backdrop[index] * (1 - alpha))
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+  );
+}
+test.each(['light', 'dark'])(
+  'identidade prateada %s mantém contraste de texto, vidro, navegação e voz',
+  scheme => {
+    const { colors: c, effects: e } = silverThemes[scheme];
+    for (const background of [
+      c.background,
+      composite(c.surface, c.background),
+      c.surfaceMuted,
+      c.dialogSurface,
+    ]) {
+      for (const foreground of [
+        c.text,
+        c.secondary,
+        c.placeholder,
+        c.positive,
+        c.negative,
+      ]) {
+        expect({
+          foreground,
+          background,
+          readable: contrast(foreground, background) >= 4.5,
+        }).toMatchObject({ readable: true });
+      }
+    }
+    for (const [foreground, background] of [
+      [c.onPrimary, c.primary],
+      [c.onPrimary, c.primaryPressed],
+      [c.onBrand, c.brandPrimary],
+      [c.onBrand, c.brandPressed],
+      [e.dock.text, e.dock.solidFill],
+      [e.dock.activeText, e.dock.solidLens],
+      [e.dock.microphoneText, e.dock.solidStrong],
+      [e.voiceOrb.control.icon, e.voiceOrb.control.fillTop],
+      [e.voiceOrb.control.icon, e.voiceOrb.control.fillBottom],
+      [e.toast.text, e.toast.fill],
+      [e.toast.secondary, e.toast.fill],
+    ])
+      expect(contrast(foreground, background)).toBeGreaterThanOrEqual(4.5);
+    expect(e.ambientLight.intensity).toBeGreaterThan(0.22);
+    if (scheme === 'light') expect(e.ambientLight.colors[0]).toBe('#000000');
   },
 );

@@ -1,3 +1,4 @@
+import { pointerEventsStyles } from '../theme/interaction';
 import { useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -10,7 +11,7 @@ export default function Skeleton({ width = '100%', height = 16, radius = 8, styl
 }
 
 export function SkeletonGroup({ label, children, style }) {
-  return <View accessible accessibilityLabel={label} accessibilityState={{ busy: true }} pointerEvents="none" style={style}>{children}</View>;
+  return <View accessible accessibilityLabel={label} accessibilityState={{ busy: true }} style={[style, pointerEventsStyles.none]}>{children}</View>;
 }
 
 export function ListSkeleton({ label = 'Carregando lançamentos', count = 4, showAmount = true }) {

@@ -52,10 +52,13 @@ export async function authenticatedFetch(path, options = {}, accessToken) {
 }
 
 export class ApiError extends Error {
-  constructor(message, status, fieldErrors = {}) {
+  constructor(message, status, fieldErrors = {}, details = {}) {
     super(message);
     this.status = status;
     this.fieldErrors = fieldErrors;
+    this.code = typeof details.code === 'string' ? details.code : undefined;
+    this.missingFields = Array.isArray(details.missingFields)
+      ? details.missingFields.filter(field => typeof field === 'string') : [];
   }
 }
 
@@ -98,7 +101,9 @@ async function requestJson(method, path, body, accessToken, options) {
       : response.status === 401 ? 'Não foi possível autenticar. Confira seus dados ou entre novamente.'
         : response.status >= 500 ? 'Não foi possível concluir agora. Tente novamente.'
           : data?.message || 'Não foi possível concluir a solicitação.';
-    throw new ApiError(message, response.status, data?.fieldErrors || {});
+    throw new ApiError(message, response.status, data?.fieldErrors || {}, {
+      code: data?.code, missingFields: data?.missingFields,
+    });
   }
   return data;
 }

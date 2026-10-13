@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.vikash_api.services.JwtService;
+import com.vikash_api.logging.SafeDiagnostics;
 import com.vikash_api.repositories.RefreshTokenRepository;
 import com.vikash_api.entities.UserEntity;
 import io.jsonwebtoken.Claims;
@@ -42,12 +43,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
 
         if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+            log.info("event=authentication.token outcome=absent-or-unsupported");
             filterChain.doFilter(request, response);
             return;
         }
 
         final String jwt = authHeader.substring(7);
 
+        log.info("event=authentication.token outcome=validation-started");
         try {
             if (jwtService.isAccessTokenValid(jwt)) {
                 Claims claims = jwtService.extractAccessTokenClaims(jwt);
@@ -75,10 +78,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    log.info("event=authentication.token outcome=authenticated");
                 }
             }
         } catch (Exception e) {
-            log.warn("Could not authenticate JWT token: {}", e.getMessage());
+            SafeDiagnostics.failure(log, "authentication.failed", "jwt.validate", e, 0, false);
         }
 
         filterChain.doFilter(request, response);

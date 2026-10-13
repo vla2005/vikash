@@ -5,3 +5,33 @@ output
 .npm-cache/
 .agents
 .impeccable/review/
+
+# Private local configuration and diagnostic artifacts
+.env
+.env.*
+!.env.example
+*.log
+*.log.*
+.codex/
+.aws/
+/tmp/
+/design-qa.md
+/app/premium-audit.json
+
+# Private keys and release signing material (keep the standard Android debug key)
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+!/app/android/app/debug.keystore
+release-signing.properties
+id_rsa
+id_ed25519
+
+# Private database snapshots; SQL migrations remain versioned
+backups/
+*.dump
+*.sqlite
+*.sqlite3

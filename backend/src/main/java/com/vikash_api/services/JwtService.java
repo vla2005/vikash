@@ -19,6 +19,7 @@ import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
+@lombok.extern.slf4j.Slf4j
 public class JwtService {
 
     private final SecretKey accessTokenKey;
@@ -112,6 +113,7 @@ public class JwtService {
             Claims claims = extractAccessTokenClaims(token);
             return !claims.getExpiration().before(new Date());
         } catch (JwtException | IllegalArgumentException e) {
+            com.vikash_api.logging.SafeDiagnostics.failure(log, "auth.token.invalid", "jwt.validate", e, 0, false);
             return false;
         }
     }
@@ -121,6 +123,7 @@ public class JwtService {
             Claims claims = extractRefreshTokenClaims(token);
             return !claims.getExpiration().before(new Date());
         } catch (JwtException | IllegalArgumentException e) {
+            com.vikash_api.logging.SafeDiagnostics.failure(log, "auth.token.invalid", "jwt.validate", e, 0, false);
             return false;
         }
     }

@@ -1,3 +1,4 @@
+import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -31,7 +32,7 @@ export default function RecentTransactions({ rows = [], creditRows = [], onOpenT
   const error = isCredit && creditError;
   const onViewAll = isCredit ? onViewCards : onViewStatement;
   const linkLabel = isCredit ? 'Ver cartões' : 'Ver extrato';
-  return <View style={s.card}>
+  return <GlassPanel style={s.card}>
     <View style={s.heading}><Text accessibilityRole="header" style={s.title}>Movimentações recentes</Text>
       {!!onViewAll && <Pressable accessibilityRole="button" accessibilityLabel={linkLabel} onPress={onViewAll}
         style={({ pressed }) => [s.linkButton, pressed && s.pressed]}><Text style={s.link}>{linkLabel}</Text><Icon name="chevron" size={14} color={colors.primary} /></Pressable>}
@@ -59,7 +60,7 @@ export default function RecentTransactions({ rows = [], creditRows = [], onOpenT
         <Text style={[s.amount, !hidden && income && s.income, !hidden && expense && s.expense]}>{hidden ? hiddenAmount : `${sign}${formatCurrency(row.amount)}`}</Text>
       </Pressable>;
     }) : <Text style={s.empty}>{isCredit ? 'Suas últimas compras no crédito aparecerão aqui.' : 'Suas últimas transações das contas aparecerão aqui.'}</Text>}
-  </View>;
+  </GlassPanel>;
 }
 
 const createStyles = (colors) => StyleSheet.create({

@@ -9,7 +9,7 @@ function shape(tag) {
     return React.createElement(tag, { ...props, ref, transform, strokeDasharray, style: StyleSheet.flatten(style), 'data-testid': testID }, children);
   });
 }
-export const Svg = shape('svg');
+const Svg = shape('svg');
 export const Path = shape('path');
 export const Rect = shape('rect');
 export const Circle = shape('circle');
@@ -19,9 +19,9 @@ export const Polyline = shape('polyline');
 export const Polygon = shape('polygon');
 export const Defs = shape('defs');
 export const Mask = shape('mask');
-export const ClipPath = shape('clipPath');
 export const G = shape('g');
 export const LinearGradient = shape('linearGradient');
+export const RadialGradient = shape('radialGradient');
 export const Stop = shape('stop');
 export const Text = shape('text');
 export default Svg;

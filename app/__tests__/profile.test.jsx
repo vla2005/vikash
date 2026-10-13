@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Text } from 'react-native';
+import { Text, Switch } from 'react-native';
 import ProfileScreen from '../src/screens/ProfileScreen';
 import ConfirmationDialog from '../src/components/ConfirmationDialog';
 import { getProfileInitials } from '../src/utils/profile';
@@ -56,4 +56,10 @@ test('cancelar confirmação de logout fecha popup e não encerra a sessão', as
 
 test.each([[' Viktor  Lucena ', 'VL'], ['Viktor', 'V'], ['', 'V']])('iniciais de %s', (name, expected) => {
   expect(getProfileInitials(name)).toBe(expected);
+});
+
+test('perfil contém um único toggle claro/escuro e não oferece ajuda e suporte', async () => {
+  await act(async () => { renderer = TestRenderer.create(<ProfileScreen profile={{ name: 'Ana Martins' }} />); });
+  expect(renderer.root.findAllByType(Switch)).toHaveLength(1);
+  expect(button('Ajuda e suporte')).toBeUndefined();
 });

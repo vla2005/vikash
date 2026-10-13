@@ -7,52 +7,25 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { StyleSheet, View, useColorScheme } from 'react-native';
-import { themes } from '../theme';
+import { StyleSheet, View } from 'react-native';
 import { categoryPalettes } from '../theme/categoryPalette';
 import { readAppearance, writeAppearance } from '../services/appearanceStorage';
+import { silverThemes } from '../theme/silver';
 
-export const appearanceOptions = [
-  {
-    value: 'system',
-    label: 'Sistema',
-    description: 'Acompanhar o tema do aparelho',
-    icon: 'device',
-  },
-  {
-    value: 'light',
-    label: 'Claro',
-    description: 'Usar sempre o modo claro',
-    icon: 'sun',
-  },
-  {
-    value: 'dark',
-    label: 'Escuro',
-    description: 'Usar sempre o modo escuro',
-    icon: 'moon',
-  },
-];
-const validPreference = value =>
-  appearanceOptions.some(option => option.value === value);
+const validPreference = value => value === 'light' || value === 'dark';
 const ThemeContext = createContext({
-  ...themes.light,
-  categoryColors: categoryPalettes.light,
-  preference: 'system',
+  ...silverThemes.dark,
+  categoryColors: categoryPalettes.dark,
+  preference: 'dark',
   ready: true,
   setPreference: async () => {},
 });
 
 export function ThemeProvider({ children }) {
-  const systemScheme = useColorScheme();
-  const [preference, setPreferenceState] = useState('system');
+  const [preference, setPreferenceState] = useState('dark');
   const [ready, setReady] = useState(false);
   const saving = useRef(false);
-  const scheme =
-    preference === 'system'
-      ? systemScheme === 'dark'
-        ? 'dark'
-        : 'light'
-      : preference;
+  const scheme = preference;
 
   useEffect(() => {
     let active = true;
@@ -63,7 +36,7 @@ export function ThemeProvider({ children }) {
         }
       })
       .catch(() => {
-        // Sem acesso ao armazenamento, o tema do sistema continua disponível.
+        // Sem acesso ao armazenamento, mantém a aparência escura padrão.
       })
       .finally(() => {
         if (active) {
@@ -77,7 +50,7 @@ export function ThemeProvider({ children }) {
 
   const setPreference = useCallback(async next => {
     if (!validPreference(next)) {
-      throw new Error('Escolha Sistema, Claro ou Escuro.');
+      throw new Error('Escolha Claro ou Escuro.');
     }
     if (saving.current) {
       return;
@@ -95,7 +68,7 @@ export function ThemeProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      ...themes[scheme],
+      ...silverThemes[scheme],
       categoryColors: categoryPalettes[scheme],
       preference,
       ready,
@@ -111,7 +84,7 @@ export function ThemeProvider({ children }) {
         <View
           style={[
             styles.loading,
-            { backgroundColor: themes[scheme].colors.background },
+            { backgroundColor: silverThemes[scheme].colors.background },
           ]}
         />
       )}
@@ -120,6 +93,20 @@ export function ThemeProvider({ children }) {
 }
 
 export const useTheme = () => useContext(ThemeContext);
+// A mesma identidade visual acompanha a preferência, sem remontar as telas.
+export function ThemeVariant({ children, variant = 'silver' }) {
+  const parent = useTheme();
+  const value = useMemo(
+    () =>
+      variant === 'silver'
+        ? { ...parent, ...silverThemes[parent.scheme] }
+        : parent,
+    [parent, variant],
+  );
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
+}
 export function useInputTheme() {
   const { colors, scheme } = useTheme();
   return {
@@ -129,13 +116,14 @@ export function useInputTheme() {
     keyboardAppearance: scheme,
   };
 }
+export const useThemeTokens = () => useTheme().effects;
 const styles = StyleSheet.create({ loading: { flex: 1 } });
 
 // Cada componente mantém seus estilos; só as cores vêm do tema compartilhado.
 export function useThemeStyles(createStyles) {
-  const { colors: palette, typography: type } = useTheme();
+  const { colors: palette, typography: type, effects } = useTheme();
   return useMemo(
-    () => createStyles(palette, type),
-    [createStyles, palette, type],
+    () => createStyles(palette, type, effects),
+    [createStyles, palette, type, effects],
   );
 }

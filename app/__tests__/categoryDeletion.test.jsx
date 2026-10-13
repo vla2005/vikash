@@ -6,6 +6,7 @@ import CategoryFormScreen from '../src/screens/CategoryFormScreen';
 import SelectionField from '../src/components/SelectionField';
 import ConfirmationDialog from '../src/components/ConfirmationDialog';
 import SwipeableRow from '../src/components/SwipeableRow';
+jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 
 jest.mock('../src/hooks/useReducedMotion', () => () => true);
 jest.mock('../src/hooks/useToast', () => () => ({ showToast: jest.fn() }));

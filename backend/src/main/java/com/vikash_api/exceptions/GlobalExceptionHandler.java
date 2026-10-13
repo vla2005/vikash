@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.vikash_api.dtos.responses.ErrorResponse;
+import com.vikash_api.logging.SafeDiagnostics;
+import com.vikash_api.logging.RequestIdFilter;
+import org.slf4j.MDC;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -70,6 +73,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TransactionNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleTransactionNotFound(TransactionNotFoundException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.NOT_FOUND, "Transaction Not Found", ex.getMessage(), request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(VoiceAnalysisValidationException.class)
+    public ResponseEntity<ErrorResponse> handleVoiceAnalysisValidation(VoiceAnalysisValidationException ex, HttpServletRequest request) {
+        log.info("event=voice.analysis.rejected code={} fields={}", ex.getCode(), ex.getMissingFields());
+        var response = buildErrorResponse(HttpStatus.BAD_REQUEST, "Voice Analysis Validation", ex.getMessage(),
+                request.getRequestURI(), ex.getFieldErrors());
+        response.getBody().setCode(ex.getCode());
+        response.getBody().setMissingFields(ex.getMissingFields());
+        return response;
+    }
+
+    @ExceptionHandler(AiAnalysisUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleAiAnalysisUnavailable(AiAnalysisUnavailableException ex, HttpServletRequest request) {
+        SafeDiagnostics.failure(log, "response.ai-unavailable", "voice.analysis", ex, 0, true);
+        var response = buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, "Voice Analysis Unavailable",
+                "Não foi possível analisar agora. Tente novamente em instantes.", request.getRequestURI(), null);
+        response.getBody().setCode("VOICE_ANALYSIS_UNAVAILABLE");
+        return response;
     }
 
     @ExceptionHandler(InvalidTransactionException.class)
@@ -151,7 +173,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TokenCompromisedException.class)
     public ResponseEntity<ErrorResponse> handleTokenCompromised(TokenCompromisedException ex, HttpServletRequest request) {
-        log.warn("Security compromise detected at URI: {}", request.getRequestURI());
+        log.info("event=security.session-reuse outcome=rejected");
         return buildErrorResponse(HttpStatus.FORBIDDEN, "Security Compromise Detected", ex.getMessage(), request.getRequestURI(), null);
     }
 
@@ -194,7 +216,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled exception processing request: {}", request.getRequestURI(), ex);
+        SafeDiagnostics.failure(log, "response.unexpected-error", "http", ex, 0, true);
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error",
@@ -211,8 +233,11 @@ public class GlobalExceptionHandler {
             String path,
             Map<String, String> fieldErrors) {
 
+        log.info("event=response.error route={} status={} error={} invalidFieldCount={}", RequestIdFilter.currentRoute(),
+                status.value(), error, fieldErrors == null ? 0 : fieldErrors.size());
         ErrorResponse response = ErrorResponse.builder()
                 .timestamp(Instant.now())
+                .requestId(MDC.get("requestId"))
                 .status(status.value())
                 .error(error)
                 .message(message)

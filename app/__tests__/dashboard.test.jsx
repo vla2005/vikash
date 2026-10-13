@@ -271,6 +271,8 @@ test('animated card selection prevents overlapping switches and opens the new in
   expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: false, disabled: true });
   await act(async () => finish({ finished: true }));
   expect(button('Selecionar cartão Cartão final 7070').props.accessibilityState).toEqual({ selected: true, disabled: false });
+  await act(async () => button('Abrir detalhes de Cartão final 7070').props.onPress());
+  expect(onOpenCard).toHaveBeenCalledWith('second');
   await act(async () => button('Ver fatura de Cartão final 7070').props.onPress());
   expect(onOpenCard).toHaveBeenCalledWith('second', 'new-invoice');
 });

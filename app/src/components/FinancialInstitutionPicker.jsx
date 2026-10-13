@@ -89,7 +89,7 @@ const createStyles = (colors, typography) => StyleSheet.create({
   value: { flex: 1, fontFamily, fontSize: 15, color: colors.text },
   placeholder: { color: colors.secondary },
   overlay: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'flex-end', alignItems: 'center' },
-  sheet: { width: '100%', maxWidth: 460, maxHeight: '85%', backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 12 },
+  sheet: { width: '100%', maxWidth: 460, maxHeight: '85%', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingTop: 12 },
   handle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 22 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   title: { ...typography.title, fontSize: 24, lineHeight: 30 },

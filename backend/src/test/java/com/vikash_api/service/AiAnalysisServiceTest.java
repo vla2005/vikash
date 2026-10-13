@@ -148,6 +148,26 @@ class AiAnalysisServiceTest {
         server.verify();
     }
 
+    @Test
+    void sendsReviewFieldEnumAndPromptForAllMissingInformationWithoutGuessing() {
+        server.expect(anything()).andExpect(request -> {
+            var body = mapper.readTree(((MockClientHttpRequest) request).getBodyAsString());
+            var schema = body.path("generationConfig").path("responseFormat").path("text").path("schema");
+            assertThat(schema.path("properties").path("missingFields").path("items").path("enum"))
+                    .isEqualTo(mapper.valueToTree(com.vikash_api.enums.VoiceAnalysisField.fieldNames()));
+            var prompt = body.path("systemInstruction").path("parts").path(0).path("text").asText();
+            assertThat(prompt).contains("Banco não é forma de pagamento", "TODOS os campos afetados", "Não preencha um campo por ser a única", "EXEMPLOS DE EXTRAÇÃO", "VERIFICAÇÃO FINAL");
+        }).andRespond(withSuccess(geminiResponse("STOP", "{\"amount\":50,\"paymentMethod\":null,\"accountUuid\":null,\"missingFields\":[\"paymentMethod\",\"accountUuid\"]}"), MediaType.APPLICATION_JSON));
+        assertThat(service.analyze("Gastei cinquenta na farmácia", context).missingFields()).containsExactly("paymentMethod", "accountUuid");
+    }
+
+    @Test
+    void unknownDiagnosticFieldIsProviderFailureRatherThanLostValidation() {
+        server.expect(anything()).andRespond(withSuccess(geminiResponse("STOP", "{\"missingFields\":[\"invented-bank-field\"]}"), MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> service.analyze("Almoço", context))
+                .isInstanceOf(com.vikash_api.exceptions.AiAnalysisUnavailableException.class);
+    }
+
     private String geminiResponse(String finishReason, String text) {
         return mapper.writeValueAsString(Map.of("candidates", List.of(Map.of(
                 "finishReason", finishReason,

@@ -1,53 +1,158 @@
-import React, { createContext, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Modal, Platform, StyleSheet, View } from 'react-native';
+import { pointerEventsStyles } from '../theme/interaction';
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  Dimensions,
+  Modal,
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import useReducedMotion from '../hooks/useReducedMotion';
+import useDrawerAnimation from '../hooks/useDrawerAnimation';
 
 export const DrawerMotionContext = createContext(null);
 
-// Keep the modal and its content mounted until the panel has left the screen.
-export default function DrawerModal({ visible = true, children, ...props }) {
+// Medir antes da entrada; conservar o conteúdo até completar a saída.
+export default function DrawerModal({
+  visible = true,
+  children,
+  onShow,
+  ...props
+}) {
+  const { height } = useWindowDimensions();
+  const offscreen = Math.max(height, Dimensions.get('screen').height) + 24;
   const [present, setPresent] = useState(visible);
-  const slide = useRef(new Animated.Value(180)).current;
-  const panelHeight = useRef(1000);
+  const { slide, panelStyle, enter, exit, prepare, stop } = useDrawerAnimation(
+    offscreen,
+  );
+  const screenOffset = useRef(offscreen);
+  const panelHeight = useRef(offscreen);
   const lastContent = useRef(children);
   const reducedMotion = useReducedMotion();
-  const measure = useCallback(event => {
-    panelHeight.current = event.nativeEvent.layout.height + 24;
-  }, []);
-  const motion = useMemo(() => ({ slide, measure }), [slide, measure]);
+  const initialized = useRef(false);
+  const measured = useRef(false);
+  const shown = useRef(Platform.OS === 'web');
+  const entered = useRef(false);
+  const pendingEntry = useRef(false);
+  const generation = useRef(0);
 
   useLayoutEffect(() => {
-    if (visible) { lastContent.current = children; }
+    screenOffset.current = offscreen;
+  }, [offscreen]);
+  useLayoutEffect(() => {
+    if (visible) {
+      lastContent.current = children;
+    }
   }, [visible, children]);
-
-  useEffect(() => {
-    if (!visible && !present) { slide.setValue(180); return; }
-    if (visible) { setPresent(true); }
-    if (reducedMotion) {
-      slide.setValue(visible ? 0 : panelHeight.current);
-      setPresent(visible);
+  const startEntry = useCallback(() => {
+    if (!pendingEntry.current || !measured.current || !shown.current) {
       return;
     }
-    let active = true;
-    const animation = visible
-      ? Animated.spring(slide, { toValue: 0, damping: 24, stiffness: 200, useNativeDriver: Platform.OS !== 'web' })
-      : Animated.timing(slide, { toValue: panelHeight.current, duration: 260, easing: Easing.in(Easing.cubic), useNativeDriver: Platform.OS !== 'web' });
-    animation.start(({ finished }) => {
-      if (active && finished && !visible) {
-        setPresent(false);
-        slide.setValue(180);
+    pendingEntry.current = false;
+    const initial = !entered.current;
+    entered.current = true;
+    enter(initial);
+  }, [enter]);
+  const measure = useCallback(
+    event => {
+      panelHeight.current = Math.ceil(event.nativeEvent.layout.height) + 24;
+      if (!measured.current) {
+        measured.current = true;
+        if (pendingEntry.current && !entered.current) {
+          prepare(panelHeight.current);
+        }
       }
-    });
-    return () => { active = false; animation.stop(); };
-  }, [visible, present, reducedMotion, slide]);
+      startEntry();
+    },
+    [prepare, startEntry],
+  );
+  const show = useCallback(
+    event => {
+      shown.current = true;
+      startEntry();
+      onShow?.(event);
+    },
+    [onShow, startEntry],
+  );
+  const resetHidden = useCallback(() => {
+    initialized.current = false;
+    measured.current = false;
+    shown.current = Platform.OS === 'web';
+    entered.current = false;
+    pendingEntry.current = false;
+    setPresent(false);
+    prepare(screenOffset.current);
+  }, [prepare]);
 
-  return <Modal {...props} visible={visible || present} transparent animationType="none" statusBarTranslucent>
-    {(visible || present) && <DrawerMotionContext.Provider value={motion}>
-      <View style={styles.frame} pointerEvents={visible ? 'auto' : 'none'}>
-        {visible ? children : lastContent.current}
-      </View>
-    </DrawerMotionContext.Provider>}
-  </Modal>;
+  useLayoutEffect(() => {
+    const current = ++generation.current;
+    if (visible) {
+      if (!initialized.current) {
+        initialized.current = true;
+        measured.current = false;
+        shown.current = Platform.OS === 'web';
+        entered.current = false;
+        prepare(screenOffset.current);
+      }
+      setPresent(true);
+      if (reducedMotion) {
+        pendingEntry.current = false;
+        prepare(0);
+      } else {
+        pendingEntry.current = true;
+        startEntry();
+      }
+    } else if (initialized.current) {
+      pendingEntry.current = false;
+      if (reducedMotion) {
+        resetHidden();
+      } else {
+        exit(panelHeight.current, () => {
+          if (generation.current === current) {
+            resetHidden();
+          }
+        });
+      }
+    }
+    return () => {
+      generation.current = current + 1;
+      pendingEntry.current = false;
+      stop();
+    };
+  }, [visible, reducedMotion, prepare, startEntry, exit, resetHidden, stop]);
+  useEffect(() => stop, [stop]);
+  const motion = useMemo(
+    () => ({ slide, panelStyle, measure }),
+    [slide, panelStyle, measure],
+  );
+
+  return (
+    <Modal
+      {...props}
+      onShow={show}
+      visible={visible || present}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+    >
+      {(visible || present) && (
+        <DrawerMotionContext.Provider value={motion}>
+          <View style={[styles.frame, pointerEventsStyles[visible ? 'auto' : 'none']]} >
+            {visible ? children : lastContent.current}
+          </View>
+        </DrawerMotionContext.Provider>
+      )}
+    </Modal>
+  );
 }
 
 const styles = StyleSheet.create({ frame: { flex: 1 } });

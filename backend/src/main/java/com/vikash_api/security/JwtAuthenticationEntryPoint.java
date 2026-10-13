@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.time.Instant;
 
+@lombok.extern.slf4j.Slf4j
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
@@ -20,6 +21,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
             HttpServletResponse response,
             AuthenticationException authException) throws IOException {
 
+        log.info("event=authentication.required status=401");
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
@@ -34,6 +36,8 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
                 request.getRequestURI()
         );
 
+        String requestId = org.slf4j.MDC.get("requestId");
+        if (requestId != null) json = json.substring(0, json.length() - 1) + ",\"requestId\":\"" + requestId + "\"}";
         response.getWriter().write(json);
     }
 }

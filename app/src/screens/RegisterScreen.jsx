@@ -5,6 +5,7 @@ import Screen from '../components/Screen';
 import BrandLogo from '../components/BrandLogo';
 import FormField from '../components/FormField';
 import PrimaryButton from '../components/PrimaryButton';
+import GlassBackButton from '../components/GlassBackButton';
 import Icon from '../components/Icon';
 import InlineNotice from '../components/InlineNotice';
 import { useOnboarding } from '../contexts/OnboardingContext';
@@ -48,7 +49,7 @@ export default function RegisterScreen({ navigation, route }) {
     } finally { submitting.current = false; setLoading(false); }
   }
   return <Screen>
-    <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar ao login" style={styles.back} onPress={() => navigation.goBack()}><Icon name="back" size={25} color={colors.secondary} /></Pressable><BrandLogo centered /><View style={styles.headerBalance} /></View>
+    <View style={styles.header}><GlassBackButton accessibilityLabel="Voltar ao login" style={styles.back} onPress={() => navigation.goBack()} /><BrandLogo centered /><View style={styles.headerBalance} /></View>
     <View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>Vamos começar.</Text><Text style={typography.body}>Crie seu acesso ao Vikash.</Text></View>
     <View style={styles.form}>
       <FormField label="Nome" placeholder="Como você se chama?" value={values.name} onChangeText={value => change('name', value)} error={errors.name} maxLength={100} autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} testID="register-name" />
@@ -64,8 +65,8 @@ export default function RegisterScreen({ navigation, route }) {
 }
 const createStyles = (colors, typography) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { width: 34, height: 44, justifyContent: 'center' },
-  headerBalance: { width: 34 },
+  back: { width: 44, height: 44 },
+  headerBalance: { width: 44 },
   heading: { marginTop: 28, gap: 9 },
   title: { ...typography.title, fontSize: 32, lineHeight: 41 },
   form: { marginTop: 24, gap: 16, padding: 18, backgroundColor: colors.surface, borderRadius: 24 },

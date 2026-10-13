@@ -1,3 +1,4 @@
+import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel } from '../utils/creditCards';
 import React from 'react';
@@ -28,7 +29,7 @@ export default function DashboardInsights({ data, period, invoices = [], hidden,
   const delta = comparison.data ? data.expenses - comparison.data.expenses : null;
   return <View style={s.section}>
     <Text accessibilityRole="header" style={s.title}>De olho no mês</Text>
-    <View style={s.panel}>
+    <GlassPanel style={s.panel}>
       {dueInvoice && dueInDays <= 7 && <Pressable accessibilityRole="button" accessibilityLabel="Abrir próxima fatura"
         onPress={() => onOpenCard?.(dueInvoice.creditCard.uuid, dueInvoice.uuid)} style={({ pressed }) => [s.notice, pressed && s.pressed]}>
         <IconTile tone={dueInDays < 0 ? 'negative' : 'warning'}><Icon name="warning" size={21} color={dueInDays < 0 ? colors.negative : colors.warning} /></IconTile>
@@ -56,7 +57,7 @@ export default function DashboardInsights({ data, period, invoices = [], hidden,
         {pace.projection != null && <View style={[s.copy, s.divider]}><Text style={s.label}>Projeção de saídas</Text><Text style={s.value}>{money(pace.projection)}</Text></View>}
       </View>}
       <Text style={s.caption}>{pace?.projection != null ? 'Saídas das contas. Estimativa pelo ritmo do mês, sem prever novas compras.' : 'Saídas das contas, incluindo pagamentos de faturas.'}</Text>
-    </View>
+    </GlassPanel>
   </View>;
 }
 const createStyles = (colors) => StyleSheet.create({

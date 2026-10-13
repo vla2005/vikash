@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 export const lightColors = {
   background: '#F3F5F9',
   surface: '#FFFFFF',
+  dialogSurface: '#FFFFFF',
   text: '#15244A',
   secondary: '#606D83',
   primary: '#2348EF',
@@ -47,6 +48,7 @@ export const darkColors = {
   ...lightColors,
   background: '#101727',
   surface: '#1C2636',
+  dialogSurface: '#1C2636',
   surfaceMuted: '#263244',
   text: '#F0F4FF',
   secondary: '#B1BED4',

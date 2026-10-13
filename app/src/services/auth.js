@@ -45,7 +45,27 @@ export async function fetchCurrentUser(accessToken, renew = true) {
 }
 
 async function authenticate(path, values) {
-  const session = await postJson(path, values);
+  const controller = new AbortController();
+  let timeout;
+  const url = `${API_BASE_URL}${path}`;
+  if (__DEV__) { console.info(`[Vikash auth] Enviando solicitação para ${url}`); }
+  let session;
+  try {
+    session = await Promise.race([
+      postJson(path, values, undefined, { signal: controller.signal }),
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error('A API não respondeu em 15 segundos. Confira sua conexão e tente novamente.'));
+          controller.abort();
+        }, 15000);
+      }),
+    ]);
+  } catch (cause) {
+    if (__DEV__ && !(cause instanceof ApiError)) {
+      console.warn(`[Vikash auth] Falha de conexão com ${url}`);
+    }
+    throw cause;
+  } finally { clearTimeout(timeout); }
   if (!session?.accessToken || !session?.user) {
     throw new Error('A API não retornou os dados de autenticação esperados.');
   }

@@ -1,3 +1,4 @@
+import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -15,14 +16,14 @@ export default function HomeAccountsAndCards({ accounts = [], cards = [], profil
         <Text style={s.link}>Ver todos</Text><Icon name="chevron" size={16} color={colors.primary} />
       </Pressable>}
     </View>
-    <View style={s.panel}>
+    <GlassPanel style={s.panel}>
       <Text accessibilityRole="header" style={s.subtitle}>Contas</Text>
       {accounts.length ? accounts.slice(0, 3).map((account, index) => <View key={account.uuid}>
         {index > 0 && <View style={s.separator} />}
         <HomeAccountRow account={account} hidden={hidden} onOpen={onOpenAccount} />
       </View>) : <Text style={s.empty}>Adicione uma conta para acompanhar seu saldo.</Text>}
       {accounts.length > 3 && <Text style={s.note}>Até 3 contas. Acesse “Ver todos” para a lista completa.</Text>}
-    </View>
+    </GlassPanel>
     <HomeCreditCards cards={cards} profile={profile} hidden={hidden} onOpenCard={onOpenCard} title="Cartões de crédito" compactHeading />
   </View>;
 }

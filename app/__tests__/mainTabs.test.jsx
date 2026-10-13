@@ -1,6 +1,7 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { RefreshControl, Text } from 'react-native';
+import { Platform, RefreshControl, Text } from 'react-native';
+import DockBackdrop from '../src/components/silver/DockBackdrop';
 import MainTabs from '../src/navigation/MainTabs';
 jest.mock('../src/hooks/useCreditDashboard', () => () => ({ data: null, loading: false, error: '', retry: jest.fn() }));
 jest.mock('../src/components/DashboardInsights', () => 'DashboardInsights');
@@ -36,12 +37,23 @@ jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({
 jest.mock('react-native-svg', () => {
   const ReactModule = require('react'); const { View } = require('react-native');
   const Shape = props => ReactModule.createElement(View, props);
-  return { __esModule: true, default: Shape, Svg: Shape, G: Shape, Path: Shape, Rect: Shape, Circle: Shape, Ellipse: Shape, Line: Shape, Polyline: Shape };
+  return { __esModule: true, default: Shape, Svg: Shape, G: Shape, Path: Shape, Rect: Shape, Circle: Shape, Ellipse: Shape, Line: Shape, Polyline: Shape, Defs: Shape, Stop: Shape, LinearGradient: Shape, RadialGradient: Shape };
 });
 jest.mock('../src/hooks/useReducedMotion', () => () => true);
 jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition: () => { throw new Error('Transcrição indisponível neste dispositivo.'); } }));
 
 let renderer;
+
+test('assistente informa disponibilidade futura sem abrir a captura; microfone continua independente', async () => {
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Pergunte ao ViKash').props.onPress());
+  expect(useToast().showToast).toHaveBeenCalledWith({ type: 'info', message: 'Essa função estará disponível em breve.' });
+  expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(false);
+  expect(createTransaction).not.toHaveBeenCalled();
+  await act(async () => button('Registrar por voz').props.onPress());
+  expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(true);
+  expect(useToast().showToast).toHaveBeenCalledTimes(1);
+});
 
 test('detalhes abrem distribuição e recarregam cartão após PATCH bem sucedido', async () => {
   const card = { uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 2800,
@@ -51,6 +63,7 @@ test('detalhes abrem distribuição e recarregam cartão após PATCH bem sucedid
   fetchCreditCardDetails.mockResolvedValue(card);
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
+  await act(async () => button('Mostrar cartões').props.onPress());
   await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   await act(async () => button('Distribuir valores iniciais nas faturas').props.onPress());
   expect(button('Continuar depois')).toBeTruthy();
@@ -88,10 +101,24 @@ beforeEach(() => {
   fetchCategories.mockResolvedValue({ defaultCategories: [{ name: 'Saúde', icon: 'health', color: 'sage' }, { name: 'Mercado', icon: 'basket', color: 'ochre' }], customCategories: [] });
 });
 
+test.each(['android', 'ios'])('mantém só uma luz e isola a captura da barra no %s', async platform => {
+  jest.replaceProperty(Platform, 'OS', platform);
+  try {
+    await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+    expect(renderer.root.findAllByType('AmbientLight')).toHaveLength(1);
+    expect(renderer.root.findByType(DockBackdrop).findAllByType('AmbientLight'))
+      .toHaveLength(platform === 'android' ? 0 : 1);
+  } finally {
+    jest.restoreAllMocks();
+  }
+});
+
 test('header and logo stay mounted across tabs and are hidden only on forms and details', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   const header = renderer.root.findByType(AppHeader);
   const logo = header.findByType(BrandLogo);
+  // A captura contém apenas a tela. O header fica acima e não desfoca a si mesmo.
+  expect(renderer.root.findByType(DockBackdrop).findAllByType(AppHeader)).toHaveLength(0);
   const headerContainer = () => renderer.root.findAll(node => node.props.testID === 'app-header')[0];
   for (const label of ['Extrato', 'Contas', 'Categorias', 'Início']) {
     await act(async () => button(label).props.onPress());
@@ -120,7 +147,8 @@ test('avatar abre perfil em todas as abas e voltar preserva a tela e o header', 
     await act(async () => button('Voltar do perfil').props.onPress());
     expect(button(label).props.accessibilityState.selected).toBe(true);
   }
-  expect(fetchDashboard).toHaveBeenCalledTimes(1);
+  // Início e o novo resumo de gastos das categorias consultam o período.
+  expect(fetchDashboard).toHaveBeenCalledTimes(2);
   expect(fetchAccounts).toHaveBeenCalledTimes(1);
   expect(fetchCreditCards).toHaveBeenCalledTimes(1);
 });
@@ -152,13 +180,13 @@ test('confirmacao envia transcricao com token e mostra sucesso somente depois de
   expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Transação registrada!' }));
 });
 
-test('falha ao salvar mostra toast e propaga erro para manter a revisao', async () => {
+test('falha ao salvar permanece no drawer sem emitir toast', async () => {
   createTransaction.mockRejectedValue(new Error('Falha ao salvar'));
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => {
     await expect(renderer.root.findByType(VoiceDrawer).props.onConfirm('Texto revisado')).rejects.toThrow('Falha ao salvar');
   });
-  expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error', message: 'Falha ao salvar' }));
+  expect(useToast().showToast).not.toHaveBeenCalled();
 });
 afterEach(async () => { if (renderer) { await act(async () => renderer.unmount()); } });
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
@@ -234,9 +262,14 @@ test('alternar para cartoes esconde contas sem repetir consultas e permite volta
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
   expect(labels()).toContain('Dinheiro');
+  expect(labels()).not.toContain('Cartões de crédito');
+  expect(labels()).not.toContain('Cartão final 0032');
   await act(async () => button('Mostrar cartões').props.onPress());
   expect(labels()).not.toContain('Dinheiro');
   expect(labels()).toContain('Cartão final 0032');
+  expect(labels()).toContain('Todos os cartões');
+  expect(button('Abrir detalhes de Cartão final 0032')).toBeTruthy();
+  expect(button('Abrir cartão Cartão final 0032')).toBeTruthy();
   expect(button('Mostrar cartões').props['aria-selected']).toBe(true);
   expect(button('Contas').props.accessibilityState.selected).toBe(true);
   expect(fetchAccounts).toHaveBeenCalledTimes(1);
@@ -286,6 +319,7 @@ test('cartao valida dias, envia ID real e preserva dados na falha antes de volta
   try {
     await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
     await act(async () => button('Contas').props.onPress());
+    await act(async () => button('Mostrar cartões').props.onPress());
     await act(async () => button('Novo cartão').props.onPress());
     expect(labels()).toContain('Seu cartão de crédito.');
     await act(async () => button('Criar cartão').props.onPress());
@@ -337,6 +371,7 @@ test('cartoes consultam dados reais, nao somam limite ao saldo e abrem os detalh
   const total = renderer.root.findAll(node => node.props.accessibilityLabel === 'Saldo total em contas')[0];
   expect(total.props.children.replace(/\s/g, '')).toBe('R$2.000,00');
   fetchCreditCardDetails.mockResolvedValue({ uuid: 'card', lastFourDigits: 32, creditLimit: 5000, availableLimit: 4400, closingDay: 3, dueDay: 10, financialInstitution: { name: 'Inter' }, currentInvoiceUuid: 'invoice', invoices: [{ uuid: 'invoice', referenceMonth: '2026-10', total: 600, status: 'OPEN', closingDate: '2026-10-03', dueDate: '2026-10-10' }] });
+  await act(async () => button('Mostrar cartões').props.onPress());
   await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   expect(fetchCreditCardDetails).toHaveBeenCalledWith('card', 'test-access', expect.anything());
   expect(labels()).toContain('Detalhes do cartão');
@@ -401,6 +436,7 @@ test('lapis abre cartao preenchido e atualiza sem criar outro cartao', async () 
   fetchCreditCardDetails.mockResolvedValue(card);
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
+  await act(async () => button('Mostrar cartões').props.onPress());
   await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   await act(async () => button('Editar cartão').props.onPress());
   expect(labels()).toContain('Editar seu cartão.');
@@ -557,6 +593,7 @@ test('clique na parcela usa UUID da compra e abre a fatura escolhida nos detalhe
   ] });
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Contas').props.onPress());
+  await act(async () => button('Mostrar cartões').props.onPress());
   await act(async () => button('Abrir cartão Cartão final 0032').props.onPress());
   expect(fetchCreditCardPurchaseDetails).not.toHaveBeenCalled();
   await act(async () => button('Abrir lançamento Televisão').props.onPress());

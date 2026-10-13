@@ -1,6 +1,8 @@
+import GlassPanel from '../components/silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useState } from 'react';
-import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import ScrollView from '../components/silver/DockScrollView';
 import Skeleton, { DashboardSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
 import useDashboard from '../hooks/useDashboard';
@@ -64,7 +66,7 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
       </View>
       <View style={s.summaryCard}>
         <BalanceCard value={amount(data?.totalBalance)} caption="Saldo atual de todas as suas contas" loading={loading && !hidden} />
-      <View style={s.monthlySummary}>
+      <GlassPanel style={s.monthlySummary}>
         <Text accessibilityRole="header" style={s.sectionTitle}>Resumo do mês</Text>
         <View style={s.monthNavigation}>
           <Pressable accessibilityRole="button" accessibilityLabel="Mês anterior" disabled={period.year === 1900 && period.month === 1}
@@ -84,7 +86,7 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
       <View style={[s.remaining, !hidden && data && { backgroundColor: data.incomes - data.expenses < 0 ? colors.negativeSoft : colors.positiveSoft }]}>
         <Text style={[s.label, !hidden && data && { color: data.incomes - data.expenses < 0 ? colors.negative : colors.positive }]}>{data && data.incomes - data.expenses < 0 ? 'Faltou no mês' : 'Sobrou no mês'}</Text>
         {loading && !hidden ? <Skeleton width={110} height={22} /> : <Text style={[s.remainingValue, !hidden && data && { color: data.incomes - data.expenses < 0 ? colors.negative : colors.positive }]}>{amount(data ? data.incomes - data.expenses : null)}</Text>}</View>
-      </View>
+      </GlassPanel>
       </View>
       {!!data && !loading && !error && <>
         <CategoryExpensesChart categories={data.expensesPerCategory} creditCategories={credit.data?.expensesPerCategory}

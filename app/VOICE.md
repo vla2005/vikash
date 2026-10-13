@@ -4,7 +4,7 @@ O botão central abre um drawer e inicia reconhecimento em `pt-BR`, com resultad
 
 “Parar e revisar” interrompe a captura e aguarda o resultado final antes de abrir a revisão. É possível editar o texto e gravar novamente. Cancelar, fechar ou colocar o app em segundo plano interrompe a captura. Se a transcrição falhar, o texto já reconhecido pode ser revisado.
 
-Não existe endpoint de análise conectado nesta etapa. `VoiceDrawer` aceita `onConfirm(text)` para integrar depois. Sem esse callback, confirmar mantém a revisão aberta e informa que a análise ainda não está disponível. Nenhum áudio é persistido pelo app nem enviado à API do Vikash.
+A confirmação envia somente a transcrição revisada para `/api/transaction/create`. Nenhum áudio é persistido pelo app nem enviado à API do Vikash. Falhas ficam dentro do drawer, preservando o texto. Os códigos VOICE_INFORMATION_REQUIRED e VOICE_INPUT_INVALID geram aviso amarelo com orientações por campo em missingFields/fieldErrors. VOICE_ANALYSIS_UNAVAILABLE, rede e demais falhas técnicas geram aviso vermelho. Respostas legadas usam HTTP 400/422 como fallback. É possível editar, regravar ou tentar novamente. Apenas o sucesso emite toast e fecha o drawer. Sem o callback `onConfirm(text)`, a revisão permanece aberta com aviso de indisponibilidade. O contrato está descrito em backend/VOICE_ANALYSIS.md. O drawer traduz accountUuid para "Conta ou banco" e paymentMethod para "Forma de pagamento", mostrando apenas os campos retornados.
 
 ## Navegador
 
@@ -26,7 +26,8 @@ Para iOS, use os equivalentes `--platform ios` e `run:ios` em um Mac com Xcode. 
 ## Organização
 
 - `components/VoiceDrawer.jsx`: escuta, revisão editável, fundo escurecido e confirmação.
-- `components/VoiceWaveform.jsx`: barras animadas de atividade visual; não representam uma medição do volume do áudio.
+- `components/ListeningOrb` e `components/ListeningWave`: esfera deformável e ondas durante a captura.
+- `components/VoiceMicButton`, `VoiceMicPulse` e `VoiceMicGlyph`: controle de gravação, luzes e transição entre microfone e confirmação.
 - `hooks/useVoiceTranscription.js`: ciclo da captura, texto parcial, tempo, encerramento, erros e proteção contra eventos atrasados.
 - `services/speechRecognition.js`: integração com o reconhecedor nativo.
 - `services/speechRecognition.web.js`: integração com Web Speech API.

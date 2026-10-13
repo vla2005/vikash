@@ -1,7 +1,7 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel, formatLastFourDigits, formatInvoiceDate } from '../utils/creditCards';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import InstitutionLogo from './InstitutionLogo';
 import Icon from './Icon';
@@ -134,7 +134,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
           const animatedStyle = { height: cardHeight, zIndex, transform, opacity };
           const cardStyle = [s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }];
           const cardContent = <>
-              <Svg width="100%" height="100%" viewBox="0 0 320 202" preserveAspectRatio="none" style={StyleSheet.absoluteFill} accessible={false}>
+              <Svg width="100%" height="100%" viewBox="0 0 320 202" preserveAspectRatio="none" style={StyleSheet.absoluteFill} accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>
                 <Path d="M-20 180C50 180 72 54 142 96S220 172 340 32V230H-20Z" fill="#FFFFFF" opacity="0.045" />
                 <Path d="M-20 234C86 168 142 204 202 118S286 70 350 136V230Z" fill="#051747" opacity="0.16" />
               </Svg>
@@ -161,6 +161,8 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
         <Text style={s.hint}>Toque em um cartão para selecionar</Text>
       </>}
       <View accessibilityLiveRegion="polite" style={[s.details, cards.length === 1 && s.singleDetails]}>
+        <Pressable accessibilityRole={onOpenCard ? 'button' : undefined} accessibilityLabel={onOpenCard ? `Abrir detalhes de ${creditCardLabel(selected)}` : undefined} disabled={!!transition || !onOpenCard} onPress={() => onOpenCard?.(selected.uuid)} style={({ pressed }) => [s.detailsLink, pressed && s.pressed]}>
+        <View style={s.detailsCopy}>
         <View style={s.detailsHeading}><Text numberOfLines={2} style={s.detailsName}>{creditCardLabel(selected)}</Text>
           {!!invoice?.status && <Text style={[s.badge, invoice.status === 'CLOSED' && s.closedBadge, invoice.status === 'PAID' && s.paidBadge]}>{statusLabels[invoice.status] ?? invoice.status}</Text>}
         </View>
@@ -171,6 +173,9 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
         <View style={s.usage}><View accessibilityRole={hidden ? undefined : 'progressbar'} accessibilityLabel={hidden ? 'Limite utilizado. Valores ocultos.' : `Limite utilizado de ${creditCardLabel(selected)}`} accessibilityValue={hidden ? undefined : { min: 0, max: 100, now: Math.min(100, Math.round(usedPercentage)) }} style={s.track}>
           {!hidden && <View style={[s.progress, { width: `${Math.min(100, usedPercentage)}%` }, selected.availableLimit < 0 && s.overLimit]} />}
         </View><Text style={s.usageLabel}>{hidden ? hiddenAmount : `${Math.round(usedPercentage)}% utilizado`}</Text></View>
+        </View>
+        {!!onOpenCard && <Icon name="chevron" size={19} color={colors.primary} />}
+        </Pressable>
         <View style={s.invoiceFooter}><View style={s.due}><Text style={s.caption}>{invoice ? `Vencimento em ${formatInvoiceDate(invoice.dueDate)}` : 'Nenhuma fatura em aberto'}</Text></View>
           {!!onOpenCard && <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${invoice ? 'fatura' : 'detalhes'} de ${creditCardLabel(selected)}`} disabled={!!transition} onPress={() => onOpenCard(selected.uuid, invoice?.uuid)} style={({ pressed }) => [s.invoiceButton, pressed && s.pressed]}>
             <Text style={s.link}>{invoice ? 'Ver fatura' : 'Ver cartão'}</Text><Icon name="chevron" size={16} color={colors.primary} />
@@ -182,7 +187,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
 }
 
 function Contactless() {
-  return <Svg width={23} height={23} viewBox="0 0 24 24" accessible={false}>
+  return <Svg width={23} height={23} viewBox="0 0 24 24" accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>
     <Path d="M5 9a5 5 0 010 6M9 6a10 10 0 010 12M13 3a15 15 0 010 18M17 1a19 19 0 010 22" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" />
   </Svg>;
 }
@@ -200,6 +205,7 @@ const createStyles = (colors) => StyleSheet.create({
   dots: { flexGrow: 1, justifyContent: 'center', paddingTop: 3 }, dotButton: { width: 30, height: 36, justifyContent: 'center', alignItems: 'center' },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.handle }, selectedDot: { width: 18, backgroundColor: colors.primary }, hint: { fontFamily, color: colors.secondary, fontSize: 11, textAlign: 'center', marginBottom: 14 },
   details: { backgroundColor: colors.surface, borderRadius: 22, padding: 16 }, singleDetails: { marginTop: 16 }, detailsHeading: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  detailsLink: { flexDirection: 'row', alignItems: 'center', gap: 12 }, detailsCopy: { flex: 1, minWidth: 0 },
   detailsName: { flex: 1, fontFamily: fontFamilyBold, fontWeight: '700', fontSize: 16, color: colors.text, lineHeight: 23 },
   badge: { fontFamily: fontFamilyMedium, fontSize: 10, color: colors.primary, backgroundColor: colors.primarySoft, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   closedBadge: { color: colors.warning, backgroundColor: colors.warningSoft }, paidBadge: { color: colors.positive, backgroundColor: colors.positiveSoft },

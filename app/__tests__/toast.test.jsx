@@ -1,9 +1,11 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { ToastProvider } from '../src/contexts/ToastContext';
 import useToast from '../src/hooks/useToast';
 import Toast, { toastVariants } from '../src/components/Toast';
+import Icon from '../src/components/Icon';
+import { toast as toastTokens } from '../src/theme/silver';
 
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 24 }) }));
 jest.mock('react-native-svg', () => {
@@ -42,5 +44,26 @@ test.each(['success', 'error', 'warn', 'info'])('suporta estado %s com mensagem 
   await act(async () => api.showToast({ type, message: 'Mensagem da ação' }));
   expect(renderer.root.findByType(Toast).props.type).toBe(type);
   expect(toastVariants[type].color).toBeDefined();
+  const notification = renderer.root.findByType(Toast);
+  expect(notification.findByType(Icon).props.color).toBe(toastVariants[type].color);
+  const card = renderer.root.findAll(node => node.props.testID === 'toast')[0];
+  expect(StyleSheet.flatten(card.props.style).backgroundColor).toBe(toastTokens.fill);
+  expect(StyleSheet.flatten(card.props.style).borderColor).toBeUndefined();
+  notification.findAllByType(Text).forEach(text => {
+    expect(StyleSheet.flatten(text.props.style).color).toBe(toastTokens.text);
+  });
   expect(renderer.root.findAllByType(Text).map(item => item.props.children)).toContain('Mensagem da ação');
+});
+
+test('confirmação compacta fecha pelo toque e erros mantêm a explicação acessível', async () => {
+  await act(async () => { renderer = TestRenderer.create(<ToastProvider><Observer /></ToastProvider>); });
+  await act(async () => api.showToast({ type: 'success', title: 'Perfil atualizado!', message: 'Suas alterações foram salvas.' }));
+  const alert = () => renderer.root.findAll(node => node.props.testID === 'toast')[0];
+  expect(alert().props.accessibilityLabel).toBe('Perfil atualizado!');
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain('Suas alterações foram salvas.');
+  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: 'Fechar notificação' })[0].props.onPress());
+  expect(renderer.root.findAllByType(Toast)).toHaveLength(0);
+  await act(async () => api.showToast({ type: 'error', title: 'Não foi possível salvar', message: 'Confira sua conexão e tente novamente.' }));
+  expect(alert().props.accessibilityLabel).toContain('Confira sua conexão e tente novamente.');
+  expect(alert().props.accessibilityLiveRegion).toBe('assertive');
 });

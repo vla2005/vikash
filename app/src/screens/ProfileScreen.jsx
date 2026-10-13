@@ -2,12 +2,11 @@ import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
+import GlassBackButton from '../components/GlassBackButton';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { EnvelopeSimple } from 'phosphor-react-native/src/icons/EnvelopeSimple';
 import { Key } from 'phosphor-react-native/src/icons/Key';
 import { PencilSimple } from 'phosphor-react-native/src/icons/PencilSimple';
-import { Question } from 'phosphor-react-native/src/icons/Question';
 import { SignOut } from 'phosphor-react-native/src/icons/SignOut';
 import { User } from 'phosphor-react-native/src/icons/User';
 import ConfirmationDialog from '../components/ConfirmationDialog';
@@ -17,7 +16,7 @@ import useToast from '../hooks/useToast';
 import { getProfileInitials } from '../utils/profile';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
-export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPassword, onSupport }) {
+export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPassword }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
@@ -44,7 +43,7 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
   return <>
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[s.content, { paddingBottom: Math.max(insets.bottom, 20) }]}>
       <View style={s.nav}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Voltar do perfil" disabled={saving} onPress={onBack} style={({ pressed }) => [s.back, pressed && s.pressed]}><CaretLeft size={25} color={colors.text} /></Pressable>
+        <GlassBackButton accessibilityLabel="Voltar do perfil" disabled={saving} onPress={onBack} />
         <Text accessibilityRole="header" style={s.navTitle}>Meu perfil</Text><View style={s.back} />
       </View>
       <View style={s.identity}>
@@ -67,9 +66,7 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
           <Pressable accessibilityRole="button" accessibilityLabel="Alterar senha" onPress={onPassword} style={({ pressed }) => [s.row, pressed && s.pressed]}>
             <IconTile tone="warning"><Key size={24} color={colors.warning} /></IconTile><View style={s.copy}><Text style={s.value}>Alterar senha</Text><Text style={s.description}>Atualize sua senha de acesso</Text></View><CaretRight size={23} color={colors.secondary} />
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Ajuda e suporte" onPress={onSupport} style={({ pressed }) => [s.row, s.divider, pressed && s.pressed]}>
-            <IconTile tone="info"><Question size={24} color={colors.info} /></IconTile><Text style={[s.value, s.support]}>Ajuda e suporte</Text><CaretRight size={23} color={colors.secondary} />
-          </Pressable>
+
         </View>
       </View>
       <View style={s.footer}>
@@ -105,7 +102,6 @@ const createStyles = (colors) => StyleSheet.create({
   label: { fontFamily, fontSize: 13, lineHeight: 18, color: colors.secondary },
   value: { fontFamily, fontSize: 16, lineHeight: 23, color: colors.text },
   description: { fontFamily, fontSize: 12, lineHeight: 18, color: colors.secondary },
-  support: { flex: 1 },
   footer: { flex: 1, justifyContent: 'flex-end', marginTop: 32 },
   logout: { minHeight: 62, borderRadius: 18, padding: 16, backgroundColor: colors.negativeSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   logoutText: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 17, color: colors.negative },

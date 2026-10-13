@@ -2,16 +2,17 @@
 name: Vikash
 description: Aplicativo de finanças pessoais com foco em leitura rápida de valores e ações claras.
 colors:
-  primary: "#2348EF"
-  primaryPressed: "#1838CB"
-  primarySoft: "#E8EDFF"
-  background: "#F3F5F9"
-  surface: "#FFFFFF"
-  surfaceMuted: "#EDF1F7"
-  text: "#15244A"
-  secondary: "#606D83"
-  placeholder: "#606D83"
-  border: "#DAE1ED"
+  primary: "#242527"
+  primaryPressed: "#44464B"
+  primarySoft: "#E7E8EB"
+  background: "#FAFAFA"
+  surface: "rgba(255,255,255,0.82)"
+  dialogSurface: "#FFFFFF"
+  surfaceMuted: "#ECECEE"
+  text: "#111214"
+  secondary: "#5D5E64"
+  placeholder: "#62646B"
+  border: "rgba(17,18,20,0.12)"
   positive: "#08734F"
   positiveSoft: "#DCF6E9"
   negative: "#B42C49"
@@ -20,41 +21,46 @@ colors:
   warningSoft: "#FFF0D2"
   info: "#6843B9"
   infoSoft: "#EEE7FF"
-  balanceSurface: "#2348D9"
-  onBalance: "#FFFFFF"
-  balanceSecondary: "#DBE4FF"
+  balanceSurface: "rgba(255,255,255,0.82)"
+  onBalance: "#111214"
+  balanceSecondary: "#5D5E64"
   error: "#A3322C"
   errorSoft: "#F9EDEA"
   onPrimary: "#FFFFFF"
   dangerButton: "#A3322C"
   dangerPressed: "#8A2924"
   onDanger: "#FFFFFF"
-  brandPrimary: "#2348EF"
-  brandPressed: "#1838CB"
+  brandPrimary: "#242527"
+  brandPressed: "#44464B"
   onBrand: "#FFFFFF"
   logoSurface: "#FFFFFF"
-  dark-primary: "#96AEFF"
-  dark-primaryPressed: "#829BEF"
-  dark-primarySoft: "#273A66"
-  dark-background: "#101727"
-  dark-surface: "#1C2636"
-  dark-surfaceMuted: "#263244"
-  dark-text: "#F0F4FF"
-  dark-secondary: "#B1BED4"
-  dark-placeholder: "#A1AFC8"
-  dark-border: "#3B4A60"
-  dark-positive: "#5DE3AB"
-  dark-positiveSoft: "#163E32"
-  dark-negative: "#FF91A6"
-  dark-negativeSoft: "#472936"
+  dark-primary: "#E0E1E3"
+  dark-primaryPressed: "#BFC1C5"
+  dark-primarySoft: "#292A2C"
+  dark-background: "#050505"
+  dark-surface: "rgba(23, 23, 24, 0.68)"
+  dark-dialogSurface: "#1C1C1F"
+  dark-onBalance: "#F4F4F3"
+  dark-balanceSecondary: "#B0B0B4"
+  dark-surfaceMuted: "#252527"
+  dark-text: "#F4F4F3"
+  dark-secondary: "#B0B0B4"
+  dark-placeholder: "#A1A1A6"
+  dark-border: "rgba(255,255,255,0.10)"
+  dark-positive: "#79DDB6"
+  dark-positiveSoft: "#17372C"
+  dark-negative: "#F79B9F"
+  dark-negativeSoft: "#3A2427"
   dark-warning: "#FFCE75"
   dark-warningSoft: "#453722"
   dark-info: "#C6A4FF"
   dark-infoSoft: "#392C53"
-  dark-balanceSurface: "#3048D5"
+  dark-balanceSurface: "rgba(23, 23, 24, 0.68)"
   dark-error: "#FFB1A8"
   dark-errorSoft: "#442D32"
-  dark-onPrimary: "#101727"
+  dark-onPrimary: "#151516"
+  dark-brandPrimary: "#D8DADC"
+  dark-onBrand: "#151516"
 typography:
   sans:
     fontFamily: "Vikash Sans, Arial, sans-serif"
@@ -87,8 +93,8 @@ components:
     rounded: "{rounded.button}"
     padding: "15px 20px"
   button-primary-dark:
-    backgroundColor: "{colors.brandPrimary}"
-    textColor: "{colors.onBrand}"
+    backgroundColor: "{colors.dark-brandPrimary}"
+    textColor: "{colors.dark-onBrand}"
     rounded: "{rounded.button}"
     padding: "15px 20px"
   button-outlined:
@@ -105,11 +111,11 @@ components:
     textColor: "{colors.dark-error}"
     rounded: "{rounded.button}"
   ConfirmationDialog:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.dialogSurface}"
     textColor: "{colors.text}"
     rounded: "{rounded.dialog}"
   ConfirmationDialog-dark:
-    backgroundColor: "{colors.dark-surface}"
+    backgroundColor: "{colors.dark-dialogSurface}"
     textColor: "{colors.dark-text}"
     rounded: "{rounded.dialog}"
   field:
@@ -132,11 +138,11 @@ components:
     textColor: "{colors.text}"
     rounded: "18px"
     padding: "12px"
-  appearance-option:
+  appearance-toggle:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.secondary}"
     rounded: "{rounded.field}"
-    padding: "12px 4px"
+    padding: "18px"
   balance-card:
     backgroundColor: "{colors.balanceSurface}"
     textColor: "{colors.onBalance}"
@@ -144,7 +150,7 @@ components:
     padding: "20px"
   balance-card-dark:
     backgroundColor: "{colors.dark-balanceSurface}"
-    textColor: "{colors.onBalance}"
+    textColor: "{colors.dark-onBalance}"
     rounded: "{rounded.panel}"
     padding: "20px"
   financial-metric-income:
@@ -183,28 +189,35 @@ components:
     height: "36px"
 ---
 
+## Política global de animação
+
+A política do Vikash mantém todas as animações independentes de Reduzir movimento, por decisão explícita do usuário. `useReducedMotion` é o ponto compartilhado de compatibilidade e retorna sempre `false`, sem ler `AccessibilityInfo` ou `prefers-reduced-motion` e sem assinar mudanças do sistema. `AppMotionPolicy` fixa os defaults nativos do Reanimated com `ReducedMotionConfig / ReduceMotion.Never`; drawer, revisão de voz, toast, lente e compactação também passam `Never` explicitamente. A alternativa web não importa o motor nativo. Isso não modifica configurações do aparelho. Pausas em segundo plano, desmontagem, conteúdo oculto ou fim de captura continuam sendo regras do ciclo de vida, e Reduzir transparência continua independente.
+
 # Design System: Vikash
 
 ## Overview
 
 **Creative North Star: "Leitura financeira clara"**
 
-Interface de produto para consultar contas, compras e faturas no celular. A extensão cromática aprovada em `.impeccable/surfaces/color-life.md` mantém a marca Vikash, Plus Jakarta Sans e os cartões arredondados, com saldo azul saturado, entradas verdes, saídas coral e categorias vívidas. Neutros frios no claro e azul-marinho no escuro dão contraste aos valores e às ações. A linguagem é português brasileiro; valores são formatados em reais.
+Interface de produto para consultar contas, compras e faturas no celular. A identidade atual combina preto/grafite e luz prateada no escuro, branco/carvão e luz preta no claro, com cards foscos, preservando Plus Jakarta Sans e as cores próprias de categorias e instituições. A linguagem é português brasileiro; valores são formatados em reais.
 
-A aparência acompanha o sistema por padrão e oferece escolhas explícitas em Meu perfil. A troca entre essas preferências conserva a geometria da composição atual, os campos e a navegação; a extensão autorizada já introduziu novos agrupamentos de saldo e métricas. A pilha sobreposta de cartões conserva integralmente desenho, artwork, cores das instituições e movimento. O código canônico dos tokens é `src/theme/index.js`; categorias usam `src/theme/categoryPalette.js`.
+O app oferece claro e escuro da mesma identidade, aplicados por `ThemeProvider` e `ThemeVariant`. A pilha sobreposta conserva desenho, artwork, cores das instituições e movimento. O modelo de propriedade é runtime canônico (Model B): `src/theme/index.js` fornece a base, `src/theme/silver.js` define a identidade atual e `ThemeVariant` a entrega aos componentes. Este documento espelha os tokens; não gera outro sistema de valores. Categorias usam `src/theme/categoryPalette.js`. `SILVER-DESIGN.md` documenta luz, vidro e navegação por plataforma.
 
 **Key Characteristics:**
 
 - Leitura rápida de valores, com dígitos tabulares quando disponíveis.
-- Azul saturado para saldo, identidade e ações sólidas; primário semântico para texto e contornos.
+- Prateado para identidade e ações sólidas; primário semântico para texto e contornos.
 - Verde para entradas e limite disponível nos detalhes; coral para saídas, âmbar para atenção e violeta para apoio.
 - Categorias com acentos explícitos por tema, em versões suave e vivid.
-- Superfícies arredondadas e hierarquia tonal consistente nos dois temas.
-- Sistema, Claro e Escuro com seleção nomeada e marca visível.
+- Superfícies arredondadas e hierarquia tonal sobre o fundo de cada tema.
+- Uma identidade neutra em dois modos, com luz suave e fundos de vidro fosco.
+- Navegação em uma camada própria de grafite, distinta dos cards: película mais densa, contorno e sombra suaves, lente prateada e degradê escuro atrás dos controles. Os tokens são `dock` em `src/theme/silver.js`, usados por `GlassMaterial` e `DockShade`.
+- Header fixo e transparente, sem painel retangular; desfoque com queda suave na base preserva a leitura sobre o conteúdo rolável. `FloatingAppHeader` e `HeaderBackdrop` recebem os tokens de `header` em `src/theme/silver.js`.
+- Drawers e popups de confirmação usam grafite opaco, para impedir que o conteúdo da página atravesse suas informações. `colors.dialogSurface` pertence ao tema e é aplicado por `DrawerPanel` e `ConfirmationDialog`; os cards conservam sua superfície fosca.
 
 ## Colors
 
-A paleta combina um azul de ação com neutros frios e pares semânticos legíveis sobre a superfície correspondente.
+A paleta combina ações prateadas com preto e grafite e pares semânticos legíveis sobre a superfície correspondente.
 
 ### Primary
 
@@ -250,7 +263,7 @@ As definições web estão em `src/web/fonts.css`; o app nativo usa `useAppFonts
 
 A interface mantém composição de celular com rolagem vertical e área segura. `Screen` centraliza um canvas de largura máxima de 460 px, com margem interna lateral de 24 px. Detalhes do cartão usam 22 px; detalhes de lançamento, Início e Meu perfil usam 20 px. Não há escala global de espaçamento: manter a geometria do componente reutilizado.
 
-O navegador inferior se adapta abaixo de 350 px, reduzindo margens, rótulos e espaço central do microfone. No web largo, o canvas continua centralizado. Drawers preservam largura máxima de 460 px; a confirmação usa no máximo 360 px e 90% da altura disponível. Rótulos de exclusão permanecem visíveis em telas estreitas, com texto e ícone no mesmo alvo de toque.
+O navegador inferior se adapta abaixo de 350 px, reduzindo margens, rótulos e espaço central do microfone. No web largo, o canvas continua centralizado. Drawers preservam largura máxima de 460 px, exceto o registro por voz, que ocupa a tela inteira com fundo opaco e conteúdo central de até 520 px. A confirmação usa no máximo 360 px e 90% da altura disponível. Rótulos de exclusão permanecem visíveis em telas estreitas, com texto e ícone no mesmo alvo de toque.
 
 O Início ordena saldo, período e resumo mensal, com intervalos de 16 px entre os blocos principais. Início e Extrato usam uma linha de métricas com wrap: abaixo de 360 px cada `FinancialMetric` ocupa a largura inteira; de 360 a 389 px, ou com valor de mais de 14 caracteres, o número usa 16 px. Limites em `CreditCardDetailsScreen` empilham abaixo de 390 px ou quando `fontScale > 1.15`.
 
@@ -260,7 +273,7 @@ A evidência visual desta extensão é React Native Web com API sintética: 23 t
 
 O sistema combina camadas tonais com sombras suaves nos cartões de marca e na navegação inferior. As sombras seguem a paleta e não mudam a geometria. A confirmação reutiliza `ConfirmationDialog`, com fundo escurecido independente do conteúdo; drawers usam o backdrop semântico do tema. Valores de sombra e backdrop ficam no sidecar.
 
-`DrawerPanel` usa entrada por mola e `SegmentedControl` desloca seu indicador com mola. `useReducedMotion` aplica o estado final diretamente nesses movimentos. Não adicionar uma sombra ou animação diferente para uma única exclusão.
+`DrawerPanel` usa a transição compartilhada de sheet e `SegmentedControl` desloca seu indicador com mola. A política global mantém ambos animados, independentemente de Reduzir movimento. Não adicionar uma sombra ou animação diferente para uma única exclusão.
 
 ## Shapes
 
@@ -270,21 +283,23 @@ Campos e botões usam curvas suaves da família existente; painéis, folhas e co
 
 ### Buttons
 
-`PrimaryButton` combina ação e rótulo claros, com altura mínima de 54 px, espaçamento interno horizontal de 20 px e vertical de 15 px. A versão sólida conserva azul de marca e texto branco nos dois temas. A variante outlined mantém fundo transparente, texto e contorno primários do tema. Pressionar reduz opacidade a 0,88 e escala a 0,985; indisponível usa opacidade 0,55. Carregamento mostra “Aguarde...” e bloqueia a ação.
+`PrimaryButton` combina ação e rótulo claros, com altura mínima de 54 px, espaçamento interno horizontal de 20 px e vertical de 15 px. A versão sólida usa prateado e texto grafite. A variante outlined mantém fundo transparente, texto e contorno primários do tema. Pressionar reduz opacidade a 0,88 e escala a 0,985; indisponível usa opacidade 0,55. Carregamento mostra “Aguarde...” e bloqueia a ação.
 
 `DeleteActionButton` é compartilhado por transações e faturas, com fundo suave de erro, ícone e rótulo no mesmo alvo de pelo menos 52 px. O vermelho sólido fica na confirmação; não usar vermelho para ações seguras.
+
+`SwipeableRow` apresenta a ação de exclusão revelada pelo gesto em um botão vermelho arredondado, com ícone e rótulo “Excluir”, raio de 14 px e respiro de 6 px. A ação usa `dangerButton`, `dangerPressed` e `onDanger` do tema. Sua posição deriva do mesmo deslocamento da linha, mantendo o vermelho fora do conteúdo durante abertura, retorno parcial e fechamento. O toque abre a confirmação existente; não exclui imediatamente. O componente atende categorias, extrato e listas de detalhes.
 
 ### Chips
 
 Filtros de extrato usam contorno e texto de apoio, altura mínima de 40 px e espaçamento horizontal de 14 px. A seleção combina fundo primário suave e contorno primário; a semântica acessível acompanha o estado.
 
-`SegmentedControl` usa trilho neutro atenuado de 44 px, padding de 4 px e raio de 16 px; o indicador tem raio de 12 px, azul de marca e rótulo branco em ambos os temas. A mola existente permanece; pressionar a opção reduz opacidade a 0,65.
+`SegmentedControl` usa trilho neutro atenuado de 44 px, padding de 4 px e raio de 16 px; o indicador tem raio de 12 px, prateado e rótulo grafite. A mola existente permanece; pressionar a opção reduz opacidade a 0,65.
 
 ### Cards / Containers
 
 `CreditCardSummary` usa superfície atenuada, raio local e padding de 12 px. Métricas, limite utilizado e divisórias seguem tokens semânticos. Cartões visuais das instituições preservam seus fundos de marca e artwork. `InstitutionLogo` mantém a base branca quando há imagem; falhas usam o ícone de banco.
 
-`BalanceCard` destaca o saldo com azul saturado, raio de 24 px, padding de 20 px e gap de 8 px. Rótulo, valor e caption usam os pares de saldo; loading mantém skeleton. `FinancialMetric` repete verde/verde suave para entradas e coral/coral suave para saídas no Início e Extrato, com raio de 15 px, padding de 12 px, gap de 10 px e ícone direcional. Não deduzir novos dados ou estados da cor.
+`BalanceCard` destaca o saldo sobre o vidro escuro, raio de 24 px, padding de 20 px e gap de 8 px. Rótulo, valor e caption usam os pares de saldo; loading mantém skeleton. `FinancialMetric` repete verde/verde suave para entradas e coral/coral suave para saídas no Início e Extrato, com raio de 15 px, padding de 12 px, gap de 10 px e ícone direcional. Não deduzir novos dados ou estados da cor.
 
 `HomeCreditCards` é uma restrição fixa: preservar a pilha sobreposta, sua geometria, desenho e todas as animações. Não recolorir artwork nem alterar algoritmos ou constantes das instituições.
 
@@ -292,7 +307,7 @@ Filtros de extrato usam contorno e texto de apoio, altura mínima de 40 px e esp
 
 `CategoryBadge` suave usa background/foreground da categoria em listas densas; `vivid` usa accent/onAccent nas grades. O tamanho padrão é 38 px e o raio é 26% do tamanho. `CategoryFormScreen` repete o par sólido na prévia circular de 84 px. `TransactionDetailsLayout` usa categoria sólida na identidade e par suave na linha de categoria; o valor usa o par semântico da direção do dinheiro.
 
-`IconTile` agrupa ícones em superfície suave por `tone`, com tamanho padrão de 42 px e raio de 30% do tamanho; o componente filho fornece a cor do ícone. Perfil usa primário para identidade, âmbar para senha e violeta para suporte. Perfil e edição usam avatar azul de saldo; alteração de senha repete âmbar.
+`IconTile` agrupa ícones em superfície suave por `tone`, com tamanho padrão de 42 px e raio de 30% do tamanho; o componente filho fornece a cor do ícone. Perfil usa primário para identidade, âmbar para senha e violeta para suporte. Perfil e edição usam avatar grafite; alteração de senha repete âmbar.
 
 ### Inputs / Fields
 
@@ -300,21 +315,29 @@ Filtros de extrato usam contorno e texto de apoio, altura mínima de 40 px e esp
 
 ### Navigation
 
-O navegador inferior agrupa Início, Extrato, Contas e Categorias, com o microfone central. O item ativo usa texto e ícone primários e uma pequena marca inferior; os demais usam cor secundária. Preservar nomes acessíveis e a adaptação para telas estreitas.
+O navegador inferior agrupa Início, Extrato, Contas e Categorias, com botão de microfone circular separado. A lente prateada acompanha apenas a aba confirmada e cobre toda a área circular na versão compacta. Ícones e rótulos mantêm contraste próprio. `GlassBackButton` é o responsável canônico por todas as setas de voltar das páginas, em um círculo de 44 px.
+
+“Pergunte ao ViKash” usa o símbolo de estrela de IA e, ao tocar, mostra o toast informativo “Essa função estará disponível em breve.”, sem abrir tela, iniciar captura ou enviar requisições. O microfone circular separado continua abrindo o registro por voz. `MainTabs` controla os callbacks distintos, `DockLayout` os apresenta nas versões nativa e web e `ToastContext` é o responsável pelo aviso.
 
 ### Appearance
 
-`AppearanceSettings` oferece Sistema, Claro e Escuro em Meu perfil. Cada opção tem nome, ícone e espaço reservado para a marca de seleção, evitando mudança de altura. O padrão segue o aparelho e reage às mudanças do sistema. A escolha persiste fora das sessões; só se aplica após salvar. Em falha, manter o tema atual e mostrar erro com possibilidade de tentar novamente. A troca não remonta rotas ou formulários.
+A identidade prateada oferece modos claro e escuro em todas as telas, escolhidos por um único toggle “Tema escuro” no perfil. Não há opção Sistema. O padrão é escuro; a escolha clara/escura fica salva no aparelho, é restaurada antes de montar o conteúdo e continua a mesma ao trocar perfis. Valores antigos “system” ou inválidos usam o padrão escuro. Falha ao salvar mantém o tema atual e informa o erro. A troca não remonta telas nem descarta campos ou sessões. “Ajuda e suporte” foi removido do perfil. `AppearanceSettings` é o único controle da preferência. Paletas e efeitos pertencem a `silverThemes` em `src/theme/silver.js`; todos os adaptadores usam os mesmos tokens. A luz parte do topo e se estende suavemente até perto da metade da tela, com intensidade 0,40 e bordas suaves nos dois modos. No claro, malha e ondas são pretas; a navegação branca tem lente e microfone escuros com símbolos brancos. Logo, header, toasts, drawers, popups e teclado acompanham a preferência.
 
 ### Confirmation and feedback
 
-`ConfirmationDialog` controla confirmação, carregamento e erro, mantendo foco, Escape e redução de movimento do componente canônico. Enquanto a requisição está pendente, os controles ficam desabilitados. `ToastContext`/`Toast` apresentam sucesso. Manter a consequência da exclusão explícita e o erro dentro da confirmação; preservar a lista quando o servidor recusa a operação.
+`DrawerModal` e `useDrawerAnimation` controlam a entrada e a saída compartilhadas, e `DrawerPanel` aplica o movimento ao painel. A abertura espera medição e disponibilidade do modal, parte de fora da tela e sobe em 300 ms com a curva `(0.32, 0.72, 0, 1)`, sem oscilação. Nativo usa Reanimated; web usa CSS com um quadro inicial fora da tela. O fechamento conserva 260 ms e a curva cúbica anterior. Conteúdo permanece montado até sair, atualizações não reiniciam a entrada e reabrir inverte a animação atual. Reduzir movimento não elimina nem encurta a translação animada. Backdrop e acabamento continuam pertencendo às primitivas e fluxos existentes.
+
+`VoiceDrawer` ocupa a tela inteira com a variante `fullScreen` de `DrawerPanel`, respeitando áreas seguras e teclado. O topo usa `GlassBackButton`, símbolo de voz e o título estável “Registro por voz”, sem menu de três pontos. A base mantém regravar e fechar em alvos de 48 px e o controle central prateado de 72 px. `VoiceMicButton`, `VoiceMicPulse` e `VoiceMicGlow` indicam escuta ativa com reflexo, halo pulsante e dois anéis de luz. Parar a captura faz a transcrição subir e ocupar a área da ilustração. `VoiceScene` coordena desaparecimento da malha e movimento do texto em 280 ms; `VoiceMicGlyph` troca microfone por confirmação em 180 ms. Regravar inverte as duas transições. O texto da revisão fica centralizado sobre o fundo do tema, sem card ou título grande adicional; o lápis foca a edição. O campo cresce com o texto dentro do scroller; os controles permanecem fora dele. As transições usam transform e opacidade, rodam na UI nativa ou em CSS na web e mantêm a animação com Reduzir movimento ligado.
+
+`ListeningOrbSurface` concentra o desenho da esfera de voz. `ListeningWaveSurface` desenha a malha sonora de bordas suaves abaixo dela. `ListeningOrb` e `ListeningWave` controlam suas geometrias na thread de UI nativa; os adaptadores web usam os mesmos cálculos. Os tokens da esfera, das ondas e do microfone pertencem a `voiceOrb` em `src/theme/silver.js`. Os efeitos animam durante a captura ativa, inclusive com Reduzir movimento ativado por solicitação explícita do usuário. Preparação, finalização e erro não simulam escuta. O título e a transcrição preservam a informação acessível. A escuta mostra o trecho recente; a revisão preserva todo o texto e só o envia após confirmação.
+
+`ConfirmationDialog` controla confirmação, carregamento e erro, mantendo foco, Escape e animação do componente canônico. Enquanto a requisição está pendente, os controles ficam desabilitados. `ToastContext` controla as notificações compartilhadas por `ToastContent` e pelos adaptadores nativo/web de `Toast`. O toast é uma cápsula opaca, pequena e centralizada no topo; toque fecha. Sucesso usa uma linha de confirmação. Erros e avisos preservam a explicação e o anúncio acessível. Cores vêm de `toast` em `src/theme/silver.js`. O indicador de tipo usa verde em success, azul em info, amarelo em warn e vermelho em error, com acentos próprios para contraste em claro/escuro. Texto, superfície e contorno da cápsula permanecem neutros. Manter a consequência da exclusão explícita e o erro dentro da confirmação; preservar a lista quando o servidor recusa a operação.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- Do reutilizar componentes, ícones e tokens semânticos existentes nos dois temas.
+- Do reutilizar componentes, ícones e tokens semânticos da identidade prateada.
 - Do preservar a geometria e a hierarquia tipográfica ao trocar a aparência.
 - Do manter seleção nomeada e marca visível, além da cor.
 - Do preservar logos, cores de instituições, artwork e todo o desenho e movimento da pilha sobreposta de cartões.
@@ -325,8 +348,17 @@ O navegador inferior agrupa Início, Extrato, Contas e Categorias, com o microfo
 
 ### Don't:
 
-- Don't usar vermelho para ações seguras ou substituir texto/contorno semântico pelo azul fixo de marca no escuro.
+- Don't usar vermelho para ações seguras ou substituir texto/contorno semântico por uma cor fixa sem relação com a identidade atual.
 - Don't diluir acentos de categoria escuros com branco ou alterar sua chave salva na API.
 - Don't criar outra família de bordas, sombras ou animações para uma exclusão isolada.
 - Don't usar diálogo nativo do navegador ou decoração extra nas ações financeiras.
 - Don't remontar formulários ou associar a preferência de aparência à sessão de um perfil.
+
+
+Validação de claro/escuro (13/10/2026): 496 testes em 65 suítes, incluindo persistência, falha de gravação, troca sem remontar campos e atualização de materiais nativos, toast e microfone. ESLint sem erros, com dois avisos anteriores. Build Vite e exportações Expo Android/iOS/web concluídas. Auditoria premium estrita sem violações; designmd sem erros (avisos de tokens espelhados e transparência). Prévia com dados simulados: 22 telas nos dois modos, componentes principais em 320 e 390 px, toggle persistido após recarregar, filtros e confirmação opacos, cartões com cores preservadas, escuta/revisão/regravação no claro. A execução e o vidro em aparelhos físicos ainda precisam de conferência no Expo; a exportação não mede FPS.
+
+
+Validação da política de movimento permanente (13/10/2026): 499 testes em 66 suítes. Casos novos usam a política real com preferência nativa ligada e consulta web simulada ligada; verificam ausência de leitura/assinatura da preferência, defaults Never, luz ativa e tempos de lente, toast e revisão. ESLint sem erros (dois avisos anteriores), build Vite, exportações Expo Android/iOS/web e auditoria premium estrita passaram. DESIGN.md sem erros. A prévia com dados e áudio simulados manteve os loops da luz em execução, confirmou revisão/regravação e durações CSS de 280 ms com a preferência simulada ligada. A fluidez e o comportamento do sistema em aparelhos físicos não foram medidos.
+
+
+Falhas na análise por voz são exibidas dentro do drawer, abaixo da transcrição preservada, por `VoiceAnalysisFeedback`. A API entrega code, missingFields e fieldErrors. VOICE_INFORMATION_REQUIRED e VOICE_INPUT_INVALID usam o ícone amarelo e mostram rótulos legíveis com a orientação de cada campo; VOICE_ANALYSIS_UNAVAILABLE, rede e demais falhas técnicas usam ícone vermelho. HTTP 400/422 é apenas o fallback para a API antiga. Título, texto e superfície opaca continuam neutros nos dois temas. Corrigir o texto, regravar, reenviar ou reabrir limpa o aviso anterior. O drawer continua aberto no erro; o controle central permite confirmar novamente ou tentar novamente. Somente o sucesso do registro emite toast. Os campos mostrados são exclusivamente os apontados pela API, sem inferência ou enumeração de dados já preenchidos.

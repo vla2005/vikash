@@ -82,6 +82,38 @@ class TransactionBoundaryIntegrationTest {
         assertThat(accounts.findByUuid(account.getUuid()).orElseThrow().getBalance()).isEqualByComparingTo("100.00");
     }
 
+    @Test
+    void missingSpokenBankAndMethodReachHttpResponseAndNeverChangeBalance() {
+        when(ai.analyze(any(), any())).thenReturn(new AiAnalysisResponse("Farmácia", new BigDecimal("50"),
+                TransactionType.EXPENSE, null, LocalDateTime.now(), null, null, null, null, null, 1, List.of()));
+        var response = client.post().uri("/api/transaction/create").header("Authorization", "Bearer " + auth.getAccessToken())
+                .contentType(MediaType.APPLICATION_JSON).body(Map.of("transcription", "Gastei cinquenta na farmácia"))
+                .exchange((request, result) -> {
+                    assertThat(result.getStatusCode().value()).isEqualTo(400);
+                    return result.bodyTo(com.vikash_api.dtos.responses.ErrorResponse.class);
+                });
+        assertThat(response.getCode()).isEqualTo("VOICE_INFORMATION_REQUIRED");
+        assertThat(response.getMissingFields()).containsExactly("paymentMethod", "accountUuid");
+        assertThat(response.getFieldErrors()).containsKeys("paymentMethod", "accountUuid");
+        assertThat(response.getFieldErrors().get("accountUuid")).contains("conta ou banco");
+        assertThat(accounts.findByUuid(account.getUuid()).orElseThrow().getBalance()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void actualProviderFailureIs503WithTechnicalCodeAndNoMissingFields() {
+        when(ai.analyze(any(), any())).thenThrow(new com.vikash_api.exceptions.AiAnalysisUnavailableException("test-only-internal-cause"));
+        var response = client.post().uri("/api/transaction/create").header("Authorization", "Bearer " + auth.getAccessToken())
+                .contentType(MediaType.APPLICATION_JSON).body(Map.of("transcription", "Almoço no Pix da carteira"))
+                .exchange((request, result) -> {
+                    assertThat(result.getStatusCode().value()).isEqualTo(503);
+                    return result.bodyTo(com.vikash_api.dtos.responses.ErrorResponse.class);
+                });
+        assertThat(response.getCode()).isEqualTo("VOICE_ANALYSIS_UNAVAILABLE");
+        assertThat(response.getMissingFields()).isNull();
+        assertThat(response.getMessage()).doesNotContain("internal-cause");
+        assertThat(accounts.findByUuid(account.getUuid()).orElseThrow().getBalance()).isEqualByComparingTo("100.00");
+    }
+
     private AiAnalysisResponse income(UUID uuid) {
         return new AiAnalysisResponse("Recebimento", new BigDecimal("10.00"), TransactionType.INCOME,
                 PaymentMethod.PIX, LocalDateTime.now(), uuid, null, null, null, null, 1, List.of());

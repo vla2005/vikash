@@ -1,12 +1,12 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { EnvelopeSimple } from 'phosphor-react-native/src/icons/EnvelopeSimple';
 import { ShieldCheck } from 'phosphor-react-native/src/icons/ShieldCheck';
 import { CheckCircle } from 'phosphor-react-native/src/icons/CheckCircle';
 import Screen from './Screen';
 import BrandLogo from './BrandLogo';
-import Icon from './Icon';
+import GlassBackButton from './GlassBackButton';
 import { fontFamily } from '../theme';
 
 export default function PasswordRecoveryLayout({ children, title, description, onBack, backLabel = 'Voltar ao login', saving, symbol = 'email' }) {
@@ -15,8 +15,7 @@ export default function PasswordRecoveryLayout({ children, title, description, o
   const Symbol = symbol === 'success' ? CheckCircle : symbol === 'password' ? ShieldCheck : EnvelopeSimple;
   return <Screen contentStyle={styles.content}>
     <View style={styles.nav}>
-      <Pressable accessibilityRole="button" accessibilityLabel={backLabel} disabled={saving} onPress={onBack}
-        style={({ pressed }) => [styles.back, pressed && styles.pressed]}><Icon name="back" size={26} /></Pressable>
+      <GlassBackButton accessibilityLabel={backLabel} disabled={saving} onPress={onBack} />
       <BrandLogo width={126} />
     </View>
     <View style={[styles.symbol, symbol === 'success' && styles.success]} accessible={false}>

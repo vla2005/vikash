@@ -1,3 +1,4 @@
+import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useId, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
@@ -59,7 +60,7 @@ function BalanceEvolutionChart({ points, hidden = false }) {
   const tooltipWidth = Math.max(83, currentBalance.length * 6 + 14);
   const tooltipY = Math.max(1, last.y - 39);
 
-  return <View style={s.card}>
+  return <GlassPanel style={s.card}>
     <Text accessibilityRole="header" style={s.title}>Evolução do saldo</Text>
     <Text style={s.subtitle}>Últimos 7 dias</Text>
     {hidden ? <View style={s.hidden}><Text style={s.hiddenText}>••••••</Text><Text style={s.subtitle}>Mostre os valores para ver o gráfico.</Text></View>
@@ -92,7 +93,7 @@ function BalanceEvolutionChart({ points, hidden = false }) {
           </AnimatedG>
         </Svg>
       </View>}
-  </View>;
+  </GlassPanel>;
 }
 
 const createStyles = (colors) => StyleSheet.create({
