@@ -40,7 +40,7 @@ export default function VoiceScene({
   );
 }
 const styles = StyleSheet.create({
-  scene: { flex: 1, overflow: 'hidden' },
-  layer: { ...StyleSheet.absoluteFillObject },
+  scene: { flex: 1, minHeight: 0, overflow: 'hidden' },
+  layer: { ...StyleSheet.absoluteFill },
   visual: { alignItems: 'center', justifyContent: 'center' },
 });

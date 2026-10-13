@@ -513,10 +513,10 @@ export default function MainTabs({ navigation }) {
             backgroundColor={colors.background}
           />
           <View style={[styles.canvas, { paddingTop: insets.top }]}>
-            {Platform.OS === 'android' && <AmbientLight />}
+            {Platform.OS === 'android' && <AmbientLight enabled={!voiceVisible} />}
             <DockBackdrop style={styles.backdrop}>
               {/* No Android, a luz do topo não precisa entrar na amostra do dock. */}
-              {Platform.OS !== 'android' && <AmbientLight />}
+              {Platform.OS !== 'android' && <AmbientLight enabled={!voiceVisible} />}
               <ScreenTransition
                 sceneKey={scene.key}
                 depth={scene.depth}
@@ -586,12 +586,12 @@ export default function MainTabs({ navigation }) {
               </ScreenTransition>
             </DockBackdrop>
             <FloatingAppHeader
-              visible={showAppHeader}
+              visible={showAppHeader && !voiceVisible}
               topInset={insets.top}
               profile={onboarding?.profile}
               onOpenProfile={() => setProfilesVisible(true)}
             />
-            {showDock && (
+            {showDock && !voiceVisible && (
               <BottomNavigator
                 selected={selected}
                 onSelect={key => {

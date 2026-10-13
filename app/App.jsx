@@ -43,8 +43,8 @@ function AppContent() {
     <SafeAreaProvider>
       <ThemeBrowserSync />
       <StatusBar
-        barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={colors.background}
+        barStyle={showSplash || scheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={showSplash ? '#000000' : colors.background}
       />
       <View style={[styles.root, { backgroundColor: colors.background }]}>
         <View

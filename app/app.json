@@ -31,13 +31,25 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFFFFF",
+          "backgroundColor": "#000000",
           "image": "./assets/brand/app-icon.png",
           "imageWidth": 180,
-          "dark": { "backgroundColor": "#101727" },
+          "dark": {
+            "backgroundColor": "#000000"
+          },
           "resizeMode": "contain"
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "./plugins/withAndroidReleaseApks"
     ]
   }
 }

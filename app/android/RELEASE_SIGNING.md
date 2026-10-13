@@ -26,3 +26,14 @@ APKs e AABs são ignorados pelo Git. O script de configuração e seus testes s�
 Guarde uma cópia segura da chave de release: futuras atualizações devem usar a
 mesma assinatura. Se já distribuiu um APK assinado com debug, mudar de chave exige
 reinstalar o app nesses aparelhos; preserve/exporte os dados necessários antes disso.
+
+## APK Android ARM64
+
+Execute `npm run build:android:apks` na pasta `app` para recriar o Android,
+compilar com R8 e gerar somente o APK ARM64. O comando usa as mesmas
+credenciais `VIKASH_RELEASE_*` e valida a assinatura privada antes da build.
+Os APKs e o mapping ficam em `app/build/android-apks/`, fora do Git.
+
+A fonte da política de assinatura para `expo prebuild` fica em
+`app/plugins/release-signing-policy.gradle`; a cópia em `android/app/` é gerada
+pelo plugin. Ao mudar a política, atualize a fonte e regenere o projeto.

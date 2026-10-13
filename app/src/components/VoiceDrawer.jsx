@@ -30,6 +30,7 @@ import DrawerModal from './DrawerModal';
 import DrawerPanel from './DrawerPanel';
 import AmbientLight from './silver/AmbientLight';
 import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
+import { voiceSceneLayout } from '../utils/voiceSceneLayout';
 
 export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const inputTheme = useInputTheme();
@@ -104,11 +105,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     voice.text.length > 180
       ? `…${voice.text.slice(-180).replace(/^\S*\s/, '')}`
       : voice.text;
-  const orbSize = Math.min(
-    compact ? 200 : 300,
-    width - 40,
-    Math.max(compact ? 144 : 216, height * (compact ? 0.28 : 0.34)),
-  );
+  const { orbSize, distance: travel, visualOffset } = voiceSceneLayout(width, sceneHeight, compact);
   const reviewLabel = feedback?.type === 'warn'
     ? 'Confirmar novamente'
     : feedback ? 'Tentar novamente' : 'Confirmar e analisar';
@@ -117,8 +114,6 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     : voice.phase === 'error'
     ? 'Tentar novamente'
     : 'Parar e revisar';
-  const travel = sceneHeight * (compact ? 0.42 : 0.4);
-  const visualOffset = -travel * (compact ? 0.46 : 0.32);
   return (
     <DrawerModal
       visible={visible}
@@ -256,7 +251,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                         : 'Sua fala aparecerá aqui.')}
                   </Text>
                 )}
-                <View style={styles.reviewTools}>
+                <View style={review ? styles.reviewTools : undefined}>
                   {review && (
                     <>
                       <Pressable
@@ -378,6 +373,7 @@ const createStyles = colors =>
       paddingHorizontal: 24,
     },
     header: {
+      flexShrink: 0,
       flexDirection: 'row',
       alignItems: 'center',
       minHeight: 52,
@@ -409,8 +405,8 @@ const createStyles = colors =>
       flexGrow: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingTop: 24,
-      paddingBottom: 24,
+      paddingTop: 12,
+      paddingBottom: 12,
     },
     title: {
       fontFamily: fontFamilyMedium,
@@ -475,7 +471,7 @@ const createStyles = colors =>
       color: colors.secondary,
       marginTop: 4,
     },
-    footer: { paddingTop: 24, paddingBottom: 6 },
+    footer: { flexShrink: 0, paddingTop: 24, paddingBottom: 6 },
     footerCompact: { paddingTop: 16 },
     controls: {
       flexDirection: 'row',

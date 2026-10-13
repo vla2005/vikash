@@ -1,33 +1,51 @@
-import React, { memo, useEffect, useState } from 'react';
-import { AppState } from 'react-native';
-import Animated, {
+import React, { memo, useEffect, useMemo, useState } from 'react';
+import { AppState, StyleSheet, View } from 'react-native';
+import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia';
+import {
   cancelAnimation,
   Easing,
   ReduceMotion,
-  useAnimatedProps,
   useDerivedValue,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { Path } from 'react-native-svg';
+import { useThemeTokens } from '../contexts/ThemeContext';
+import { pointerEventsStyles } from '../theme/interaction';
+import { voiceOrb as defaultVoiceOrb } from '../theme/silver';
+import { orbShaderSource, orbUniforms } from '../utils/orbShader';
 import ListeningOrbSurface from './ListeningOrbSurface';
-import { voiceOrb } from '../theme/silver';
 import { createOrbMesh, projectOrb } from '../utils/listeningOrb';
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const mesh = createOrbMesh();
-const initialShape = projectOrb(mesh, 0, voiceOrb.radius, voiceOrb.deformation);
+// Compilado uma vez, não a cada render/frame. Sem ray marching ou blur.
+const effect = Skia.RuntimeEffect.Make(orbShaderSource);
+// Falha gráfica não deve impedir a captura: mantém uma ilustração estática.
+const fallback = effect
+  ? null
+  : projectOrb(
+      createOrbMesh(8, 16),
+      0,
+      defaultVoiceOrb.radius,
+      defaultVoiceOrb.deformation,
+    );
 
-const ListeningOrb = memo(function ListeningOrb({
+export default memo(function ListeningOrb({
   active,
-  size = voiceOrb.size,
+  size = defaultVoiceOrb.size,
 }) {
+  const { voiceOrb } = useThemeTokens();
   const phase = useSharedValue(0);
   const [foreground, setForeground] = useState(
-    AppState.currentState !== 'background',
+    AppState.currentState !== 'background' &&
+      AppState.currentState !== 'inactive',
   );
-  const running = active && foreground;
+  const running = active && foreground && !!effect;
+  const palette = useMemo(() => orbUniforms(size, voiceOrb), [size, voiceOrb]);
+  const uniforms = useDerivedValue(
+    () => ({ ...palette, phase: phase.get() }),
+    [palette, phase],
+  );
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => {
       setForeground(state === 'active');
@@ -38,7 +56,6 @@ const ListeningOrb = memo(function ListeningOrb({
     cancelAnimation(phase);
     phase.set(0);
     if (running) {
-      // A escuta permanece animada com Reduzir movimento, conforme solicitado.
       phase.set(
         withRepeat(
           withTiming(Math.PI * 2, {
@@ -54,22 +71,40 @@ const ListeningOrb = memo(function ListeningOrb({
       );
     }
     return () => cancelAnimation(phase);
-  }, [phase, running]);
-  // Um cálculo compartilhado e dois paths, sem render React por frame.
-  const shape = useDerivedValue(
-    () => projectOrb(mesh, phase.get(), voiceOrb.radius, voiceOrb.deformation),
-    [phase],
-  );
-  const front = useAnimatedProps(() => ({ d: shape.get().front }), [shape]);
-  const back = useAnimatedProps(() => ({ d: shape.get().back }), [shape]);
+  }, [phase, running, voiceOrb.duration]);
+
+  if (!effect) {
+    return (
+      <ListeningOrbSurface
+        active={active}
+        size={size}
+        frontProps={{ d: fallback.front }}
+        backProps={{ d: fallback.back }}
+      />
+    );
+  }
   return (
-    <ListeningOrbSurface
-      active={active}
-      size={size}
-      PathComponent={AnimatedPath}
-      frontProps={{ d: initialShape.front, animatedProps: front }}
-      backProps={{ d: initialShape.back, animatedProps: back }}
-    />
+    <View
+      testID="listening-orb"
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[
+        { width: size, height: size },
+        !active && styles.idle,
+        pointerEventsStyles.none,
+      ]}
+    >
+      <Canvas style={styles.canvas} opaque={false}>
+        <Fill>
+          <Shader source={effect} uniforms={uniforms} />
+        </Fill>
+      </Canvas>
+    </View>
   );
 });
-export default ListeningOrb;
+
+const styles = StyleSheet.create({
+  canvas: { flex: 1 },
+  idle: { opacity: 0.5 },
+});

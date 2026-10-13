@@ -35,7 +35,7 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-test('Android mantém vidro nas três superfícies e usa a barra como fundo da lente', async () => {
+test('Android mantém o desfoque da barra e evita repetir a captura nos controles e na lente', async () => {
   const blurTarget = { current: null };
   const content = (
     <DockContext.Provider value={{ blurTarget }}>
@@ -45,7 +45,7 @@ test('Android mantém vidro nas três superfícies e usa a barra como fundo da l
   await act(async () => {
     renderer = TestRenderer.create(content);
   });
-  expect(blurs()).toHaveLength(3);
+  expect(blurs()).toHaveLength(1);
   expect(blurs().every(node => node.props.blurTarget === blurTarget)).toBe(
     true,
   );

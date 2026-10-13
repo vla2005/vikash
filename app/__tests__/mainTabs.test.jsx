@@ -283,10 +283,11 @@ test('microfone abre e fecha drawer sem mudar a aba e informa captura indisponiv
   await act(async () => button('Extrato').props.onPress());
   await act(async () => button('Registrar por voz').props.onPress());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(true);
-  expect(renderer.root.findByType(BottomNavigator).props.selected).toBe('Statement');
+  expect(renderer.root.findAllByType(BottomNavigator)).toHaveLength(0);
   expect(labels()).toContain('Transcrição indisponível neste dispositivo.');
   await act(async () => button('Fechar microfone').props.onPress());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(false);
+  expect(renderer.root.findByType(BottomNavigator).props.selected).toBe('Statement');
   expect(button('Extrato').props.accessibilityState.selected).toBe(true);
 });
 

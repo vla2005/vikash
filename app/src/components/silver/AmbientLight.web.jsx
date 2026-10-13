@@ -6,7 +6,7 @@ import { ambientLight as defaultAmbientLight } from '../../theme/silver';
 import { useThemeTokens, useThemeStyles } from '../../contexts/ThemeContext';
 import useReducedMotion from '../../hooks/useReducedMotion';
 
-export default memo(function AmbientLight() {
+export default memo(function AmbientLight({ enabled = true }) {
   const { ambientLight } = useThemeTokens();
   const styles = useThemeStyles(createStyles);
   const reduced = useReducedMotion();
@@ -41,7 +41,7 @@ export default memo(function AmbientLight() {
             : `vikash-silver-light ${
                 ambientLight.duration * (index === 0 ? 1 : 1.4)
               }ms cubic-bezier(.77,0,.175,1) infinite`,
-          animationPlayState: active ? 'running' : 'paused',
+          animationPlayState: active && enabled ? 'running' : 'paused',
         };
         return (
           <View
@@ -89,7 +89,7 @@ const createStyles = ({ background }) =>
       bottom: -defaultAmbientLight.overscan.vertical,
     },
     fade: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundImage: `linear-gradient(to right,${background} 0%,${background}40 ${
         horizontal * 50
       }%,transparent ${horizontal * 100}%,transparent ${

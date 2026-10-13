@@ -36,7 +36,7 @@ export default memo(function VoiceMicPulse({ active }) {
 });
 const styles = StyleSheet.create({
   ring: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 40,
     borderWidth: 1.5,
   },

@@ -1,6 +1,6 @@
 import { pointerEventsStyles } from '../../theme/interaction';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../Icon';
 import GlassMaterial from './GlassMaterial';
@@ -99,7 +99,7 @@ export default function DockLayout({
       </Box>
       {dockTabs.map(renderTab)}
       <Box style={[s.voice, voiceStyle]}>
-        <GlassMaterial navigation style={s.fill}>
+        <GlassMaterial navigation blurred={Platform.OS !== 'android'} style={s.fill}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Pergunte ao ViKash"
@@ -119,7 +119,7 @@ export default function DockLayout({
         </GlassMaterial>
       </Box>
       <View style={s.microphone}>
-        <GlassMaterial navigation strong style={s.fill}>
+        <GlassMaterial navigation strong blurred={Platform.OS !== 'android'} style={s.fill}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Registrar por voz"

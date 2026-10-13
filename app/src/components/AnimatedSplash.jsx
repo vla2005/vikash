@@ -1,4 +1,3 @@
-import { useThemeStyles } from '../contexts/ThemeContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Platform, StyleSheet, Text } from 'react-native';
 import appIcon from '../assets/appIcon';
@@ -7,7 +6,6 @@ import { hideNativeSplash } from '../services/nativeSplash';
 import { fontFamilyBold } from '../theme';
 
 export default function AnimatedSplash({ ready, onFinish }) {
-  const styles = useThemeStyles(createStyles);
   const [layoutReady, setLayoutReady] = useState(false);
   const [imageReady, setImageReady] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -62,9 +60,9 @@ export default function AnimatedSplash({ ready, onFinish }) {
   </Animated.View>;
 }
 
-const createStyles = (colors) => StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+const styles = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: '#000000', alignItems: 'center', justifyContent: 'center' },
   symbol: { width: 180, height: 180 },
   wordmark: { position: 'absolute', top: '50%', marginTop: 92 },
-  name: { fontFamily: fontFamilyBold, fontSize: 36, lineHeight: 48, letterSpacing: -1.6, color: colors.text },
+  name: { fontFamily: fontFamilyBold, fontSize: 36, lineHeight: 48, letterSpacing: -1.6, color: '#FFFFFF' },
 });

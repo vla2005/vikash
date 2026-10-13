@@ -1,6 +1,6 @@
 import { pointerEventsStyles } from '../../theme/interaction';
 import React, { memo, useEffect, useId, useState } from 'react';
-import { AppState, Platform, StyleSheet, View } from 'react-native';
+import { AppState, Image, Platform, StyleSheet, View } from 'react-native';
 import Animated, { cubicBezier } from 'react-native-reanimated';
 import Svg, {
   Defs,
@@ -13,6 +13,8 @@ import Svg, {
 import useReducedMotion from '../../hooks/useReducedMotion';
 import { ambientLight as defaultAmbientLight } from '../../theme/silver';
 import { useTheme, useThemeTokens } from '../../contexts/ThemeContext';
+
+const lightTexture = require('../../../assets/effects/ambient-light.png');
 
 const overscanX = 460 * defaultAmbientLight.overscan.horizontal;
 const overscanY = defaultAmbientLight.overscan.vertical;
@@ -98,50 +100,72 @@ const Field = memo(function Field({ field, index, active, reduced, id }) {
       };
   return (
     <Animated.View
-      // Só o SVG estático vira textura; o conteúdo rolável continua dinâmico.
-      renderToHardwareTextureAndroid={
-        Platform.OS === 'android' && active && !reduced
-      }
+      // A imagem já é uma textura pequena: não criar outro cache do tamanho da tela.
+      testID={'ambient-field-' + index}
+      renderToHardwareTextureAndroid={false}
       style={[styles.field, { opacity: opacity * 0.8 }, motion]}
     >
-      <Svg
-        width="100%"
-        height="100%"
-        viewBox={fieldViewBox}
-        preserveAspectRatio="none"
-      >
-        <Defs>
-          <RadialGradient id={id}>
-            <Stop
-              offset="0"
-              stopColor={ambientLight.colors[index]}
-              stopOpacity="1"
-            />
-            <Stop
-              offset={ambientLight.fadeStart}
-              stopColor={ambientLight.colors[index]}
-              stopOpacity="0.35"
-            />
-            <Stop
-              offset="1"
-              stopColor={ambientLight.colors[index]}
-              stopOpacity="0"
-            />
-          </RadialGradient>
-        </Defs>
-        <Ellipse
-          cx={field.x * 460}
-          cy={field.y}
-          rx={field.radiusX}
-          ry={field.radiusY}
-          fill={`url(#${id})`}
+      {Platform.OS === 'android' ? (
+        <Image
+          source={lightTexture}
+          resizeMode="stretch"
+          resizeMethod="none"
+          fadeDuration={0}
+          tintColor={ambientLight.colors[index]}
+          style={[
+            styles.texture,
+            {
+              left:
+                ((field.x * 460 - field.radiusX + overscanX) /
+                  (460 + overscanX * 2)) *
+                  100 +
+                '%',
+              top: field.y - field.radiusY + overscanY,
+              width: ((field.radiusX * 2) / (460 + overscanX * 2)) * 100 + '%',
+              height: field.radiusY * 2,
+            },
+          ]}
         />
-      </Svg>
+      ) : (
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox={fieldViewBox}
+          preserveAspectRatio="none"
+        >
+          <Defs>
+            <RadialGradient id={id}>
+              <Stop
+                offset="0"
+                stopColor={ambientLight.colors[index]}
+                stopOpacity="1"
+              />
+              <Stop
+                offset={ambientLight.fadeStart}
+                stopColor={ambientLight.colors[index]}
+                stopOpacity="0.35"
+              />
+              <Stop
+                offset="1"
+                stopColor={ambientLight.colors[index]}
+                stopOpacity="0"
+              />
+            </RadialGradient>
+          </Defs>
+          <Ellipse
+            cx={field.x * 460}
+            cy={field.y}
+            rx={field.radiusX}
+            ry={field.radiusY}
+            fill={`url(#${id})`}
+          />
+        </Svg>
+      )}
     </Animated.View>
   );
 });
 
-export default memo(function AmbientLight() {
+export default memo(function AmbientLight({ enabled = true }) {
   const { ambientLight } = useThemeTokens();
   const reduced = useReducedMotion();
   const [active, setActive] = useState(AppState.currentState !== 'background');
@@ -157,7 +181,10 @@ export default memo(function AmbientLight() {
       accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[[styles.clip, { height: ambientLight.height }], pointerEventsStyles.none]}
+      style={[
+        [styles.clip, { height: ambientLight.height }],
+        pointerEventsStyles.none,
+      ]}
       testID="silver-ambient-light"
     >
       {ambientLight.fields.map((field, index) => (
@@ -165,7 +192,7 @@ export default memo(function AmbientLight() {
           key={index}
           field={field}
           index={index}
-          active={active}
+          active={active && enabled}
           reduced={reduced}
           id={`${id}-${index}`}
         />
@@ -175,6 +202,7 @@ export default memo(function AmbientLight() {
   );
 });
 const styles = StyleSheet.create({
+  texture: { position: 'absolute' },
   clip: { position: 'absolute', left: 0, right: 0, top: 0, overflow: 'hidden' },
   field: {
     position: 'absolute',

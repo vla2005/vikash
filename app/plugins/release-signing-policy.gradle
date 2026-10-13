@@ -1,0 +1,39 @@
+import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.MessageDigest
+import org.gradle.api.GradleException
+
+ext.validateReleaseSigning = { Map credentials, File debugKeystore ->
+    if (credentials.values().any { it == null || it.toString().isBlank() }) {
+        throw new GradleException('Release exige VIKASH_RELEASE_STORE_FILE, VIKASH_RELEASE_STORE_PASSWORD, VIKASH_RELEASE_KEY_ALIAS e VIKASH_RELEASE_KEY_PASSWORD.')
+    }
+    File keystoreFile = credentials.storeFile
+    if (!keystoreFile.isFile()) {
+        throw new GradleException('O arquivo da chave de release não foi encontrado.')
+    }
+    if (keystoreFile.canonicalFile == debugKeystore.canonicalFile
+            || credentials.keyAlias.equalsIgnoreCase('androiddebugkey')) {
+        throw new GradleException('Uma build de release não pode usar a chave de debug.')
+    }
+    try {
+        KeyStore keystore = KeyStore.getInstance(keystoreFile, credentials.storePassword.toCharArray())
+        def key = keystore.getKey(credentials.keyAlias, credentials.keyPassword.toCharArray())
+        def certificate = keystore.getCertificate(credentials.keyAlias)
+        if (!(key instanceof PrivateKey) || certificate == null) {
+            throw new GradleException('O alias de release deve identificar uma chave privada com certificado.')
+        }
+        // Uma cópia da chave pública de debug continua proibida, mesmo com outro nome/alias.
+        def digest = MessageDigest.getInstance('SHA-256')
+        def debug = KeyStore.getInstance(debugKeystore, 'android'.toCharArray())
+        def debugCertificate = debug.getCertificate('androiddebugkey')
+        if (certificate.subjectX500Principal.name.contains('CN=Android Debug')
+                || MessageDigest.isEqual(digest.digest(certificate.publicKey.encoded), digest.digest(debugCertificate.publicKey.encoded))) {
+            throw new GradleException('Uma build de release não pode usar um certificado de debug.')
+        }
+    } catch (GradleException ex) {
+        throw ex
+    } catch (Exception ignored) {
+        // As credenciais e mensagens internas do keystore não devem ir para os logs do CI.
+        throw new GradleException('Não foi possível abrir a chave de release. Confira o arquivo, o alias e as senhas.')
+    }
+}

@@ -1,7 +1,6 @@
 // Malha pequena: dois paths, sem views ou renders React por ponto.
-export function projectListeningWave(phase) {
+export function projectListeningWave(phase, columns = 40, rows = 7) {
   'worklet';
-  const columns = 40;
   const heights = [];
   let ribs = '';
   let strands = '';
@@ -17,10 +16,10 @@ export function projectListeningWave(phase) {
     const x = (t * 300).toFixed(2);
     ribs += `M${x},66L${x},${(66 - height).toFixed(2)}`;
   }
-  for (let row = 1; row <= 7; row++) {
+  for (let row = 1; row <= rows; row++) {
     for (let column = 0; column <= columns; column++) {
       const x = ((column / columns) * 300).toFixed(2);
-      const y = (66 - (row / 7) * heights[column]).toFixed(2);
+      const y = (66 - (row / rows) * heights[column]).toFixed(2);
       strands += `${column === 0 ? 'M' : 'L'}${x},${y}`;
     }
   }

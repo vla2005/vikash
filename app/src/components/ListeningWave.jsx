@@ -1,28 +1,41 @@
 import React, { memo, useEffect, useState } from 'react';
-import { AppState } from 'react-native';
-import Animated, {
+import { AppState, StyleSheet, View } from 'react-native';
+import {
+  Canvas,
+  Group,
+  LinearGradient,
+  Path,
+  Skia,
+  usePathInterpolation,
+} from '@shopify/react-native-skia';
+import {
   cancelAnimation,
   Easing,
   ReduceMotion,
-  useAnimatedProps,
-  useDerivedValue,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { Path } from 'react-native-svg';
-import ListeningWaveSurface from './ListeningWaveSurface';
-import { voiceOrb } from '../theme/silver';
-import { projectListeningWave } from '../utils/listeningWave';
+import { useThemeTokens } from '../contexts/ThemeContext';
+import { pointerEventsStyles } from '../theme/interaction';
+import { createWavePaths } from '../utils/nativeWavePaths';
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const initialShape = projectListeningWave(0);
+// Preparado uma vez ao carregar o módulo, antes de abrir o drawer.
+const poses = createWavePaths(() => Skia.PathBuilder.Make());
+
 export default memo(function ListeningWave({ active, compact }) {
+  const { voiceOrb } = useThemeTokens();
   const phase = useSharedValue(0);
+  const [width, setWidth] = useState(300);
   const [foreground, setForeground] = useState(
-    AppState.currentState !== 'background',
+    AppState.currentState !== 'background' &&
+      AppState.currentState !== 'inactive',
   );
   const running = active && foreground;
+  const height = compact ? voiceOrb.wave.compactHeight : voiceOrb.wave.height;
+  const scale = Math.min(width / 300, height / 76);
+  const strands = usePathInterpolation(phase, poses.phases, poses.strands);
+  const ribs = usePathInterpolation(phase, poses.phases, poses.ribs);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state =>
       setForeground(state === 'active'),
@@ -48,20 +61,68 @@ export default memo(function ListeningWave({ active, compact }) {
       );
     }
     return () => cancelAnimation(phase);
-  }, [phase, running]);
-  const shape = useDerivedValue(
-    () => projectListeningWave(phase.get()),
-    [phase],
-  );
-  const strands = useAnimatedProps(() => ({ d: shape.get().strands }), [shape]);
-  const ribs = useAnimatedProps(() => ({ d: shape.get().ribs }), [shape]);
+  }, [phase, running, voiceOrb.wave.duration]);
+
+  const colors = [
+    voiceOrb.wave.color + '00',
+    voiceOrb.wave.color + 'a6',
+    voiceOrb.highlight,
+    voiceOrb.wave.color + 'a6',
+    voiceOrb.wave.color + '00',
+  ];
   return (
-    <ListeningWaveSurface
-      active={active}
-      compact={compact}
-      PathComponent={AnimatedPath}
-      strandsProps={{ d: initialShape.strands, animatedProps: strands }}
-      ribsProps={{ d: initialShape.ribs, animatedProps: ribs }}
-    />
+    <View
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      onLayout={event => setWidth(event.nativeEvent.layout.width)}
+      style={[
+        styles.frame,
+        { height },
+        !active && styles.idle,
+        pointerEventsStyles.none,
+      ]}
+    >
+      <Canvas style={styles.canvas} opaque={false}>
+        <Group
+          transform={[
+            { translateX: (width - 300 * scale) / 2 },
+            { translateY: (height - 76 * scale) / 2 },
+            { scale },
+          ]}
+        >
+          <Group opacity={0.3}>
+            <Path path={ribs} style="stroke" strokeWidth={0.8}>
+              <LinearGradient
+                start={{ x: 0, y: 0 }}
+                end={{ x: 300, y: 0 }}
+                colors={colors}
+                positions={[0, 0.2, 0.5, 0.8, 1]}
+              />
+            </Path>
+          </Group>
+          <Group opacity={0.65}>
+            <Path
+              path={strands}
+              style="stroke"
+              strokeWidth={0.8}
+              strokeCap="round"
+            >
+              <LinearGradient
+                start={{ x: 0, y: 0 }}
+                end={{ x: 300, y: 0 }}
+                colors={colors}
+                positions={[0, 0.2, 0.5, 0.8, 1]}
+              />
+            </Path>
+          </Group>
+        </Group>
+      </Canvas>
+    </View>
   );
+});
+const styles = StyleSheet.create({
+  frame: { width: '100%', maxWidth: 300, marginTop: 8 },
+  canvas: { flex: 1 },
+  idle: { opacity: 0.2 },
 });

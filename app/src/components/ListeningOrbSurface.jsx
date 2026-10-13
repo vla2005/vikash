@@ -11,7 +11,7 @@ import Svg, {
 } from 'react-native-svg';
 import { useThemeTokens } from '../contexts/ThemeContext';
 
-// O desenho é o mesmo nas três plataformas; só o motor da malha muda.
+// Renderer SVG da web e ilustração de contingência do shader nativo.
 export default function ListeningOrbSurface({
   active,
   size,

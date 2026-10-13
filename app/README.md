@@ -116,6 +116,47 @@ Para abrir no simulador iOS, em macOS com Xcode:
 npm run ios
 ```
 
+## APKs Android de release
+
+A build usa **R8**, remoção de recursos não utilizados e APK de release somente para
+**ARM de 64 bits** (`arm64-v8a`). As
+imagens, fontes, animações, permissões e funcionalidades são preservadas. Debug
+continua sem minificação e com suporte às arquiteturas de emuladores.
+
+Configure o Android SDK/JDK e as variáveis `VIKASH_RELEASE_*` conforme
+[assinatura de release](android/RELEASE_SIGNING.md). Use um caminho absoluto para
+a chave e mantenha a mesma assinatura das versões distribuídas. Então execute:
+
+```sh
+npm run build:android:apks
+```
+
+O comando executa `expo prebuild`, compila somente ARM64 e verifica a
+presença do APK e do mapping do R8. Os arquivos finais ficam em:
+
+- `build/android-apks/vikash-arm64-v8a-release.apk`
+- `build/android-apks/mapping.txt`
+
+A distribuição exige Android com suporte a `arm64-v8a`; não há APK de 32 bits.
+Para a Play Store, use `bundleRelease` e distribua o AAB; a loja seleciona os arquivos para
+cada dispositivo. Não distribua APKs de validação assinados com uma chave
+provisória como atualização de uma versão já instalada.
+
+`app.json` configura o plugin oficial `expo-build-properties`. O plugin local
+`plugins/withAndroidReleaseApks.js` mantém os splits, o preset de otimização R8
+e a política de assinatura quando o Expo recria o Android. As bibliotecas
+fornecem suas próprias regras para preservar classes acessadas por JNI/reflexão.
+Não use regras globais de `-keep` ou `-dontwarn`, que podem ocultar problemas ou
+anular a redução de código.
+
+O plugin amplia o limite de metaspace da JVM de compilação para 1536 MB, pois
+o lint nativo excedeu o limite anterior de 512 MB. Essa configuração vale para
+as ferramentas de build e não altera a memória utilizada pelo app instalado.
+
+Guarde o `mapping.txt` de cada release com os artefatos daquela versão. Ele
+permite interpretar stack traces cujos nomes foram alterados pelo R8. APKs,
+chaves, caches e os arquivos em `build/` não são versionados.
+
 ## Organização
 
 - `src/screens`: telas de login, cadastro, criação e resumo de contas.

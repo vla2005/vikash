@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { AppState, Platform, StyleSheet } from 'react-native';
+import { AppState, Image, Platform, StyleSheet } from 'react-native';
 import AmbientLight from '../src/components/silver/AmbientLight';
 import useReducedMotion from '../src/hooks/useReducedMotion';
 import { ambientLight } from '../src/theme/silver';
@@ -45,16 +45,17 @@ afterEach(async () => {
   jest.restoreAllMocks();
 });
 
-test('Android mantém os dois focos animados e libera suas texturas em segundo plano', async () => {
+test('Android reutiliza a textura compacta e pausa os dois focos em segundo plano', async () => {
   await act(async () => {
     renderer = TestRenderer.create(<AmbientLight />);
   });
-  expect(renderer.root.findAllByType('Ellipse')).toHaveLength(
+  expect(renderer.root.findAllByType(Image)).toHaveLength(
     ambientLight.fields.length,
   );
+  expect(renderer.root.findAllByType('Ellipse')).toHaveLength(0);
   expect(fields().length).toBeGreaterThan(0);
   expect(
-    fields().every(node => node.props.renderToHardwareTextureAndroid),
+    fields().every(node => !node.props.renderToHardwareTextureAndroid),
   ).toBe(true);
   await act(async () => changeState('background'));
   expect(
@@ -68,7 +69,7 @@ test('Android mantém os dois focos animados e libera suas texturas em segundo p
   ).toBe(true);
   await act(async () => changeState('active'));
   expect(
-    fields().every(node => node.props.renderToHardwareTextureAndroid),
+    fields().every(node => !node.props.renderToHardwareTextureAndroid),
   ).toBe(true);
   await act(async () => renderer.unmount());
   renderer = null;
@@ -84,7 +85,7 @@ test('movimento reduzido preserva a luz estática sem reservar texturas de anima
   expect(
     renderer.root.findAllByProps({ renderToHardwareTextureAndroid: true }),
   ).toHaveLength(0);
-  expect(renderer.root.findAllByType('Ellipse')).toHaveLength(
+  expect(renderer.root.findAllByType(Image)).toHaveLength(
     ambientLight.fields.length,
   );
 });
@@ -105,4 +106,37 @@ test('iOS mantém sua renderização e o mesmo percurso da luz', async () => {
         'infinite',
     ),
   ).toBe(true);
+});
+
+test('pausa quando coberta pelo drawer e retoma ao voltar, sem alocar cache grande', async () => {
+  await act(async () => {
+    renderer = TestRenderer.create(<AmbientLight />);
+  });
+  const before = renderer.root
+    .findAllByType(Image)
+    .map(node => node.props.source);
+  await act(async () => {
+    renderer.update(<AmbientLight enabled={false} />);
+  });
+  expect(
+    fields().every(
+      node =>
+        StyleSheet.flatten(node.props.style).animationPlayState === 'paused',
+    ),
+  ).toBe(true);
+  await act(async () => {
+    renderer.update(<AmbientLight enabled />);
+  });
+  expect(
+    fields().every(
+      node =>
+        StyleSheet.flatten(node.props.style).animationPlayState === 'running',
+    ),
+  ).toBe(true);
+  expect(
+    renderer.root.findAllByType(Image).map(node => node.props.source),
+  ).toEqual(before);
+  expect(
+    renderer.root.findAllByType(Image).map(node => node.props.tintColor),
+  ).toEqual(ambientLight.colors);
 });

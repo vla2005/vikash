@@ -13,6 +13,25 @@ import { voiceOrb } from '../src/theme/silver';
 import { createOrbMesh, projectOrb } from '../src/utils/listeningOrb';
 import { projectListeningWave } from '../src/utils/listeningWave';
 
+jest.mock('@shopify/react-native-skia', () => ({
+  Canvas: 'SkiaCanvas',
+  Fill: 'SkiaFill',
+  Shader: 'SkiaShader',
+  Group: 'SkiaGroup',
+  Path: 'SkiaPath',
+  LinearGradient: 'SkiaGradient',
+  usePathInterpolation: (_phase, _range, paths) => ({ get: () => paths[0] }),
+  Skia: {
+    RuntimeEffect: { Make: jest.fn(() => ({})) },
+    PathBuilder: {
+      Make: () => ({
+        moveTo() {},
+        lineTo() {},
+        build: () => ({}),
+      }),
+    },
+  },
+}));
 jest.unmock('../src/components/ListeningOrb');
 jest.unmock('../src/components/ListeningWave');
 jest.unmock('../src/components/VoiceMicPulse');
@@ -102,7 +121,16 @@ test.each([
       undefined,
       'never',
     );
-    expect(renderer.root.findAllByType('Path')).toHaveLength(2);
+    if (Component === ListeningOrb) {
+      expect(renderer.root.findAllByType('Path')).toHaveLength(0);
+      expect(renderer.root.findAllByType('SkiaShader')).toHaveLength(1);
+      expect(
+        renderer.root.findByType('SkiaShader').props.uniforms.get().size,
+      ).toBe(voiceOrb.size);
+    } else {
+      expect(renderer.root.findAllByType('SkiaPath')).toHaveLength(2);
+      expect(renderer.root.findAllByType('Svg')).toHaveLength(0);
+    }
   },
 );
 

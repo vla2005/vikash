@@ -39,7 +39,7 @@ export default memo(function VoiceMicGlyph({ review }) {
 const styles = StyleSheet.create({
   frame: { width: 30, height: 30 },
   icon: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     transitionProperty: 'transform, opacity',

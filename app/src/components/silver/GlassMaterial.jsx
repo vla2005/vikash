@@ -41,7 +41,7 @@ export default function GlassMaterial({
   const shouldBlur =
     !reduced &&
     blurred &&
-    (Platform.OS !== 'android' || (!!context?.blurTarget && !lens));
+    (Platform.OS !== 'android' || (!!context?.blurTarget && navigation && !lens));
   return (
     <View
       style={[

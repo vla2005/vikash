@@ -6,19 +6,22 @@
   "scripts": {
     "android": "expo start --go --android",
     "ios": "expo start --go --ios",
-    "lint": "eslint App.jsx index.js src __tests__",
+    "lint": "eslint App.jsx index.js src __tests__ plugins scripts/build-android-apks.js",
     "start": "expo start --go",
     "test": "jest --runInBand",
     "web": "vite --host 0.0.0.0",
-    "build:web": "vite build"
+    "build:web": "vite build",
+    "build:android:apks": "node scripts/build-android-apks.js"
   },
   "dependencies": {
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-navigation/native": "^7.5.0",
     "@react-navigation/native-stack": "^7.20.0",
+    "@shopify/react-native-skia": "2.6.2",
     "expo": "^57.0.26",
     "expo-blur": "~57.0.3",
+    "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.20",
     "expo-font": "~57.0.4",
     "expo-glass-effect": "~57.0.4",

@@ -53,8 +53,11 @@ assert build.count('signingConfig signingConfigs.debug') == 1
 assert build.contains('validateReleaseSigning(releaseCredentials')
 assert build.contains("contains('release')")
 // Executa o callback real de seleção de tarefas, sem precisar do Android SDK.
+int gateStart = build.indexOf('gradle.taskGraph.whenReady')
+int gateEnd = build.indexOf('\ndependencies {', gateStart)
+if (gateEnd < 0) { gateEnd = build.indexOf('\n// @generated begin vikash-release-abi-splits', gateStart) }
 String gate = 'import org.gradle.api.GradleException\n' + build.substring(
-        build.indexOf('gradle.taskGraph.whenReady'), build.indexOf('\ndependencies {'))
+        gateStart, gateEnd < 0 ? build.length() : gateEnd)
 def runGate = { String taskName, Map values, Map options = [:], boolean cached = false ->
     def owner = new Expando(properties: options)
     def task = [project: owner, name: taskName]
