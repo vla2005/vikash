@@ -115,13 +115,15 @@ export default function GlassDock({
     ],
   }));
   const lens = useAnimatedStyle(() => ({
-    width: (tabWidth - 2) * (1 - progress.get()) + 54 * progress.get(),
+    width: tabWidth * (1 - progress.get()) + 54 * progress.get(),
+    height: 64 - 10 * progress.get(),
     transform: [
       {
         translateX: (8 + index.get() * tabWidth) * (1 - progress.get()),
       },
-      { scaleX: 1 + pressed.get() * 0.1 },
-      { scaleY: 1 + pressed.get() * 0.12 },
+      { translateY: 5 * progress.get() },
+      { scaleX: 1 + Math.max(0, pressed.get()) * 0.1 },
+      { scaleY: 1 + Math.max(0, pressed.get()) * 0.12 },
     ],
   }));
   return (

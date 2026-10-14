@@ -1,3 +1,6 @@
+// Reutiliza o formatador: alternar a privacidade atualiza muitos valores juntos.
+const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
 export function parseCurrency(value) {
   const digits = String(value).replace(/\D/g, '');
   const sign = String(value).trim().startsWith('-') ? -1 : 1;
@@ -5,7 +8,7 @@ export function parseCurrency(value) {
 }
 
 export function formatCurrency(value) {
-  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return currencyFormatter.format(Number(value || 0));
 }
 
 export function maskCurrency(value) {

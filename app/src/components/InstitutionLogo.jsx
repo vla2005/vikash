@@ -1,5 +1,5 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useState } from 'react';
+import React, { memo, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import logos from '../assets/institutions';
 
@@ -7,7 +7,7 @@ import Icon from './Icon';
 import { API_BASE_URL } from '../config/api';
 import { readableAccent } from '../theme/categoryPalette';
 
-export default function InstitutionLogo({ institution, size = 34, fallbackIcon = 'bank', fallbackColor, backgroundColor }) {
+function InstitutionLogo({ institution, size = 34, fallbackIcon = 'bank', fallbackColor, backgroundColor }) {
   const { colors, scheme } = useTheme();
   const styles = useThemeStyles(createStyles);
   fallbackColor ??= colors.secondary;
@@ -28,3 +28,5 @@ const createStyles = (colors) => StyleSheet.create({
   frame: { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   image: { borderRadius: 5 },
 });
+
+export default memo(InstitutionLogo);

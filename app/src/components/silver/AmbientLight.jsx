@@ -1,3 +1,4 @@
+import { renderingEffects } from '../../config/renderingEffects';
 import { pointerEventsStyles } from '../../theme/interaction';
 import React, { memo, useEffect, useId, useState } from 'react';
 import { AppState, Image, Platform, StyleSheet, View } from 'react-native';
@@ -187,7 +188,7 @@ const Field = memo(function Field({ field, index, active, reduced, id }) {
   );
 });
 
-export default memo(function AmbientLight({ enabled = true }) {
+const AmbientLightContent = memo(function AmbientLightContent({ enabled = true }) {
   const { ambientLight } = useThemeTokens();
   const reduced = useReducedMotion();
   const [active, setActive] = useState(AppState.currentState !== 'background');
@@ -223,6 +224,10 @@ export default memo(function AmbientLight({ enabled = true }) {
     </View>
   );
 });
+export default memo(function AmbientLight(props) {
+  return renderingEffects.ambientLight ? <AmbientLightContent {...props} /> : null;
+});
+
 const styles = StyleSheet.create({
   texture: { position: 'absolute' },
   clip: { position: 'absolute', left: 0, right: 0, top: 0, overflow: 'hidden' },

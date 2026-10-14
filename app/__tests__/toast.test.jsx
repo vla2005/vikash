@@ -45,7 +45,7 @@ test.each(['success', 'error', 'warn', 'info'])('suporta estado %s com mensagem 
   expect(renderer.root.findByType(Toast).props.type).toBe(type);
   expect(toastVariants[type].color).toBeDefined();
   const notification = renderer.root.findByType(Toast);
-  expect(notification.findByType(Icon).props.color).toBe(toastVariants[type].color);
+  expect(notification.findByType(Icon.type).props.color).toBe(toastVariants[type].color);
   const card = renderer.root.findAll(node => node.props.testID === 'toast')[0];
   expect(StyleSheet.flatten(card.props.style).backgroundColor).toBe(toastTokens.fill);
   expect(StyleSheet.flatten(card.props.style).borderColor).toBeUndefined();

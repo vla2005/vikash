@@ -1,6 +1,6 @@
 import GlassPanel from '../components/silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import ScrollView from '../components/silver/DockScrollView';
 import Skeleton, { DashboardSkeleton } from '../components/Skeleton';
@@ -47,7 +47,7 @@ function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard,
   const name = profile?.name?.trim().split(/\s+/)[0];
   const greeting = hour < 6 ? 'Boa madrugada' : hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   const amount = value => hidden ? hiddenAmount : value == null ? '—' : formatCurrency(value);
-  const recentPurchases = toRecentPurchaseRows(credit.data?.recentPurchases);
+  const recentPurchases = useMemo(() => toRecentPurchaseRows(credit.data?.recentPurchases), [credit.data?.recentPurchases]);
 
   function chooseMonth(month) {
     setPeriod({ year: pickerYear, month });

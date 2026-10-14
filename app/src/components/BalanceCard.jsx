@@ -1,3 +1,4 @@
+import { FadeComponent } from '../shared/components/reacticx/base/fade-component';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -19,22 +20,12 @@ export default function BalanceCard({
         <Text style={[styles.label, { color: colors.onBalance }]}>{label}</Text>
         <Icon name="wallet" color={colors.balanceSecondary} size={23} />
       </View>
-      {loading ? (
-        <Skeleton width="80%" height={46} />
-      ) : (
-        <Text
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.55}
-          style={[
-            styles.value,
-            String(value).length > 16 && styles.longValue,
-            { color: colors.onBalance },
-          ]}
-        >
-          {value}
-        </Text>
-      )}
+      <FadeComponent state={loading ? 'from' : 'to'} duration={180} style={styles.valueContainer}>
+        <FadeComponent.From><Skeleton width="80%" height={46} /></FadeComponent.From>
+        <FadeComponent.To><View accessibilityElementsHidden={loading} importantForAccessibility={loading ? 'no-hide-descendants' : 'auto'}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} style={[styles.value, String(value).length > 16 && styles.longValue, { color: colors.onBalance }]}>{value}</Text>
+        </View></FadeComponent.To>
+      </FadeComponent>
       {!!caption && (
         <Text style={[styles.caption, { color: colors.balanceSecondary }]}>
           {caption}
@@ -51,6 +42,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   label: { fontFamily: fontFamilyMedium, fontSize: 14, lineHeight: 22 },
+  valueContainer: { minHeight: 47 },
   value: {
     fontFamily: fontFamilyBold,
     fontWeight: '700',

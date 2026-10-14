@@ -66,7 +66,7 @@ const createStyles = (_colors, _type, { dock }) =>
     solidLens: { backgroundColor: dock.solidLens },
     solid: { backgroundColor: dock.solidControl },
     navigationShine: { backgroundColor: dock.sheen },
-    blur: { backdropFilter: 'blur(24px) saturate(110%)' },
+    blur: { backdropFilter: 'blur(24px) saturate(110%)', WebkitBackdropFilter: 'blur(24px) saturate(110%)' },
     shine: {
       position: 'absolute',
       top: 0,

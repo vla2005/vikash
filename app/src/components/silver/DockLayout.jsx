@@ -62,7 +62,7 @@ export function DockTabButton({
           maxFontSizeMultiplier={1.3}
           style={[s.label, compact && s.smallLabel, active && s.activeLabel]}
         >
-          {compact && item.key === 'Categories' ? 'Categ.' : item.label}
+          {(compact || Platform.OS === 'ios') && item.key === 'Categories' ? 'Categ.' : item.label}
         </Text>
       </Box>
     </Pressable>
@@ -151,7 +151,7 @@ const createStyles = (_colors, _type, { dock }) =>
       borderRadius: 40,
       boxShadow: Platform.OS === 'android' ? dock.androidShadow : dock.shadow,
     },
-    lens: { position: 'absolute', top: 57, left: 0, height: 54 },
+    lens: { position: 'absolute', top: 52, left: 0, height: dock.height },
     fill: { flex: 1 },
     tabFrame: { position: 'absolute', top: 52, height: dock.height },
     tab: {

@@ -218,7 +218,7 @@ test('donut groups additional categories without dropping totals and expands all
   expect(text()).toContain('4,8%');
 });
 
-test('reduced motion skips donut and balance drawing; normal motion cleans up and never adds frame state listeners', async () => {
+test('donut aguarda medição e desenha na UI; os gráficos não criam listeners por frame', async () => {
   const stop = jest.spyOn(Reanimated, 'cancelAnimation');
   const timing = jest.spyOn(Reanimated, 'withTiming');
   const jsTiming = jest.spyOn(Animated, 'timing');
@@ -227,6 +227,7 @@ test('reduced motion skips donut and balance drawing; normal motion cleans up an
   expect(timing).not.toHaveBeenCalled();
   useReducedMotion.mockReturnValue(false);
   await act(async () => renderer.update(<CategoryExpensesChart categories={dashboard.expensesPerCategory} periodLabel="Novembro" />));
+  await act(async () => renderer.root.findAll(node => typeof node.props.onLayout === 'function')[0].props.onLayout({ nativeEvent: { layout: { width: 190, height: 190 } } }));
   expect(timing).toHaveBeenCalledWith(1, expect.objectContaining({ duration: 900, reduceMotion: 'never' }));
   expect(jsTiming).not.toHaveBeenCalled();
   expect(listener).not.toHaveBeenCalled();

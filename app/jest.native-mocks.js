@@ -26,12 +26,15 @@ jest.mock('react-native-reanimated', () => {
     default: { View, ScrollView, createAnimatedComponent },
     createAnimatedComponent,
     useAnimatedProps: props => props(),
-    useDerivedValue: updater => ({ get: updater }),
+    useDerivedValue: updater => ({ get: updater, get value() { return updater(); } }),
+    withDelay: (_, value) => value,
     useSharedValue: initial => {
       const ref = React.useRef();
       if (!ref.current) {
         let value = initial;
         ref.current = {
+          get value() { return value; },
+          set value(next) { value = next; },
           get: () => value,
           set: next => {
             value = typeof next === 'function' ? next(value) : next;
@@ -74,4 +77,9 @@ jest.mock('expo-glass-effect', () => ({
 jest.mock('@react-native-masked-view/masked-view', () => ({
   __esModule: true,
   default: require('react-native').View,
+}));
+
+jest.mock('@shopify/react-native-skia', () => ({
+  Canvas: require('react-native').View,
+  Path: require('react-native').View,
 }));

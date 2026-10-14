@@ -50,9 +50,11 @@ export default function GlassDock({
     ...motion,
   };
   const lensStyle = {
-    width: collapsed ? 54 : tabWidth - 2,
+    width: collapsed ? 54 : tabWidth,
+    height: collapsed ? 54 : 64,
     transform: [
       { translateX: collapsed ? 0 : 8 + index * tabWidth },
+      { translateY: collapsed ? 5 : 0 },
       { scale: !pressed || reduced ? 1 : 1.08 },
     ],
     ...motion,

@@ -1,3 +1,4 @@
+import { renderingEffects } from '../config/renderingEffects';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { creditCardLabel, formatLastFourDigits, formatInvoiceDate } from '../utils/creditCards';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -198,7 +199,7 @@ const createStyles = (colors) => StyleSheet.create({
   compactTitle: { fontSize: 17, letterSpacing: -0.3 },
   all: { flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 44 }, link: { fontFamily: fontFamilyMedium, color: colors.primary, fontSize: 12, fontWeight: '600' },
   stack: { position: 'relative', marginTop: 6, overflow: 'visible' }, cardPosition: { position: 'absolute', top: 0, left: 0, right: 0 },
-  card: { flex: 1, borderRadius: 20, padding: 14, overflow: 'hidden', justifyContent: 'space-between', boxShadow: colors.cardShadow },
+  card: { flex: 1, borderRadius: 20, padding: 14, overflow: 'hidden', justifyContent: 'space-between', boxShadow: renderingEffects.cardShadows ? colors.cardShadow : undefined },
   bankRow: { flexDirection: 'row', gap: 9, alignItems: 'center' }, bankName: { flex: 1, fontFamily: fontFamilyMedium, color: '#FFFFFF', fontWeight: '600', fontSize: 13 },
   cardNumber: { fontFamily: fontFamilyMedium, fontSize: 23, lineHeight: 30, fontWeight: '600', letterSpacing: 1.2, fontVariant: ['tabular-nums'], color: '#FFFFFF', marginVertical: 12 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 12 }, holder: { flex: 1, fontFamily: fontFamilyMedium, fontSize: 12, color: '#FFFFFF' }, credit: { fontFamily, fontSize: 11, color: '#FFFFFF' },

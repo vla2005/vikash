@@ -52,7 +52,7 @@ export default memo(function HeaderBackdrop({ topInset = 0 }) {
           resizeMode="stretch"
           resizeMethod="none"
           fadeDuration={0}
-          style={[StyleSheet.absoluteFill, { opacity: shade.opacity }]}
+          style={[StyleSheet.absoluteFill, styles.shadeImage, { opacity: shade.opacity }]}
         />
       </View>
     );
@@ -102,6 +102,7 @@ export default memo(function HeaderBackdrop({ topInset = 0 }) {
 
 const createStyles = (colors, _type, { header }) =>
   StyleSheet.create({
+    shadeImage: { width: '100%', height: '100%' },
     film: { backgroundColor: header.fill },
     opaque: { backgroundColor: colors.background },
   });

@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import React from 'react';
+import React, { memo } from 'react';
 import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 
 
@@ -42,10 +42,12 @@ const shapes = {
     filters: ({ props, colors }) => <><Path d="M3 6h18M3 12h18M3 18h18" {...props} /><Circle cx="8" cy="6" r="2" fill={colors.surface} {...props} /><Circle cx="16" cy="12" r="2" fill={colors.surface} {...props} /><Circle cx="10" cy="18" r="2" fill={colors.surface} {...props} /></>,
 };
 
-export default function Icon({ name, size = 24, color }) {
+function Icon({ name, size = 24, color }) {
   const { colors } = useTheme();
   color ??= colors.text;
   const props = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const shape = shapes[name] || shapes.wallet;
   return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>{shape({ props, color, colors })}</Svg>;
 }
+
+export default memo(Icon);

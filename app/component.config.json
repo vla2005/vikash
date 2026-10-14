@@ -1,0 +1,19 @@
+{
+  "$schema": "https://reacticx.com/schema/component.config.json",
+  "outDir": "src/shared/components/reacticx",
+  "aliases": {
+    "components": "",
+    "utils": "",
+    "hooks": ""
+  },
+  "paths": {
+    "utils": "src/shared/components/utils",
+    "hooks": "src/shared/components/hooks",
+    "types": "src/shared/components/types",
+    "examples": "src/shared/components/examples"
+  },
+  "include": {
+    "types": true
+  },
+  "packageManager": "npm"
+}

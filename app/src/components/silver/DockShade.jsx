@@ -28,7 +28,7 @@ export default memo(function DockShade({ bottomInset }) {
           resizeMode="stretch"
           resizeMethod="none"
           fadeDuration={0}
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, styles.shadeImage]}
         />
       ) : <Svg
         width="100%"
@@ -63,6 +63,7 @@ export default memo(function DockShade({ bottomInset }) {
 });
 
 const styles = StyleSheet.create({
+  shadeImage: { width: '100%', height: '100%' },
   shade: {
     position: 'absolute',
     top: -defaultDock.shade.overhang,

@@ -261,3 +261,21 @@ test('a lente web também mantém a aba confirmada após cancelar e soltar toque
   await act(async () => release());
   expect(lensX()).toBe(newX);
 });
+
+
+test.each([GlassDock, WebGlassDock])('destaque cobre ícone e rótulo tanto aberto quanto recolhido', async Dock => {
+  const context = collapsed => ({ collapsed, progress: { get: () => collapsed ? 1 : 0 }, expand: jest.fn() });
+  const render = collapsed => <DockContext.Provider value={context(collapsed)}><Dock selected="Categories" onSelect={jest.fn()} /></DockContext.Provider>;
+  for (const collapsed of [false, true, false]) {
+    await act(async () => {
+      if (renderer) { renderer.update(render(collapsed)); }
+      else { renderer = TestRenderer.create(render(collapsed)); }
+    });
+    const { lensStyle, railStyle } = renderer.root.findByType(DockLayout).props;
+    const lens = StyleSheet.flatten(lensStyle);
+    const rail = StyleSheet.flatten(railStyle);
+    expect(lens.height).toBe(collapsed ? 54 : 64);
+    expect(lens.width).toBeCloseTo(collapsed ? 54 : (rail.width - 16) / 4);
+    expect(lens.transform.find(item => 'translateY' in item).translateY).toBe(collapsed ? 5 : 0);
+  }
+});

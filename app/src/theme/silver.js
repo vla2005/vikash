@@ -1,3 +1,4 @@
+import { renderingEffects } from '../config/renderingEffects';
 import { darkColors, lightColors, themes } from './index';
 
 // A luz de todas as telas fica aqui. Troque as cores sem alterar os layouts.
@@ -19,7 +20,7 @@ export const ambientLight = {
 };
 
 const glass = {
-  fill: 'rgba(23, 23, 24, 0.68)',
+  fill: renderingEffects.cardTransparency ? 'rgba(23, 23, 24, 0.68)' : '#171718',
   rim: 'rgba(255, 255, 255, 0.12)',
   highlight: 'rgba(255, 255, 255, 0.10)',
   radius: 24,
@@ -34,7 +35,7 @@ export const header = {
   blurIntensity: 40,
   webBlurRadius: 18,
   fill: 'rgba(5, 5, 5, 0.22)',
-  androidShade: { color: '#050505', opacity: 0.96, overhang: 28 },
+  androidShade: { color: '#050505', opacity: 1, overhang: 52 },
 };
 
 export const toast = {
@@ -107,7 +108,7 @@ export const dock = {
   voiceText: '#F1F2F4',
   shadow: '0 6px 18px rgba(0,0,0,0.24)',
   androidShadow: '0 4px 12px rgba(0,0,0,0.40)',
-  androidShade: { overhang: 80, opacity: 0.98, color: '#050505', middleOpacity: 0.18, lowerOpacity: 0.8 },
+  androidShade: { overhang: 104, opacity: 0.98, color: '#050505', middleOpacity: 0.18, lowerOpacity: 0.8 },
   shade: { overhang: 64, opacity: 0.92, color: '#050505' },
   blurIntensity: 60,
   scrollThreshold: 24,
@@ -149,7 +150,7 @@ const colors = {
 
 const lightGlass = {
   ...glass,
-  fill: 'rgba(255,255,255,0.82)',
+  fill: renderingEffects.cardTransparency ? 'rgba(255,255,255,0.82)' : '#FFFFFF',
   rim: 'rgba(17,18,20,0.10)',
   highlight: 'rgba(255,255,255,0.8)',
   shadow: '0 8px 20px rgba(0,0,0,0.06)',

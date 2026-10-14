@@ -1,3 +1,4 @@
+import { renderingEffects } from '../../config/renderingEffects';
 import { pointerEventsStyles } from '../../theme/interaction';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -9,8 +10,12 @@ export default function GlassPanel({ children, style, ...props }) {
   const styles = useThemeStyles(createStyles);
   return (
     <View {...props} style={[styles.panel, style]}>
-      <GlassReflection />
-      <View accessible={false} style={[styles.reflection, pointerEventsStyles.none]} />
+      {renderingEffects.cardReflections && (
+        <>
+          <GlassReflection />
+          <View accessible={false} style={[styles.reflection, pointerEventsStyles.none]} />
+        </>
+      )}
       {children}
     </View>
   );
@@ -23,7 +28,7 @@ const createStyles = (_colors, _type, { glass }) =>
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: glass.rim,
       overflow: 'hidden',
-      boxShadow: glass.shadow,
+      boxShadow: renderingEffects.cardShadows ? glass.shadow : undefined,
     },
     reflection: {
       position: 'absolute',
