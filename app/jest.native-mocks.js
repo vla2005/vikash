@@ -18,10 +18,15 @@ jest.mock('./src/components/VoiceMicPulse', () => 'VoiceMicPulse');
 // Testes verificam as interações; o motor UI e os materiais nativos são simulados.
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
-  const { View, ScrollView } = require('react-native');
+  const { View, ScrollView, Easing } = require('react-native');
+  const createAnimatedComponent = Component => React.forwardRef((props, ref) =>
+    React.createElement(Component, { ...props, ...props.animatedProps, ref }));
   return {
     __esModule: true,
-    default: { View, ScrollView },
+    default: { View, ScrollView, createAnimatedComponent },
+    createAnimatedComponent,
+    useAnimatedProps: props => props(),
+    useDerivedValue: updater => ({ get: updater }),
     useSharedValue: initial => {
       const ref = React.useRef();
       if (!ref.current) {
@@ -44,7 +49,7 @@ jest.mock('react-native-reanimated', () => {
     cancelAnimation: jest.fn(),
     ReduceMotion: { System: 'system', Never: 'never' },
     ReducedMotionConfig: () => null,
-    Easing: { bezier: () => value => value },
+    Easing,
     cubicBezier: () => value => value,
   };
 });

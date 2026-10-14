@@ -1,6 +1,6 @@
 import GlassPanel from '../components/silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import ScrollView from '../components/silver/DockScrollView';
 import Skeleton, { CreditCardSkeleton, ListSkeleton } from '../components/Skeleton';
@@ -13,7 +13,7 @@ import { getAccountType } from '../constants/accountTypes';
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, fontFamily, fontFamilyBold } from '../theme';
 
-export default function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, cards = [], cardsLoading = false, cardsError = '', onRetryCards, onCreateCard, onOpenCard, profile }) {
+function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, cards = [], cardsLoading = false, cardsError = '', onRetryCards, onCreateCard, onOpenCard, profile }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const [section, setSection] = useState('accounts');
@@ -100,3 +100,5 @@ const createStyles = (colors) => StyleSheet.create({
   cardsOnly: { marginHorizontal: -12, marginBottom: -12, marginTop: 8 },
   listHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 24, marginBottom: 12 },
 });
+
+export default memo(AccountsScreen);

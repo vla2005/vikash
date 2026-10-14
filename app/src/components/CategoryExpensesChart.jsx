@@ -1,8 +1,8 @@
 import { pointerEventsStyles } from '../theme/interaction';
 import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Platform, Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useId, useMemo, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Defs, G, Mask } from 'react-native-svg';
 import SegmentedControl from './SegmentedControl';
 import { ListSkeleton } from './Skeleton';
@@ -11,7 +11,7 @@ import { formatCurrency } from '../utils/money';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 import useReducedMotion from '../hooks/useReducedMotion';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+import { ChartDrawCircle, useChartProgress } from './ChartMotion';
 const radius = 76;
 const circumference = 2 * Math.PI * radius;
 const keyFor = category => category.customCategoryUuid ? `custom:${category.customCategoryUuid}`
@@ -19,24 +19,17 @@ const keyFor = category => category.customCategoryUuid ? `custom:${category.cust
 
 function Donut({ slices, hidden, periodLabel }) {
   const { colors } = useTheme();
-  const progress = useRef(new Animated.Value(1)).current;
   const reduced = useReducedMotion();
   const maskId = `expenses${useId().replace(/:/g, '')}`;
-  useEffect(() => {
-    if (hidden || reduced || !slices.length) { progress.setValue(1); return; }
-    progress.setValue(0);
-    // SVG properties update directly; no React state or whole-screen render on each frame.
-    const drawing = Animated.timing(progress, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: false, isInteraction: false });
-    drawing.start();
-    return () => drawing.stop();
-  }, [progress, reduced, hidden, slices, periodLabel]);
+  const resetKey = useMemo(() => ({ slices, periodLabel }), [slices, periodLabel]);
+  const progress = useChartProgress(!hidden && !reduced && !!slices.length, resetKey);
   let offset = 0;
   return <Svg width="100%" height="100%" viewBox="0 0 200 200" accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>
     <Circle cx={100} cy={100} r={radius} fill="none" stroke={colors.border} strokeWidth={22} />
     {!hidden && <><Defs><Mask id={maskId} x="0" y="0" width="200" height="200" maskUnits="userSpaceOnUse">
-      <AnimatedCircle cx={100} cy={100} r={radius} fill="none" stroke="white" strokeWidth={26}
+      <ChartDrawCircle progress={progress} length={circumference} cx={100} cy={100} r={radius} fill="none" stroke="white" strokeWidth={26}
         rotation={-90} origin="100, 100" strokeDasharray={[circumference, circumference]}
-        strokeDashoffset={progress.interpolate({ inputRange: [0, 1], outputRange: [circumference, 0] })} />
+        />
     </Mask></Defs><G mask={`url(#${maskId})`}>
       {slices.map(slice => {
         const length = slice.fraction * circumference;

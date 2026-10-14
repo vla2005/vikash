@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Modal, Text } from 'react-native';
+import { Modal, Platform, Text } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import DrawerModal from '../src/components/DrawerModal';
 import DrawerPanel from '../src/components/DrawerPanel';
@@ -157,4 +157,43 @@ test('preserves consumer onShow callbacks and cancels pending entry when closed 
   expect(
     Reanimated.withTiming.mock.calls.filter(([target]) => target === 0),
   ).toHaveLength(0);
+});
+
+
+test.each([
+  ['android', false, true],
+  ['android', true, false],
+  ['ios', false, false],
+])('%s mantém cache temporário apenas no painel estático (tela inteira: %s)', async (os, fullScreen, cached) => {
+  jest.replaceProperty(Platform, 'OS', os);
+  let layer;
+  jest.spyOn(Reanimated, 'useAnimatedProps').mockImplementation(factory => {
+    layer = factory;
+    return factory();
+  });
+  const drawer = visible => <DrawerModal visible={visible}><DrawerPanel fullScreen={fullScreen}><Text>Painel</Text></DrawerPanel></DrawerModal>;
+  await act(async () => { renderer = TestRenderer.create(drawer(true)); });
+  await measure(480);
+  expect(layer().renderToHardwareTextureAndroid).toBe(cached);
+  await show();
+  expect(layer().renderToHardwareTextureAndroid).toBe(false);
+  await act(async () => renderer.update(drawer(false)));
+  expect(layer().renderToHardwareTextureAndroid).toBe(cached);
+  await act(async () => exit(true));
+  expect(renderer.root.findAllByType(DrawerPanel)).toHaveLength(0);
+});
+
+
+test('drawer ainda fechado não inicializa a ponte de animação; a primeira abertura cria só uma', async () => {
+  const sharedValue = jest.spyOn(Reanimated, 'useSharedValue');
+  await act(async () => { renderer = TestRenderer.create(content(false)); });
+  expect(sharedValue).not.toHaveBeenCalled();
+  await act(async () => renderer.update(content(true)));
+  expect(sharedValue).toHaveBeenCalledTimes(1);
+  await measure(480);
+  await show();
+  await act(async () => renderer.update(content(false)));
+  await act(async () => exit(true));
+  await act(async () => renderer.update(content(true)));
+  expect(sharedValue.mock.results.every(result => result.value === sharedValue.mock.results[0].value)).toBe(true);
 });

@@ -1,13 +1,13 @@
 import GlassPanel from '../components/silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useEffect, useState } from 'react';
-import { AppState, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { memo, useEffect, useState } from 'react';
+import { AppState, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import ScrollView from '../components/silver/DockScrollView';
 import Skeleton, { DashboardSkeleton } from '../components/Skeleton';
 import Icon from '../components/Icon';
 import useDashboard from '../hooks/useDashboard';
 import HomeAccountsAndCards from '../components/HomeAccountsAndCards';
-import CategoryExpensesChart from '../components/CategoryExpensesChart';
+import DashboardExpensesChart from '../components/DashboardExpensesChart';
 import BalanceEvolutionChart from '../components/BalanceEvolutionChart';
 import RecentTransactions from '../components/RecentTransactions';
 import DashboardInsights from '../components/DashboardInsights';
@@ -22,7 +22,7 @@ import { fontFamilyMedium, fontFamily, fontFamilyBold } from '../theme';
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-export default function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard, onViewCards, onOpenTransaction, onViewStatement }) {
+function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard, onViewCards, onOpenTransaction, onViewStatement }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const [period, setPeriod] = useState(() => {
@@ -32,7 +32,6 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(period.year);
   const [hidden, setHidden] = useState(false);
-  const [scope, setScope] = useState('accounts');
   const reduced = useReducedMotion();
   const [hour, setHour] = useState(() => new Date().getHours());
   useEffect(() => {
@@ -88,10 +87,10 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
         {loading && !hidden ? <Skeleton width={110} height={22} /> : <Text style={[s.remainingValue, !hidden && data && { color: data.incomes - data.expenses < 0 ? colors.negative : colors.positive }]}>{amount(data ? data.incomes - data.expenses : null)}</Text>}</View>
       </GlassPanel>
       </View>
+      <DashboardExpensesChart visible={!!data && !loading && !error} categories={data?.expensesPerCategory} creditCategories={credit.data?.expensesPerCategory}
+        periodLabel={`${months[period.month - 1]} de ${period.year}`} hidden={hidden}
+        creditLoading={credit.loading} creditError={credit.error} onRetryCredit={credit.retry} />
       {!!data && !loading && !error && <>
-        <CategoryExpensesChart categories={data.expensesPerCategory} creditCategories={credit.data?.expensesPerCategory}
-          periodLabel={`${months[period.month - 1]} de ${period.year}`} hidden={hidden} scope={scope} onChangeScope={setScope}
-          creditLoading={credit.loading} creditError={credit.error} onRetryCredit={credit.retry} />
         <BalanceEvolutionChart points={data.balanceEvolution} hidden={hidden} />
         <DashboardInsights data={data} period={period} invoices={credit.data?.upcomingInvoices} hidden={hidden}
           accessToken={accessToken} revision={revision} onOpenCard={onOpenCard} />
@@ -106,7 +105,7 @@ export default function HomeScreen({ profile, accessToken, revision, onOpenAccou
       {loading && <DashboardSkeleton />}
       {!!error && <View style={s.errorBox}><Text accessibilityRole="alert" style={s.error}>{error}</Text><Pressable accessibilityRole="button" accessibilityLabel="Tentar carregar resumo novamente" onPress={retry} style={s.retry}><Text style={s.link}>Tentar novamente</Text></Pressable></View>}
     </ScrollView>
-    <Modal visible={pickerOpen} transparent animationType={reduced ? 'none' : 'fade'} statusBarTranslucent onRequestClose={() => setPickerOpen(false)}>
+    <Modal hardwareAccelerated={Platform.OS === 'android'} visible={pickerOpen} transparent animationType={reduced ? 'none' : 'fade'} statusBarTranslucent onRequestClose={() => setPickerOpen(false)}>
       <View style={s.overlay}>
         <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Fechar seletor de período" onPress={() => setPickerOpen(false)} />
         <View style={s.picker} accessibilityViewIsModal>
@@ -159,3 +158,5 @@ const createStyles = (colors) => StyleSheet.create({
   selectedMonth: { backgroundColor: colors.primary }, optionText: { fontFamily: fontFamilyMedium, fontSize: 14, color: colors.text }, selectedText: { color: colors.onPrimary },
   pickerNote: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary, textAlign: 'center', marginTop: 20 },
 });
+
+export default memo(HomeScreen);

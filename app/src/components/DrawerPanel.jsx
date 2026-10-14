@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { Platform, StyleSheet } from 'react-native';
+import Animated, { useAnimatedProps, useAnimatedStyle, useDerivedValue } from 'react-native-reanimated';
 import { DrawerMotionContext } from './DrawerModal';
 import { useThemeStyles } from '../contexts/ThemeContext';
 
@@ -21,10 +21,21 @@ export default function DrawerPanel({
     }),
     [slide],
   );
+  const android = Platform.OS === 'android';
+  // O valor derivado só notifica as props nativas quando o booleano muda.
+  const cacheEnabled = useDerivedValue(
+    () => android && !fullScreen && !!slide && slide.get() !== 0,
+    [android, fullScreen, slide],
+  );
+  const layerProps = useAnimatedProps(() => ({
+    // Cache só do painel comum em movimento; liberar ao abrir e excluir a esfera.
+    renderToHardwareTextureAndroid: cacheEnabled.get(),
+  }), [cacheEnabled]);
   return (
     <Animated.View
       accessibilityViewIsModal
       {...props}
+      animatedProps={layerProps}
       onLayout={event => {
         motion?.measure(event);
         onLayout?.(event);

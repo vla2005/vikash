@@ -1,3 +1,4 @@
+import { renderingEffects } from '../../config/renderingEffects';
 import { pointerEventsStyles } from '../../theme/interaction';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -41,7 +42,7 @@ export default function GlassMaterial({
     ? dock.fill
     : dock.controlFill;
   const available =
-    !reduced && isGlassEffectAPIAvailable() && isLiquidGlassAvailable();
+    renderingEffects.backgroundBlur && !reduced && isGlassEffectAPIAvailable() && isLiquidGlassAvailable();
   if (available) {
     return (
       <GlassView
@@ -81,7 +82,7 @@ export default function GlassMaterial({
         reduced && { backgroundColor: fill },
       ]}
     >
-      {!reduced && blurred && (
+      {renderingEffects.backgroundBlur && !reduced && blurred && (
         <BlurView
           style={[StyleSheet.absoluteFill, pointerEventsStyles.none]}
           tint={

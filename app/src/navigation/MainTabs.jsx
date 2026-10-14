@@ -1,9 +1,10 @@
+import runSceneUpdate from '../utils/runSceneUpdate';
 import { ThemeVariant, useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import AmbientLight from '../components/silver/AmbientLight';
 import { header } from '../theme/silver';
 import DockProvider from '../components/silver/DockProvider';
 import DockBackdrop from '../components/silver/DockBackdrop';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   BackHandler,
   Platform,
@@ -91,6 +92,8 @@ export default function MainTabs({ navigation }) {
       !cardUuid &&
       !accountUuid,
   );
+  const retryAccounts = accountList.retry;
+  const retryCards = cardList.retry;
   const insets = useSafeAreaInsets();
   const showAppHeader =
     !profileVisible &&
@@ -165,48 +168,54 @@ export default function MainTabs({ navigation }) {
     profileForm,
     initialBalanceUuid,
   ]);
-  function openDetails(row, invoiceUuid) {
-    setInvoiceToOpen(null);
-    setItemDetails({
-      uuid: row.purchaseUuid || row.id,
-      purchase: !!row.purchaseUuid,
-      invoiceUuid,
+  const openDetails = useCallback((row, invoiceUuid) => {
+    runSceneUpdate(() => {
+      setInvoiceToOpen(null);
+      setItemDetails({
+        uuid: row.purchaseUuid || row.id,
+        purchase: !!row.purchaseUuid,
+        invoiceUuid,
+      });
     });
-  }
-  function refreshAfterDeletion() {
+  }, []);
+  const refreshAfterDeletion = useCallback(() => {
     setDashboardRevision(value => value + 1);
     setStatementRevision(value => value + 1);
     setCardRevision(value => value + 1);
     setAccountRevision(value => value + 1);
-    accountList.retry();
-    cardList.retry();
-  }
+    retryAccounts();
+    retryCards();
+  }, [retryAccounts, retryCards]);
   function closeDeletedDetails() {
     setItemDetails(null);
     refreshAfterDeletion();
   }
-  function openInvoice(card, invoice) {
-    setItemDetails(null);
-    setAccountUuid(null);
-    setSelected('AccountManagement');
-    setCardUuid(card);
-    setInvoiceToOpen(invoice);
-  }
-  function openAccount(uuid) {
-    setItemDetails(null);
-    setCardUuid(null);
-    setInvoiceToOpen(null);
-    setAccountForm(null);
-    setAccountUuid(uuid);
-    setSelected('AccountManagement');
-  }
-  async function saveCategory(values) {
+  const openInvoice = useCallback((card, invoice) => {
+    runSceneUpdate(() => {
+      setItemDetails(null);
+      setAccountUuid(null);
+      setSelected('AccountManagement');
+      setCardUuid(card);
+      setInvoiceToOpen(invoice);
+    });
+  }, []);
+  const openAccount = useCallback(uuid => {
+    runSceneUpdate(() => {
+      setItemDetails(null);
+      setCardUuid(null);
+      setInvoiceToOpen(null);
+      setAccountForm(null);
+      setAccountUuid(uuid);
+      setSelected('AccountManagement');
+    });
+  }, []);
+  const saveCategory = useCallback(async values => {
     const saved = await persistCategory(values, categoryForm.category);
     if (saved) {
       setCategoryForm(null);
     }
-  }
-  async function deleteCategory(category) {
+  }, [persistCategory, categoryForm]);
+  const deleteCategory = useCallback(async category => {
     if (!(await removeCategory(category))) {
       throw new Error('Aguarde a alteração em andamento.');
     }
@@ -219,7 +228,7 @@ export default function MainTabs({ navigation }) {
       type: 'success',
       message: 'Categoria excluída. Seus lançamentos foram preservados.',
     });
-  }
+  }, [removeCategory, showToast]);
   async function confirmTranscription(transcription) {
     await createTransaction(transcription, onboarding?.session?.accessToken);
     setDashboardRevision(value => value + 1);
@@ -239,6 +248,22 @@ export default function MainTabs({ navigation }) {
       setAccountRevision(value => value + 1);
     }
   }
+  const viewCards = useCallback(() => runSceneUpdate(() => setSelected('AccountManagement')), []);
+  const viewStatement = useCallback(() => runSceneUpdate(() => setSelected('Statement')), []);
+  const createAccount = useCallback(() => runSceneUpdate(() => setAccountForm({ kind: 'account', account: null })), []);
+  const createCard = useCallback(() => runSceneUpdate(() => setAccountForm({ kind: 'card' })), []);
+  const editAccount = useCallback(account => runSceneUpdate(() => setAccountUuid(account.uuid)), []);
+  const createCategory = useCallback(() => runSceneUpdate(() => setCategoryForm({ category: null })), []);
+  const editCategory = useCallback(category => runSceneUpdate(() => setCategoryForm({ category })), []);
+  const changeTab = useCallback(key => runSceneUpdate(() => {
+    setItemDetails(null);
+    setInvoiceToOpen(null);
+    setCategoryForm(null);
+    setAccountForm(null);
+    setCardUuid(null);
+    setAccountUuid(null);
+    setSelected(key);
+  }), []);
   function renderContent() {
     if (selected === 'Home') {
       return (
@@ -248,9 +273,9 @@ export default function MainTabs({ navigation }) {
           revision={dashboardRevision}
           onOpenAccount={openAccount}
           onOpenCard={openInvoice}
-          onViewCards={() => setSelected('AccountManagement')}
+          onViewCards={viewCards}
           onOpenTransaction={openDetails}
-          onViewStatement={() => setSelected('Statement')}
+          onViewStatement={viewStatement}
         />
       );
     }
@@ -360,9 +385,9 @@ export default function MainTabs({ navigation }) {
           onRetryCards={cardList.retry}
           onOpenCard={openInvoice}
           onRetry={accountList.retry}
-          onCreate={() => setAccountForm({ kind: 'account', account: null })}
-          onCreateCard={() => setAccountForm({ kind: 'card' })}
-          onEdit={account => setAccountUuid(account.uuid)}
+          onCreate={createAccount}
+          onCreateCard={createCard}
+          onEdit={editAccount}
         />
       );
     }
@@ -392,8 +417,8 @@ export default function MainTabs({ navigation }) {
         loading={loading}
         error={error}
         onRetry={retry}
-        onCreate={() => setCategoryForm({ category: null })}
-        onEdit={category => setCategoryForm({ category })}
+        onCreate={createCategory}
+        onEdit={editCategory}
         onDelete={deleteCategory}
       />
     );
@@ -594,15 +619,7 @@ export default function MainTabs({ navigation }) {
             {showDock && !voiceVisible && (
               <BottomNavigator
                 selected={selected}
-                onSelect={key => {
-                  setItemDetails(null);
-                  setInvoiceToOpen(null);
-                  setCategoryForm(null);
-                  setAccountForm(null);
-                  setCardUuid(null);
-                  setAccountUuid(null);
-                  setSelected(key);
-                }}
+                onSelect={changeTab}
                 onAssistant={() =>
                   showToast({
                     type: 'info',

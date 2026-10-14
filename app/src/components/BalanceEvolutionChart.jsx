@@ -1,8 +1,8 @@
 import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useEffect, useId, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, G, LinearGradient, Line, Path, Polygon, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import React, { useId } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Line, Path, Polygon, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { fontFamily, fontFamilyBold } from '../theme';
 import { formatCurrency } from '../utils/money';
 import useReducedMotion from '../hooks/useReducedMotion';
@@ -13,8 +13,7 @@ const right = 344;
 const top = 30;
 const bottom = 132;
 const monthNames = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const AnimatedG = Animated.createAnimatedComponent(G);
+import { ChartDrawPath, ChartFadeGroup, useChartProgress } from './ChartMotion';
 
 function dateLabel(date) {
   const [, month, day] = date.split('-');
@@ -25,17 +24,8 @@ function BalanceEvolutionChart({ points, hidden = false }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const reducedMotion = useReducedMotion();
-  const animation = useRef(new Animated.Value(1)).current;
   const chartId = `balance${useId().replace(/:/g, '')}`;
-  useEffect(() => {
-    if (!points?.length || hidden || reducedMotion) { animation.setValue(1); return; }
-    animation.setValue(0);
-    const drawing = Animated.timing(animation, {
-      toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: false, isInteraction: false,
-    });
-    drawing.start();
-    return () => drawing.stop();
-  }, [animation, points, hidden, reducedMotion]);
+  const progress = useChartProgress(!!points?.length && !hidden && !reducedMotion, points, 'inOutQuad');
   if (!points?.length) { return null; }
   const values = points.map(point => point.balance);
   const minimum = Math.min(0, ...values);
@@ -78,19 +68,19 @@ function BalanceEvolutionChart({ points, hidden = false }) {
             <SvgText x={plotted[index].x} y={bottom + 18} fontFamily={fontFamily} fontSize={9} fill={colors.secondary} textAnchor="middle">{dateLabel(plotted[index].date)}</SvgText>
           </React.Fragment>)}
           {/* Animar o traço evita o recorte em Defs que pode permanecer vazio no Android. */}
-          <AnimatedG opacity={animation}>
+          <ChartFadeGroup progress={progress}>
           <Path d={`${line} L ${last.x} ${bottom} L ${left} ${bottom} Z`} fill={`url(#${chartId}Area)`} />
           {plotted.map((point, index) => <Circle key={point.date} cx={point.x} cy={point.y} r={index === plotted.length - 1 ? 5.5 : 2.8} fill={colors.primary} />)}
-          </AnimatedG>
-          <AnimatedPath d={line} stroke={colors.primary} strokeWidth={2.8} fill="none" strokeLinejoin="round" strokeLinecap="round"
+          </ChartFadeGroup>
+          <ChartDrawPath progress={progress} length={lineLength} d={line} stroke={colors.primary} strokeWidth={2.8} fill="none" strokeLinejoin="round" strokeLinecap="round"
             strokeDasharray={[lineLength, lineLength]}
-            strokeDashoffset={animation.interpolate({ inputRange: [0, 1], outputRange: [lineLength, 0] })} />
-          <AnimatedG opacity={animation.interpolate({ inputRange: [0, 0.9, 1], outputRange: [0, 0, 1], extrapolate: 'clamp' })}>
+            />
+          <ChartFadeGroup progress={progress} late>
           <Line x1={last.x} x2={last.x} y1={tooltipY + 23} y2={bottom} stroke={colors.primary} strokeOpacity={0.45} strokeWidth={0.9} strokeDasharray="4 4" />
           <Rect x={right - tooltipWidth + 8} y={tooltipY} width={tooltipWidth} height={21} rx={4} fill={colors.primary} />
           <Polygon points={`${last.x - 4},${tooltipY + 21} ${last.x + 4},${tooltipY + 21} ${last.x},${tooltipY + 26}`} fill={colors.primary} />
           <SvgText x={right - tooltipWidth / 2 + 8} y={tooltipY + 14} fill={colors.onPrimary} fontFamily={fontFamilyBold} fontSize={10} fontWeight="700" textAnchor="middle">{currentBalance}</SvgText>
-          </AnimatedG>
+          </ChartFadeGroup>
         </Svg>
       </View>}
   </GlassPanel>;

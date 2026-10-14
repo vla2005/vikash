@@ -1,3 +1,4 @@
+jest.mock('../src/config/renderingEffects', () => ({ renderingEffects: { backgroundBlur: true } }));
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Platform } from 'react-native';

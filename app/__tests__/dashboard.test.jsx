@@ -1,6 +1,7 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Animated, StyleSheet, Text } from 'react-native';
+import * as Reanimated from 'react-native-reanimated';
 import HomeScreen from '../src/screens/HomeScreen';
 import CategoryExpensesChart from '../src/components/CategoryExpensesChart';
 import BalanceEvolutionChart from '../src/components/BalanceEvolutionChart';
@@ -218,14 +219,16 @@ test('donut groups additional categories without dropping totals and expands all
 });
 
 test('reduced motion skips donut and balance drawing; normal motion cleans up and never adds frame state listeners', async () => {
-  const start = jest.fn(); const stop = jest.fn();
-  const timing = jest.spyOn(Animated, 'timing').mockReturnValue({ start, stop });
+  const stop = jest.spyOn(Reanimated, 'cancelAnimation');
+  const timing = jest.spyOn(Reanimated, 'withTiming');
+  const jsTiming = jest.spyOn(Animated, 'timing');
   const listener = jest.spyOn(Animated.Value.prototype, 'addListener');
   await act(async () => { renderer = TestRenderer.create(<CategoryExpensesChart categories={dashboard.expensesPerCategory} />); });
   expect(timing).not.toHaveBeenCalled();
   useReducedMotion.mockReturnValue(false);
   await act(async () => renderer.update(<CategoryExpensesChart categories={dashboard.expensesPerCategory} periodLabel="Novembro" />));
-  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 900 }));
+  expect(timing).toHaveBeenCalledWith(1, expect.objectContaining({ duration: 900, reduceMotion: 'never' }));
+  expect(jsTiming).not.toHaveBeenCalled();
   expect(listener).not.toHaveBeenCalled();
   await act(async () => renderer.update(<CategoryExpensesChart categories={dashboard.expensesPerCategory} hidden />));
   expect(stop).toHaveBeenCalled();
@@ -409,4 +412,27 @@ test('dashboard normalizes nested cards, accounts and decimal category totals wh
   points[1].date = points[0].date;
   request.mockResolvedValueOnce({ ok: true, json: async () => ({ ...dashboard, balanceEvolution: points }) });
   await expect(fetchDashboard(2026, 10, 'access')).rejects.toThrow('evolução do saldo');
+});
+
+
+test('alternar Contas/Crédito atualiza só o gráfico sem renderizar novamente a Home', async () => {
+  const dashboardHook = jest.spyOn(require('../src/hooks/useDashboard'), 'default');
+  await home();
+  const renders = dashboardHook.mock.calls.length;
+  await act(async () => button('Mostrar gastos no crédito').props.onPress());
+  expect(renderer.root.findByType(CategoryExpensesChart.type).props.scope).toBe('credit');
+  expect(dashboardHook).toHaveBeenCalledTimes(renders);
+  await act(async () => button('Mostrar gastos das contas').props.onPress());
+  expect(renderer.root.findByType(CategoryExpensesChart.type).props.scope).toBe('accounts');
+  expect(dashboardHook).toHaveBeenCalledTimes(renders);
+});
+
+
+test('seleção de Crédito permanece ao mudar o mês e recarregar os dados do dashboard', async () => {
+  await home();
+  await act(async () => button('Mostrar gastos no crédito').props.onPress());
+  expect(renderer.root.findByType(CategoryExpensesChart.type).props.scope).toBe('credit');
+  await act(async () => button('Mês anterior').props.onPress());
+  expect(renderer.root.findByType(CategoryExpensesChart.type).props.scope).toBe('credit');
+  expect(text()).toContain('Valor integral das compras no crédito feitas no mês.');
 });

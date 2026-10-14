@@ -1,12 +1,15 @@
+import { renderingEffects } from '../../config/renderingEffects';
 import { pointerEventsStyles } from '../../theme/interaction';
 import React, { memo, useId } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Image, Platform, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import MaskedView from '@react-native-masked-view/masked-view';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useDock } from '../../contexts/DockContext';
 import useReducedTransparency from '../../hooks/useReducedTransparency';
 import { useTheme, useThemeStyles } from '../../contexts/ThemeContext';
+
+const shadeTexture = require('../../../assets/effects/header-shade.png');
 
 export default memo(function HeaderBackdrop({ topInset = 0 }) {
   const styles = useThemeStyles(createStyles);
@@ -21,11 +24,37 @@ export default memo(function HeaderBackdrop({ topInset = 0 }) {
   const fadeStart = (topInset + header.fadeStart) / height;
   const android = Platform.OS === 'android';
 
-  if (reduced || (android && !context?.blurTarget)) {
+  if (reduced || (android && renderingEffects.backgroundBlur && !context?.blurTarget)) {
     return (
       <View
         style={[[StyleSheet.absoluteFill, styles.opaque], pointerEventsStyles.none]}
       />
+    );
+  }
+
+  if (android && !renderingEffects.backgroundBlur) {
+    // Um gradiente fixo separa o header sem capturar o conteúdo a cada frame.
+    const shade = header.androidShade;
+    return (
+      <View
+        accessible={false}
+        style={[
+          StyleSheet.absoluteFill,
+          { bottom: -shade.overhang },
+          pointerEventsStyles.none,
+        ]}
+      >
+        <Image
+          testID="android-header-shade"
+          accessible={false}
+          source={shadeTexture}
+          tintColor={shade.color}
+          resizeMode="stretch"
+          resizeMethod="none"
+          fadeDuration={0}
+          style={[StyleSheet.absoluteFill, { opacity: shade.opacity }]}
+        />
+      </View>
     );
   }
 
@@ -57,7 +86,7 @@ export default memo(function HeaderBackdrop({ topInset = 0 }) {
       }
     >
       {/* Uma máscara fixa suaviza a borda sem empilhar camadas de blur. */}
-      <BlurView
+      {renderingEffects.backgroundBlur && <BlurView
         style={StyleSheet.absoluteFill}
         tint={scheme}
         intensity={header.blurIntensity}
@@ -65,7 +94,7 @@ export default memo(function HeaderBackdrop({ topInset = 0 }) {
           blurTarget: context.blurTarget,
           blurMethod: 'dimezisBlurViewSdk31Plus',
         })}
-      />
+      />}
       <View style={[StyleSheet.absoluteFill, styles.film]} />
     </MaskedView>
   );

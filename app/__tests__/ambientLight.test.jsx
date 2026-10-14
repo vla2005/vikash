@@ -21,6 +21,8 @@ jest.mock('react-native-svg', () => ({
   Stop: 'Stop',
 }));
 
+const lightImages = () => renderer.root.findAllByType(Image).filter(node => node.props.testID?.startsWith('ambient-texture-'));
+
 let renderer;
 let changeState;
 let remove;
@@ -49,7 +51,7 @@ test('Android reutiliza a textura compacta e pausa os dois focos em segundo plan
   await act(async () => {
     renderer = TestRenderer.create(<AmbientLight />);
   });
-  expect(renderer.root.findAllByType(Image)).toHaveLength(
+  expect(lightImages()).toHaveLength(
     ambientLight.fields.length,
   );
   expect(renderer.root.findAllByType('Ellipse')).toHaveLength(0);
@@ -85,7 +87,7 @@ test('movimento reduzido preserva a luz estática sem reservar texturas de anima
   expect(
     renderer.root.findAllByProps({ renderToHardwareTextureAndroid: true }),
   ).toHaveLength(0);
-  expect(renderer.root.findAllByType(Image)).toHaveLength(
+  expect(lightImages()).toHaveLength(
     ambientLight.fields.length,
   );
 });
@@ -112,8 +114,7 @@ test('pausa quando coberta pelo drawer e retoma ao voltar, sem alocar cache gran
   await act(async () => {
     renderer = TestRenderer.create(<AmbientLight />);
   });
-  const before = renderer.root
-    .findAllByType(Image)
+  const before = lightImages()
     .map(node => node.props.source);
   await act(async () => {
     renderer.update(<AmbientLight enabled={false} />);
@@ -134,9 +135,9 @@ test('pausa quando coberta pelo drawer e retoma ao voltar, sem alocar cache gran
     ),
   ).toBe(true);
   expect(
-    renderer.root.findAllByType(Image).map(node => node.props.source),
+    lightImages().map(node => node.props.source),
   ).toEqual(before);
   expect(
-    renderer.root.findAllByType(Image).map(node => node.props.tintColor),
+    lightImages().map(node => node.props.tintColor),
   ).toEqual(ambientLight.colors);
 });

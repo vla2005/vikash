@@ -149,7 +149,7 @@ const createStyles = (_colors, _type, { dock }) =>
       left: 0,
       height: dock.height,
       borderRadius: 40,
-      boxShadow: dock.shadow,
+      boxShadow: Platform.OS === 'android' ? dock.androidShadow : dock.shadow,
     },
     lens: { position: 'absolute', top: 57, left: 0, height: 54 },
     fill: { flex: 1 },
@@ -182,7 +182,7 @@ const createStyles = (_colors, _type, { dock }) =>
       top: 0,
       height: dock.voiceHeight,
       borderRadius: 40,
-      boxShadow: dock.shadow,
+      boxShadow: Platform.OS === 'android' ? dock.androidShadow : dock.shadow,
     },
     voiceButton: {
       flex: 1,
@@ -206,7 +206,7 @@ const createStyles = (_colors, _type, { dock }) =>
       width: dock.height,
       height: dock.height,
       borderRadius: 40,
-      boxShadow: dock.shadow,
+      boxShadow: Platform.OS === 'android' ? dock.androidShadow : dock.shadow,
     },
     micButton: {
       flex: 1,

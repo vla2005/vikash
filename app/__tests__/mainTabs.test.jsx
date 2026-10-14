@@ -31,7 +31,10 @@ jest.mock('../src/hooks/useToast', () => { const showToast = jest.fn(); return {
 import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../src/services/categories';
 
 jest.mock('../src/services/categories', () => ({ createCategory: jest.fn(async values => ({ ...values })), deleteCategory: jest.fn(async () => null), fetchCategories: jest.fn(), updateCategory: jest.fn(async () => null) }));
-jest.mock('../src/contexts/OnboardingContext', () => ({ useOnboarding: () => ({ session: { accessToken: 'test-access' }, profile: { name: 'Viktor Lucena' }, accounts: [], updateProfile: jest.fn(), changePassword: jest.fn() }) }));
+jest.mock('../src/contexts/OnboardingContext', () => {
+  const value = { session: { accessToken: 'test-access' }, profile: { name: 'Viktor Lucena' }, accounts: [], updateProfile: jest.fn(), changePassword: jest.fn() };
+  return { useOnboarding: () => value };
+});
 
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }) }));
 jest.mock('react-native-svg', () => {
@@ -652,4 +655,19 @@ test('editar lançamento abre formulário preenchido, salva e atualiza extrato e
   expect(labels()).toContain('Mercado corrigido');
   await act(async () => button('Início').props.onPress());
   expect(fetchDashboard).toHaveBeenCalledTimes(2);
+});
+
+
+test('abrir e fechar drawers não recalcula o dashboard que continua atrás deles', async () => {
+  const dashboard = jest.spyOn(require('../src/hooks/useDashboard'), 'default');
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  const renders = dashboard.mock.calls.length;
+  await act(async () => renderer.root.findByType(AppHeader).props.onOpenProfile());
+  expect(dashboard).toHaveBeenCalledTimes(renders);
+  await act(async () => renderer.root.findByType(require('../src/components/ProfileSwitcherDrawer').default).props.onClose());
+  expect(dashboard).toHaveBeenCalledTimes(renders);
+  await act(async () => button('Registrar por voz').props.onPress());
+  expect(dashboard).toHaveBeenCalledTimes(renders);
+  await act(async () => button('Fechar microfone').props.onPress());
+  expect(dashboard).toHaveBeenCalledTimes(renders);
 });

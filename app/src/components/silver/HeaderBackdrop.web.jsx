@@ -1,3 +1,4 @@
+import { renderingEffects } from '../../config/renderingEffects';
 import { pointerEventsStyles } from '../../theme/interaction';
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -24,8 +25,10 @@ export default memo(function HeaderBackdrop({ topInset = 0 }) {
           ? { backgroundColor: colors.background }
           : {
               backgroundColor: header.fill,
-              backdropFilter: blur,
-              WebkitBackdropFilter: blur,
+              ...(renderingEffects.backgroundBlur && {
+                backdropFilter: blur,
+                WebkitBackdropFilter: blur,
+              }),
               maskImage: mask,
               WebkitMaskImage: mask,
             },

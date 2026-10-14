@@ -1,3 +1,4 @@
+import { renderingEffects } from '../../config/renderingEffects';
 import { pointerEventsStyles } from '../../theme/interaction';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -39,6 +40,7 @@ export default function GlassMaterial({
     : dock.controlFill;
   // A lente já está sobre a barra desfocada: uma segunda amostragem só soma custo.
   const shouldBlur =
+    renderingEffects.backgroundBlur &&
     !reduced &&
     blurred &&
     (Platform.OS !== 'android' || (!!context?.blurTarget && navigation && !lens));

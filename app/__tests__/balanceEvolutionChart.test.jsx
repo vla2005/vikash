@@ -1,6 +1,7 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Animated, Platform } from 'react-native';
+import * as Reanimated from 'react-native-reanimated';
 import BalanceEvolutionChart from '../src/components/BalanceEvolutionChart';
 import useReducedMotion from '../src/hooks/useReducedMotion';
 
@@ -43,11 +44,13 @@ test('um único dia não gera coordenadas inválidas nem tenta desenhar dias aus
 test('Android mantém animação de desenho e libera animação ao ocultar valores', async () => {
   jest.replaceProperty(Platform, 'OS', 'android');
   useReducedMotion.mockReturnValue(false);
-  const stop = jest.fn();
-  const timing = jest.spyOn(Animated, 'timing').mockReturnValue({ start: jest.fn(), stop });
+  const stop = jest.spyOn(Reanimated, 'cancelAnimation');
+  const timing = jest.spyOn(Reanimated, 'withTiming');
+  const jsTiming = jest.spyOn(Animated, 'timing');
   const points = [{ date: '2026-10-09', balance: 10 }, { date: '2026-10-10', balance: 20 }];
   await act(async () => { renderer = TestRenderer.create(<BalanceEvolutionChart points={points} />); });
-  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: 900, useNativeDriver: false }));
+  expect(timing).toHaveBeenCalledWith(1, expect.objectContaining({ duration: 900, reduceMotion: 'never' }));
+  expect(jsTiming).not.toHaveBeenCalled();
   await act(async () => renderer.update(<BalanceEvolutionChart points={points} hidden />));
   expect(stop).toHaveBeenCalled();
   expect(renderer.root.findAllByType('Svg')).toHaveLength(0);
@@ -55,7 +58,7 @@ test('Android mantém animação de desenho e libera animação ao ocultar valor
 
 test('atualização do pai com os mesmos pontos evita recalcular o gráfico, mas novos dados redesenham', async () => {
   useReducedMotion.mockReturnValue(false);
-  const timing = jest.spyOn(Animated, 'timing').mockReturnValue({ start: jest.fn(), stop: jest.fn() });
+  const timing = jest.spyOn(Reanimated, 'withTiming');
   const points = [{ date: '2026-10-09', balance: 10 }, { date: '2026-10-10', balance: 20 }];
   await act(async () => { renderer = TestRenderer.create(<BalanceEvolutionChart points={points} />); });
   const renders = useReducedMotion.mock.calls.length;

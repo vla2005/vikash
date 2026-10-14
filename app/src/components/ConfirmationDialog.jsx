@@ -15,7 +15,7 @@ export default function ConfirmationDialog({ visible, title, message, confirmTex
   const danger = variant === 'danger';
   const accent = danger ? colors.error : colors.primary;
   const cancel = () => { if (!loading) { onCancel(); } };
-  return <Modal visible={visible} transparent animationType={reducedMotion ? 'none' : 'fade'}
+  return <Modal hardwareAccelerated={Platform.OS === 'android'} visible={visible} transparent animationType={reducedMotion ? 'none' : 'fade'}
     statusBarTranslucent onRequestClose={cancel} onShow={() => cancelButton.current?.focus?.()}>
     <View style={styles.overlay}>
       <Pressable accessible={false} onPress={cancel} style={styles.backdrop} />

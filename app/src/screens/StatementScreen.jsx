@@ -3,7 +3,7 @@ import {
   useTheme,
   useThemeStyles,
 } from '../contexts/ThemeContext';
-import React, { useRef, useState } from 'react';
+import React, { memo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -51,7 +51,7 @@ const months = [
   'Novembro',
   'Dezembro',
 ];
-export default function StatementScreen({
+function StatementScreen({
   accessToken,
   onOpenTransaction,
   revision = 0,
@@ -622,3 +622,5 @@ const createStyles = colors =>
       marginTop: 20,
     },
   });
+
+export default memo(StatementScreen);

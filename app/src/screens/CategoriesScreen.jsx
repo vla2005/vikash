@@ -4,7 +4,7 @@ import {
   useThemeStyles,
   useTheme,
 } from '../contexts/ThemeContext';
-import React, { useRef, useState } from 'react';
+import React, { memo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -44,7 +44,7 @@ function CategorySkeleton() {
   );
 }
 
-export default function CategoriesScreen({
+function CategoriesScreen({
   categories = [],
   defaultCategories = [],
   accessToken,
@@ -468,3 +468,5 @@ const createStyles = colors =>
     placeholderName: { width: '70%', height: 14, marginTop: 5 },
     placeholderList: { height: 156, borderRadius: 20, marginTop: 30 },
   });
+
+export default memo(CategoriesScreen);

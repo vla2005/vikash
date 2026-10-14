@@ -1,3 +1,4 @@
+import { renderingEffects } from '../../config/renderingEffects';
 import { pointerEventsStyles } from '../../theme/interaction';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -37,7 +38,7 @@ export default function GlassMaterial({
       style={[
         styles.shell,
         navigation && styles.navigation,
-        !reduced && blurred && !lens && styles.blur,
+        renderingEffects.backgroundBlur && !reduced && blurred && !lens && styles.blur,
         {
           backgroundColor: fill,
         },

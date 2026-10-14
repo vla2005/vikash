@@ -15,6 +15,8 @@ import { ambientLight as defaultAmbientLight } from '../../theme/silver';
 import { useTheme, useThemeTokens } from '../../contexts/ThemeContext';
 
 const lightTexture = require('../../../assets/effects/ambient-light.png');
+const horizontalFade = require('../../../assets/effects/ambient-fade-horizontal.png');
+const verticalFade = require('../../../assets/effects/ambient-fade-vertical.png');
 
 const overscanX = 460 * defaultAmbientLight.overscan.horizontal;
 const overscanY = defaultAmbientLight.overscan.vertical;
@@ -26,6 +28,25 @@ const fieldViewBox = `${-overscanX} ${-overscanY} ${460 + overscanX * 2} ${
 const EdgeFade = memo(function EdgeFade({ id }) {
   const { horizontal, top, bottomStart } = defaultAmbientLight.edgeFade;
   const color = useTheme().colors.background;
+  if (Platform.OS === 'android') {
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        {[horizontalFade, verticalFade].map((source, index) => (
+          <Image
+            key={index}
+            testID={'ambient-edge-fade-' + index}
+            accessible={false}
+            source={source}
+            tintColor={color}
+            resizeMode="stretch"
+            resizeMethod="none"
+            fadeDuration={0}
+            style={StyleSheet.absoluteFill}
+          />
+        ))}
+      </View>
+    );
+  }
   return (
     <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
       <Defs>
@@ -107,6 +128,7 @@ const Field = memo(function Field({ field, index, active, reduced, id }) {
     >
       {Platform.OS === 'android' ? (
         <Image
+          testID={'ambient-texture-' + index}
           source={lightTexture}
           resizeMode="stretch"
           resizeMethod="none"

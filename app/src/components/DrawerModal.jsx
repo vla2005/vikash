@@ -22,7 +22,20 @@ import useDrawerAnimation from '../hooks/useDrawerAnimation';
 export const DrawerMotionContext = createContext(null);
 
 // Medir antes da entrada; conservar o conteúdo até completar a saída.
-export default function DrawerModal({
+export default function DrawerModal({ visible = true, children, ...props }) {
+  const opened = useRef(visible);
+  useLayoutEffect(() => {
+    if (visible) { opened.current = true; }
+  }, [visible]);
+  // Formulários têm vários seletores fechados: não criar worklets/valores ainda.
+  // Depois da primeira abertura, conservar a instância para reabertura e saída.
+  if (!visible && !opened.current) {
+    return <Modal {...props} visible={false} transparent animationType="none" statusBarTranslucent hardwareAccelerated={Platform.OS === 'android'} />;
+  }
+  return <DrawerPresentation {...props} visible={visible}>{children}</DrawerPresentation>;
+}
+
+function DrawerPresentation({
   visible = true,
   children,
   onShow,
@@ -137,6 +150,7 @@ export default function DrawerModal({
 
   return (
     <Modal
+      hardwareAccelerated={Platform.OS === 'android'}
       {...props}
       onShow={show}
       visible={visible || present}

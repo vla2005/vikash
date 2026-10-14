@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../services/categories';
 
 export default function useCategories(accessToken, visible) {
@@ -9,6 +9,7 @@ export default function useCategories(accessToken, visible) {
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
+  const retry = useCallback(() => setAttempt(previous => previous + 1), []);
   useEffect(() => {
     setCategories([]); setDefaultCategories([]);
     if (!visible || !accessToken) { return; }
@@ -22,7 +23,7 @@ export default function useCategories(accessToken, visible) {
       .finally(() => { clearTimeout(timeout); if (active) { setLoading(false); } });
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
   }, [accessToken, visible, attempt]);
-  async function saveCategory(values, editing) {
+  const saveCategory = useCallback(async (values, editing) => {
     if (submitting.current) { return; }
     submitting.current = true;
     setSaving(true);
@@ -35,8 +36,8 @@ export default function useCategories(accessToken, visible) {
       submitting.current = false;
       setSaving(false);
     }
-  }
-  async function removeCategory(category) {
+  }, [accessToken]);
+  const removeCategory = useCallback(async category => {
     if (submitting.current) { return false; }
     submitting.current = true;
     setSaving(true);
@@ -49,6 +50,6 @@ export default function useCategories(accessToken, visible) {
       submitting.current = false;
       setSaving(false);
     }
-  }
-  return { categories, defaultCategories, loading, error, retry: () => setAttempt(previous => previous + 1), saving, saveCategory, removeCategory };
+  }, [accessToken]);
+  return { categories, defaultCategories, loading, error, retry, saving, saveCategory, removeCategory };
 }
