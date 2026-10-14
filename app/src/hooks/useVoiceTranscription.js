@@ -7,6 +7,7 @@ const messages = {
   'service-not-allowed': Platform.OS === 'android'
     ? 'O serviço de voz não está disponível. Ative ou atualize o app Google ou Reconhecimento e síntese de fala nas configurações do celular.'
     : 'O reconhecimento de voz não está disponível neste dispositivo.',
+  'recognition-start-failed': 'Não foi possível iniciar o reconhecimento de voz. Tente novamente.',
   'audio-capture': 'Não foi possível acessar o microfone. Confira se outro app está usando ele.',
   'no-speech': 'Não ouvimos nenhuma fala. Tente gravar novamente.',
   background: 'Volte ao Vikash e tente gravar novamente.',
@@ -60,7 +61,11 @@ export default function useVoiceTranscription(visible) {
       capture.current = instance;
       await instance.start();
     } catch (failure) {
-      if (active()) { setError(failure.message || 'Não foi possível iniciar a transcrição.'); changePhase('error'); }
+      if (active()) {
+        setError(failure?.code === 'recognition-unavailable'
+          ? failure.message : messages['recognition-start-failed']);
+        changePhase('error');
+      }
     }
   }, [cleanup, changePhase, finish]);
   const stop = useCallback(() => {

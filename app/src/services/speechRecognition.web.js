@@ -1,6 +1,6 @@
 export function createSpeechRecognition(callbacks) {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Recognition) { throw new Error('Este navegador não oferece transcrição de voz. Abra no Chrome ou Edge.'); }
+  if (!Recognition) { throw Object.assign(new Error('Este navegador não oferece transcrição de voz. Abra no Chrome ou Edge.'), { code: 'recognition-unavailable' }); }
   const recognition = new Recognition();
   recognition.lang = 'pt-BR';
   recognition.continuous = true;

@@ -42,3 +42,37 @@ test.each(['ios','android'])('%s exibe o resultado do serviço nativo, permite r
   expect(confirm).toHaveBeenCalledWith('Gastei cinquenta reais no mercado pelo Pix do Inter');
   expect(close).toHaveBeenCalledTimes(1);
 });
+
+
+test.each(['android', 'ios'])('%s mantém erro de inicialização legível e permite uma nova tentativa', async os => {
+  jest.replaceProperty(Platform, 'OS', os);
+  native.start.mockImplementationOnce(() => {
+    throw new Error("Call to function 'ExpoSpeechRecognition.start' has been rejected: recordingOptions NullPointerException");
+  });
+  await act(async () => { renderer = TestRenderer.create(<VoiceDrawer visible onClose={jest.fn()} onConfirm={jest.fn()} />); });
+  const text = () => JSON.stringify(renderer.toJSON());
+  expect(text()).toContain('Não foi possível iniciar o reconhecimento de voz. Tente novamente.');
+  expect(text()).not.toContain('NullPointerException');
+  expect(text()).not.toContain('recordingOptions');
+  expect(native.start.mock.calls[0][0]).not.toHaveProperty('recordingOptions');
+  await act(async () => button('Tentar novamente').props.onPress());
+  await act(async () => events.start());
+  expect(text()).toContain('Ouvindo você');
+  await act(async () => { events.result({ isFinal: true, results: [{ transcript: 'Mercado no Pix do Inter' }] }); events.end(); });
+  expect(renderer.root.findByType(TextInput).props.value).toBe('Mercado no Pix do Inter');
+});
+
+
+test('falha inesperada durante a permissão não expõe detalhes internos no drawer', async () => {
+  native.getPermissionsAsync.mockRejectedValueOnce(new Error('Native permission record: java.lang.NullPointerException'));
+  await act(async () => { renderer = TestRenderer.create(<VoiceDrawer visible onClose={jest.fn()} />); });
+  const text = JSON.stringify(renderer.toJSON());
+  expect(text).toContain('Não foi possível iniciar o reconhecimento de voz. Tente novamente.');
+  expect(text).not.toContain('NullPointerException');
+});
+
+test('Expo Go conserva a orientação útil para instalar uma build própria', async () => {
+  requireOptionalNativeModule.mockReturnValue(null);
+  await act(async () => { renderer = TestRenderer.create(<VoiceDrawer visible onClose={jest.fn()} />); });
+  expect(JSON.stringify(renderer.toJSON())).toContain('Ela não está disponível no Expo Go.');
+});

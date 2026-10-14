@@ -40,7 +40,7 @@ jest.mock('react-native-svg', () => {
   return { __esModule: true, default: Shape, Svg: Shape, G: Shape, Path: Shape, Rect: Shape, Circle: Shape, Ellipse: Shape, Line: Shape, Polyline: Shape, Defs: Shape, Stop: Shape, LinearGradient: Shape, RadialGradient: Shape };
 });
 jest.mock('../src/hooks/useReducedMotion', () => () => true);
-jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition: () => { throw new Error('Transcrição indisponível neste dispositivo.'); } }));
+jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition: () => { throw Object.assign(new Error('Transcrição indisponível neste dispositivo.'), { code: 'recognition-unavailable' }); } }));
 
 let renderer;
 

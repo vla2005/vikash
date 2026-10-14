@@ -14,7 +14,7 @@ let removed;
 const originalAppState = AppState.currentState;
 const callbacks = () => ({ onStart: jest.fn(), onEnd: jest.fn(), onError: jest.fn(), onResult: jest.fn() });
 beforeEach(() => {
-  jest.clearAllMocks(); events = {}; removed = [];
+  jest.clearAllMocks(); native.start.mockReset(); events = {}; removed = [];
   requireOptionalNativeModule.mockReturnValue(native);
   native.addListener.mockImplementation((name, handler) => { events[name] = handler; const remove = jest.fn(); removed.push(remove); return { remove }; });
   native.requestPermissionsAsync.mockResolvedValue({ granted: true });
@@ -56,7 +56,7 @@ test('nativo acumula segmentos finais sem duplicar as hipoteses parciais', async
   jest.replaceProperty(Platform, 'OS', 'android');
   const handlers = callbacks(); const service = createNativeRecognition(handlers);
   await service.start();
-  expect(native.start).toHaveBeenCalledWith(expect.objectContaining({ lang: 'pt-BR', interimResults: true, recordingOptions: { persist: false } }));
+  expect(native.start).toHaveBeenCalledWith(expect.objectContaining({ lang: 'pt-BR', interimResults: true }));
   events.result({ results: [{ transcript: 'Gastei' }], isFinal: false });
   events.result({ results: [{ transcript: 'Gastei cinquenta reais' }], isFinal: true });
   events.result({ results: [{ transcript: 'no mercado' }], isFinal: false });
@@ -185,4 +185,29 @@ test('iOS mantém reconhecimento contínuo e pontuação sem consultar serviços
   expect(native.getSpeechRecognitionServices).not.toHaveBeenCalled();
   expect(native.getDefaultRecognitionService).not.toHaveBeenCalled();
   service.dispose();
+});
+
+
+test.each(['android', 'ios'])('%s omite opções de persistência desnecessárias na ponte nativa', async os => {
+  jest.replaceProperty(Platform, 'OS', os);
+  const service = createNativeRecognition(callbacks());
+  await service.start();
+  expect(native.start.mock.calls[0][0]).not.toHaveProperty('recordingOptions');
+  service.dispose();
+});
+
+test.each(['sync', 'async'])('falha %s ao iniciar não vaza o stack nativo nem aceita eventos atrasados', async mode => {
+  const failure = new Error("Cannot cast value for field 'recordingOptions': java.lang.NullPointerException");
+  if (mode === 'sync') { native.start.mockImplementationOnce(() => { throw failure; }); }
+  else { native.start.mockRejectedValueOnce(failure); }
+  const handlers = callbacks();
+  const service = createNativeRecognition(handlers);
+  await expect(service.start()).resolves.toBeUndefined();
+  expect(handlers.onError).toHaveBeenCalledWith('recognition-start-failed');
+  events.start(); events.end(); events.result({ results: [{ transcript: 'atrasado' }] });
+  expect(handlers.onStart).not.toHaveBeenCalled();
+  expect(handlers.onEnd).not.toHaveBeenCalled();
+  expect(handlers.onResult).not.toHaveBeenCalled();
+  service.dispose();
+  expect(native.abort).not.toHaveBeenCalled();
 });

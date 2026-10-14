@@ -13,7 +13,7 @@ export function createSpeechRecognition(callbacks) {
   const { requireOptionalNativeModule } = require('expo');
   const module = requireOptionalNativeModule('ExpoSpeechRecognition');
   if (!module) {
-    throw new Error('A transcrição no celular precisa de uma build própria do Vikash. Ela não está disponível no Expo Go.');
+    throw Object.assign(new Error('A transcrição no celular precisa de uma build própria do Vikash. Ela não está disponível no Expo Go.'), { code: 'recognition-unavailable' });
   }
   let cancelled = false;
   let recognitionStarted = false;
@@ -66,14 +66,19 @@ export function createSpeechRecognition(callbacks) {
       const service = android ? androidRecognitionService(module) : undefined;
       if (!service && !module.isRecognitionAvailable()) { callbacks.onError('service-not-allowed'); return; }
       recognitionStarted = true;
-      module.start({
-        lang: 'pt-BR', interimResults: true, maxAlternatives: 1,
-        // No Android, o serviço captura o microfone diretamente e finaliza após a fala.
-        // O modo contínuo usa um fluxo de áudio que nem todos os serviços aceitam.
-        continuous: !android, addsPunctuation: !android,
-        recordingOptions: { persist: false },
-        ...(service ? { androidRecognitionServicePackage: service } : {}),
-      });
+      try {
+        await module.start({
+          lang: 'pt-BR', interimResults: true, maxAlternatives: 1,
+          // No Android, o serviço captura o microfone diretamente e finaliza após a fala.
+          // O modo contínuo usa um fluxo de áudio que nem todos os serviços aceitam.
+          continuous: !android, addsPunctuation: !android,
+          // Omitir recordingOptions: persist já é false por padrão no Android e iOS.
+          ...(service ? { androidRecognitionServicePackage: service } : {}),
+        });
+      } catch {
+        recognitionStarted = false;
+        if (!cancelled) { callbacks.onError('recognition-start-failed'); }
+      }
     },
     stop() { module.stop(); },
     dispose() {
