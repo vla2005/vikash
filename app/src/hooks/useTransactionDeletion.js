@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { deleteCreditCardPurchase, deleteTransaction } from '../services/transactions';
 import { formatCurrency } from '../utils/money';
 import useToast from './useToast';
@@ -10,11 +10,11 @@ export default function useTransactionDeletion(accessToken, onDeleted) {
   const busy = useRef(false);
   const { showToast } = useToast();
 
-  function requestDelete(item, purchase = false) {
+  const requestDelete = useCallback((item, purchase = false) => {
     if (busy.current) { return; }
     setError('');
     setPending({ ...item, purchase: purchase || !!item.purchaseUuid, uuid: item.purchaseUuid || item.uuid || item.id });
-  }
+  }, []);
   function cancel() { if (!busy.current) { setPending(null); setError(''); } }
   async function confirm() {
     if (!pending || busy.current) { return; }

@@ -393,3 +393,5 @@ FadeComponent faz o crossfade de 180 ms entre skeleton e saldo, preservando a in
 
 Validação Reacticx: 576 testes em 75 suítes, incluindo ocultação, arredondamento, negativos, fonte ampliada, largura estreita, cancelamento e rosca de categoria única. Lint sem avisos nos arquivos da integração; build web e exportações locais Android/iOS confirmados. Fluidez e aparência nativas ainda precisam de conferência no aparelho; não foi medido FPS.
 
+
+Extrato: FlatList virtualiza grupos de dia para preservar o GlassPanel contínuo, reflexos, bordas e separadores atuais. Montagem inicial de dois dias, lotes de dois e janela de cinco viewports; removeClippedSubviews=false conserva sombras fora dos limites. Dentro do grupo, linhas são memoizadas e callbacks permanecem estáveis. Busca normalizada, totais e agrupamento são derivados em useMemo. Abrir filtros ou swipe não recalcula o histórico. Um dia com muitos lançamentos ainda monta todas as linhas desse dia; não há promessa de virtualização individual. O adaptador de rolagem reutiliza os limiares e o padding do dock sem mudar seus componentes nem os drawers.

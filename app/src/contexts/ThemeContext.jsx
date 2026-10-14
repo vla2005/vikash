@@ -109,12 +109,12 @@ export function ThemeVariant({ children, variant = 'silver' }) {
 }
 export function useInputTheme() {
   const { colors, scheme } = useTheme();
-  return {
+  return useMemo(() => ({
     placeholderTextColor: colors.placeholder,
     selectionColor: colors.primary,
     cursorColor: colors.primary,
     keyboardAppearance: scheme,
-  };
+  }), [colors.placeholder, colors.primary, scheme]);
 }
 export const useThemeTokens = () => useTheme().effects;
 const styles = StyleSheet.create({ loading: { flex: 1 } });

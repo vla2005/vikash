@@ -44,5 +44,8 @@ export default function useTransactions(accessToken, endpoint = '/api/transactio
     if (accessToken && endpoint) { load(); } else { setLoading(false); }
     return () => { state.current = {}; request.current?.abort(); };
   }, [accessToken, endpoint, load, revision, attempt]);
-  return { rows, loading, error, hasNext, loadMore: () => load(), retry: () => load(true), reload: () => setAttempt(value => value + 1) };
+  const loadMore = useCallback(() => load(), [load]);
+  const retry = useCallback(() => load(true), [load]);
+  const reload = useCallback(() => setAttempt(value => value + 1), []);
+  return { rows, loading, error, hasNext, loadMore, retry, reload };
 }
