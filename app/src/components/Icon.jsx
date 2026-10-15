@@ -6,6 +6,7 @@ import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 
 // Drawing factories create only the selected SVG, without allocating the full catalog.
 const shapes = {
+    keyboard: ({ props }) => <><Rect x="2" y="5" width="20" height="14" rx="3" {...props} /><Path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10" {...props} /></>,
     sparkles: ({ props }) => <><Path d="M10 6.5c.9 4.8 2.7 6.6 7.5 7.5-4.8.9-6.6 2.7-7.5 7.5-.9-4.8-2.7-6.6-7.5-7.5 4.8-.9 6.6-2.7 7.5-7.5Z" {...props} /><Path d="M17.5 4.5v6M14.5 7.5h6M4 19v3M2.5 20.5h3" {...props} /></>,
     sun: ({ props }) => <><Circle cx="12" cy="12" r="4" {...props} /><Path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" {...props} /></>,
     moon: ({ props }) => <Path d="M20 15.5A9 9 0 018.5 4 9 9 0 1020 15.5z" {...props} />,

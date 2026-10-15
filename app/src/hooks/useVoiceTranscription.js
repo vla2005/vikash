@@ -74,12 +74,19 @@ export default function useVoiceTranscription(visible) {
     stopTimer.current = setTimeout(() => { finish(); cleanup(); }, 2500);
     try { capture.current?.stop(); } catch { finish(); cleanup(); }
   }, [changePhase, finish, cleanup]);
-  useEffect(() => { if (visible) { start(); } return cleanup; }, [visible, start, cleanup]);
   useEffect(() => {
-    if (phase !== 'listening') { return; }
+    if (visible) { start(); }
+    else {
+      currentText.current = '';
+      setText(''); setError(''); setSeconds(0); changePhase('starting');
+    }
+    return cleanup;
+  }, [visible, start, cleanup, changePhase]);
+  useEffect(() => {
+    if (!visible || phase !== 'listening') { return; }
     const timer = setInterval(() => setSeconds(value => value + 1), 1000);
     return () => clearInterval(timer);
-  }, [phase]);
+  }, [visible, phase]);
   useEffect(() => {
     if (!visible) { return; }
     const subscription = AppState.addEventListener('change', state => {

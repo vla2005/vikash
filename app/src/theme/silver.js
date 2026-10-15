@@ -53,7 +53,7 @@ export const voiceOrb = {
   size: 200,
   radius: 65,
   deformation: 0.23,
-  duration: 16000,
+  duration: 12000,
   wire: '#B8BDC5',
   highlight: '#F1F3F6',
   shadow: '#777E89',
@@ -62,6 +62,7 @@ export const voiceOrb = {
   backOpacity: 0.16,
   haloOpacity: 0.16,
   transition: { duration: 280 },
+  composer: { duration: 480, expandedHeight: 64, maxHeight: 128, lift: 56, stageHeight: 164 },
   wave: {
     height: 64,
     compactHeight: 48,

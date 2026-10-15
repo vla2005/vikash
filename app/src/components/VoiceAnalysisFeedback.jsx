@@ -4,11 +4,13 @@ import { useThemeStyles, useThemeTokens } from '../contexts/ThemeContext';
 import { fontFamily, fontFamilyMedium, fontFamilyBold } from '../theme';
 import Icon from './Icon';
 
-export default function VoiceAnalysisFeedback({ feedback, onEdit, disabled }) {
+export default function VoiceAnalysisFeedback({ feedback, onEdit, disabled, source = 'voice' }) {
   const styles = useThemeStyles(createStyles);
   const { toast } = useThemeTokens();
   const warning = feedback.type === 'warn';
   const color = warning ? toast.warning : toast.error;
+  const preserved = source === 'text' ? 'Seu texto foi preservado.' : 'Sua transcrição foi preservada.';
+  const correct = source === 'text' ? 'Corrigir texto' : 'Corrigir transcrição';
   return (
     <View testID="voice-analysis-feedback" style={styles.panel}>
       <View
@@ -17,7 +19,7 @@ export default function VoiceAnalysisFeedback({ feedback, onEdit, disabled }) {
         accessibilityLabel={
           feedback.title + '. ' + feedback.message +
           (feedback.details?.length ? ' ' + feedback.details.map(detail => detail.label + ': ' + (detail.message || 'Informe esse dado.')).join(' ') : '') +
-          (warning ? '' : ' Sua transcrição foi preservada.')
+          (warning ? '' : ' ' + preserved)
         }
         style={styles.row}
       >
@@ -37,19 +39,19 @@ export default function VoiceAnalysisFeedback({ feedback, onEdit, disabled }) {
               {!!detail.message && <Text style={styles.message}>{detail.message}</Text>}
             </View>
           ))}
-          {!warning && <Text style={styles.note}>Sua transcrição foi preservada.</Text>}
+          {!warning && <Text style={styles.note}>{preserved}</Text>}
         </View>
       </View>
       {warning && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Corrigir transcrição"
+          accessibilityLabel={correct}
           disabled={disabled}
           onPress={onEdit}
           style={({ pressed }) => [styles.edit, pressed && styles.pressed, disabled && styles.disabled]}
         >
           <Icon name="edit" size={17} color={styles.editText.color} />
-          <Text style={styles.editText}>Corrigir transcrição</Text>
+          <Text style={styles.editText}>{correct}</Text>
         </Pressable>
       )}
     </View>

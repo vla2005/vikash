@@ -4,8 +4,10 @@ import {
   useTheme,
   useThemeStyles,
 } from '../contexts/ThemeContext';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AppState,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +19,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import VoiceComposer from './VoiceComposer';
+import VoiceModeFade from './VoiceModeFade';
 import ListeningOrb from './ListeningOrb';
 import ListeningWave from './ListeningWave';
 import VoiceMicButton from './VoiceMicButton';
@@ -39,30 +43,75 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const compact = height < 700;
-  const voice = useVoiceTranscription(visible);
+  const [mode, setMode] = useState('voice');
+  const [typedText, setTypedText] = useState('');
+  const typing = mode === 'text';
+  const voice = useVoiceTranscription(visible && !typing);
+  const entryText = typing ? typedText : voice.text;
   const [feedback, setFeedback] = useState(null);
   const [sending, setSending] = useState(false);
   const [transcriptHeight, setTranscriptHeight] = useState(66);
   const [sceneHeight, setSceneHeight] = useState(Math.max(280, height - 210));
   const submitting = useRef(false);
+  const session = useRef(0);
   const input = useRef(null);
-  const review = voice.phase === 'review';
-  const listening = voice.phase === 'listening';
-  const failed = voice.phase === 'error';
-  const preparing = voice.phase === 'starting' || voice.phase === 'stopping';
+  const typedInput = useRef(null);
+  const focusSession = useRef(null);
+  focusSession.current = { visible, typing };
+  const focusTyped = useCallback(() => {
+    if (
+      focusSession.current?.visible &&
+      focusSession.current?.typing &&
+      AppState.currentState !== 'background' &&
+      AppState.currentState !== 'inactive'
+    ) {
+      typedInput.current?.focus();
+    }
+  }, []);
+  const review = !typing && voice.phase === 'review';
+  const listening = !typing && voice.phase === 'listening';
+  const failed = !typing && voice.phase === 'error';
+  const preparing =
+    !typing && (voice.phase === 'starting' || voice.phase === 'stopping');
   const busy = sending || preparing;
   useEffect(() => {
-    if (visible) {
+    const currentSession = ++session.current;
+    if (!visible) {
+      setMode('voice');
       setFeedback(null);
+      setTypedText('');
       setTranscriptHeight(66);
+      setSending(false);
+      submitting.current = false;
+      input.current?.blur();
+      typedInput.current?.blur();
+      Keyboard.dismiss();
     }
+    // Pending analyses from a closed session cannot affect a later opening.
+    return () => {
+      session.current = currentSession + 1;
+    };
   }, [visible]);
   function close() {
     if (submitting.current) {
       return;
     }
     voice.cancel();
+    input.current?.blur();
+    typedInput.current?.blur();
+    Keyboard.dismiss();
     onClose();
+  }
+  function changeMode(next) {
+    if (submitting.current || next === mode) {
+      return;
+    }
+    voice.cancel();
+    input.current?.blur();
+    typedInput.current?.blur();
+    Keyboard.dismiss();
+    setFeedback(null);
+    setMode(next);
   }
   function restart() {
     if (submitting.current || preparing) {
@@ -74,27 +123,40 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     voice.start();
   }
   async function confirm() {
-    if (!voice.text.trim() || submitting.current) {
+    if (!entryText.trim() || submitting.current) {
       return;
     }
     if (!onConfirm) {
-      setFeedback(voiceAnalysisFeedback(new Error(
-        'A análise estará disponível quando a integração com a API estiver pronta.',
-      )));
+      setFeedback(
+        voiceAnalysisFeedback(
+          new Error(
+            'A análise estará disponível quando a integração com a API estiver pronta.',
+          ),
+        ),
+      );
       return;
     }
+    const currentSession = session.current;
     setFeedback(null);
     submitting.current = true;
     setSending(true);
+    Keyboard.dismiss();
     try {
-      await onConfirm(voice.text.trim());
+      await onConfirm(entryText.trim());
+      if (session.current !== currentSession) {
+        return;
+      }
       submitting.current = false;
       close();
     } catch (failure) {
-      setFeedback(voiceAnalysisFeedback(failure));
+      if (session.current === currentSession) {
+        setFeedback(voiceAnalysisFeedback(failure));
+      }
     } finally {
-      submitting.current = false;
-      setSending(false);
+      if (session.current === currentSession) {
+        submitting.current = false;
+        setSending(false);
+      }
     }
   }
   const time = `${String(Math.floor(voice.seconds / 60)).padStart(
@@ -105,10 +167,17 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     voice.text.length > 180
       ? `…${voice.text.slice(-180).replace(/^\S*\s/, '')}`
       : voice.text;
-  const { orbSize, distance: travel, visualOffset } = voiceSceneLayout(width, sceneHeight, compact);
-  const reviewLabel = feedback?.type === 'warn'
-    ? 'Confirmar novamente'
-    : feedback ? 'Tentar novamente' : 'Confirmar e analisar';
+  const {
+    orbSize,
+    distance: travel,
+    visualOffset,
+  } = voiceSceneLayout(width, sceneHeight, compact);
+  const reviewLabel =
+    feedback?.type === 'warn'
+      ? 'Confirmar novamente'
+      : feedback
+      ? 'Tentar novamente'
+      : 'Confirmar e analisar';
   const microphoneLabel = review
     ? reviewLabel
     : voice.phase === 'error'
@@ -137,7 +206,11 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
           >
             <View style={styles.header}>
               <GlassBackButton
-                accessibilityLabel="Voltar do registro por voz"
+                accessibilityLabel={
+                  typing
+                    ? 'Voltar do registro por texto'
+                    : 'Voltar do registro por voz'
+                }
                 onPress={close}
                 disabled={sending}
               />
@@ -145,18 +218,12 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                 <Icon name="microphone" size={20} color={colors.primary} />
               </View>
               <View style={styles.headerCopy}>
-                <Text style={styles.headerTitle}>Registro por voz</Text>
-                <Text style={styles.headerSubtitle}>
-                  {review
-                    ? 'Revise antes de confirmar'
-                    : failed
-                    ? 'Não foi possível ouvir'
-                    : 'Novo lançamento'}
-                </Text>
+                <Text style={styles.headerTitle}>Novo lançamento</Text>
+                <Text style={styles.headerSubtitle}>Fale ou digite</Text>
               </View>
             </View>
             <VoiceScene
-              review={review || failed}
+              review={review || failed || (typing && !!feedback)}
               distance={travel}
               visualOffset={visualOffset}
               onLayout={event =>
@@ -164,147 +231,225 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
               }
               visual={
                 <>
-                  <ListeningOrb active={visible && listening} size={orbSize} />
-                  <ListeningWave
-                    active={visible && listening}
-                    compact={compact}
-                  />
-                  <Text accessibilityRole="header" style={styles.title}>
-                    {listening
-                      ? 'Ouvindo você'
-                      : voice.phase === 'starting'
-                      ? 'Preparando microfone'
-                      : voice.phase === 'stopping'
-                      ? 'Finalizando transcrição'
-                      : review
-                      ? 'Transcrição pronta'
-                      : 'Não foi possível ouvir'}
-                  </Text>
-                  <Text style={styles.timer}>{time}</Text>
+                  <VoiceModeFade visible={!typing} minOpacity={0.75}>
+                    <ListeningOrb
+                      active={visible && (listening || typing)}
+                      size={orbSize}
+                    />
+                  </VoiceModeFade>
+                  <VoiceModeFade visible={!typing} minOpacity={0.3}>
+                    <ListeningWave
+                      active={visible && listening}
+                      compact={compact}
+                    />
+                  </VoiceModeFade>
+                  <View style={styles.modeCopy}>
+                    <VoiceModeFade visible={!typing} style={styles.sceneLayer}>
+                      <Text accessibilityRole="header" style={styles.title}>
+                        {listening
+                          ? 'Ouvindo você'
+                          : voice.phase === 'starting'
+                          ? 'Preparando microfone'
+                          : voice.phase === 'stopping'
+                          ? 'Finalizando transcrição'
+                          : review
+                          ? 'Transcrição pronta'
+                          : 'Não foi possível ouvir'}
+                      </Text>
+                      <Text style={styles.timer}>{time}</Text>
+                    </VoiceModeFade>
+                    <VoiceModeFade visible={typing} style={styles.sceneLayer}>
+                      <Text accessibilityRole="header" style={styles.title}>
+                        Digite seu lançamento
+                      </Text>
+                      <Text style={styles.timer}>
+                        Você revisa antes de enviar.
+                      </Text>
+                    </VoiceModeFade>
+                  </View>
                 </>
               }
             >
-              <ScrollView
-                style={styles.scroll}
-                contentContainerStyle={styles.transcriptContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
+              <VoiceModeFade
+                visible={!typing}
+                interactive
+                style={styles.sceneLayer}
               >
-                {review ? (
-                  <View style={styles.transcriptEditor}>
+                <ScrollView
+                  style={styles.scroll}
+                  contentContainerStyle={styles.transcriptContent}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {review ? (
+                    <View style={styles.transcriptEditor}>
+                      <Text
+                        accessible={false}
+                        accessibilityElementsHidden
+                        importantForAccessibility="no-hide-descendants"
+                        aria-hidden
+                        onLayout={event =>
+                          setTranscriptHeight(
+                            Math.max(
+                              66,
+                              Math.ceil(event.nativeEvent.layout.height) + 4,
+                            ),
+                          )
+                        }
+                        style={[
+                          [
+                            styles.transcript,
+                            compact && styles.transcriptCompact,
+                            styles.measurement,
+                          ],
+                          pointerEventsStyles.none,
+                        ]}
+                      >{`${voice.text}\u200b`}</Text>
+                      <TextInput
+                        {...inputTheme}
+                        ref={input}
+                        accessibilityLabel="Texto transcrito"
+                        multiline
+                        scrollEnabled={false}
+                        value={voice.text}
+                        onChangeText={text => {
+                          setFeedback(null);
+                          voice.setText(text);
+                        }}
+                        editable={!sending}
+                        textAlignVertical="top"
+                        style={[
+                          styles.transcript,
+                          styles.input,
+                          compact && styles.transcriptCompact,
+                          { height: transcriptHeight },
+                        ]}
+                      />
+                    </View>
+                  ) : (
                     <Text
-                      accessible={false}
-                      accessibilityElementsHidden
-                      importantForAccessibility="no-hide-descendants"
-                      aria-hidden
-                      onLayout={event =>
-                        setTranscriptHeight(
-                          Math.max(
-                            66,
-                            Math.ceil(event.nativeEvent.layout.height) + 4,
-                          ),
-                        )
-                      }
-                      style={[[
-                        styles.transcript,
-                        compact && styles.transcriptCompact,
-                        styles.measurement,
-                      ], pointerEventsStyles.none]}
-                    >{`${voice.text}\u200b`}</Text>
-                    <TextInput
-                      {...inputTheme}
-                      ref={input}
-                      accessibilityLabel="Texto transcrito"
-                      multiline
-                      scrollEnabled={false}
-                      value={voice.text}
-                      onChangeText={text => {
-                        setFeedback(null);
-                        voice.setText(text);
-                      }}
-                      editable={!sending}
-                      textAlignVertical="top"
+                      accessibilityLiveRegion="polite"
+                      accessibilityLabel={voice.text || undefined}
+                      numberOfLines={3}
                       style={[
                         styles.transcript,
-                        styles.input,
+                        !voice.text && styles.placeholder,
                         compact && styles.transcriptCompact,
-                        { height: transcriptHeight },
                       ]}
-                    />
-                  </View>
-                ) : (
-                  <Text
-                    accessibilityLiveRegion="polite"
-                    accessibilityLabel={voice.text || undefined}
-                    numberOfLines={3}
-                    style={[
-                      styles.transcript,
-                      !voice.text && styles.placeholder,
-                      compact && styles.transcriptCompact,
-                    ]}
-                  >
-                    {liveText ||
-                      (listening
-                        ? 'Conte seu lançamento.\nVocê revisa antes de enviar.'
-                        : failed
-                        ? 'Você pode tentar novamente.'
-                        : 'Sua fala aparecerá aqui.')}
-                  </Text>
-                )}
-                <View style={review ? styles.reviewTools : undefined}>
-                  {review && (
-                    <>
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="Editar transcrição"
-                        disabled={sending}
-                        onPress={() => input.current?.focus()}
-                        style={({ pressed }) => [
-                          styles.editButton,
-                          pressed && styles.iconPressed,
-                        ]}
-                      >
-                        <Icon name="edit" size={18} color={colors.secondary} />
-                        <Text style={styles.editLabel}>Editar texto</Text>
-                      </Pressable>
-                      {!feedback && <Text style={styles.notice}>
-                        A análise começa após sua confirmação.
-                      </Text>}
-                    </>
-                  )}
-                </View>
-                {!!feedback && review && (
-                  <VoiceAnalysisFeedback
-                    feedback={feedback}
-                    disabled={sending}
-                    onEdit={() => input.current?.focus()}
-                  />
-                )}
-                {!!voice.error && !review && (
-                  <Text accessibilityRole="alert" style={styles.error}>
-                    {voice.error}
-                  </Text>
-                )}
-                {voice.phase === 'error' && !!voice.text.trim() && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Revisar texto capturado"
-                    onPress={voice.review}
-                    style={styles.recovery}
-                  >
-                    <Text style={styles.recoveryText}>
-                      Revisar texto capturado
+                    >
+                      {liveText ||
+                        (listening
+                          ? 'Conte seu lançamento.\nVocê revisa antes de enviar.'
+                          : failed
+                          ? 'Você pode tentar novamente.'
+                          : 'Sua fala aparecerá aqui.')}
                     </Text>
-                  </Pressable>
-                )}
-              </ScrollView>
+                  )}
+                  <View style={review ? styles.reviewTools : undefined}>
+                    {review && (
+                      <>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Editar transcrição"
+                          disabled={sending}
+                          onPress={() => input.current?.focus()}
+                          style={({ pressed }) => [
+                            styles.editButton,
+                            pressed && styles.iconPressed,
+                          ]}
+                        >
+                          <Icon
+                            name="edit"
+                            size={18}
+                            color={colors.secondary}
+                          />
+                          <Text style={styles.editLabel}>Editar texto</Text>
+                        </Pressable>
+                        {!feedback && (
+                          <Text style={styles.notice}>
+                            A análise começa após sua confirmação.
+                          </Text>
+                        )}
+                      </>
+                    )}
+                  </View>
+                  {!!feedback && review && (
+                    <VoiceAnalysisFeedback
+                      feedback={feedback}
+                      disabled={sending}
+                      onEdit={() => input.current?.focus()}
+                    />
+                  )}
+                  {!!voice.error && !review && (
+                    <Text accessibilityRole="alert" style={styles.error}>
+                      {voice.error}
+                    </Text>
+                  )}
+                  {voice.phase === 'error' && !!voice.text.trim() && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Revisar texto capturado"
+                      onPress={voice.review}
+                      style={styles.recovery}
+                    >
+                      <Text style={styles.recoveryText}>
+                        Revisar texto capturado
+                      </Text>
+                    </Pressable>
+                  )}
+                </ScrollView>
+              </VoiceModeFade>
+              <VoiceModeFade
+                visible={typing && !!feedback}
+                interactive
+                style={styles.sceneLayer}
+              >
+                <ScrollView
+                  style={styles.scroll}
+                  contentContainerStyle={styles.transcriptContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {!!feedback && typing && (
+                    <VoiceAnalysisFeedback
+                      feedback={feedback}
+                      source="text"
+                      disabled={sending}
+                      onEdit={focusTyped}
+                    />
+                  )}
+                </ScrollView>
+              </VoiceModeFade>
             </VoiceScene>
-            <View style={[styles.footer, compact && styles.footerCompact]}>
-              <View style={styles.controls}>
+            <VoiceComposer
+              expanded={typing}
+              visible={visible}
+              sending={sending}
+              value={typedText}
+              inputRef={typedInput}
+              onChangeText={text => {
+                setFeedback(null);
+                setTypedText(text);
+              }}
+              onExpand={() => changeMode('text')}
+              onExpanded={focusTyped}
+              onConfirm={confirm}
+              confirmLabel={reviewLabel}
+              caption={
+                review
+                  ? sending
+                    ? 'Analisando…'
+                    : reviewLabel
+                  : listening
+                  ? 'Toque no microfone para parar e revisar'
+                  : failed
+                  ? 'Toque no microfone para tentar novamente'
+                  : 'Aguarde o microfone'
+              }
+              restartControl={
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Gravar novamente"
-                  disabled={busy}
+                  disabled={typing || busy}
                   onPress={restart}
                   hitSlop={4}
                   style={({ pressed }) => [
@@ -315,23 +460,29 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                 >
                   <Icon name="restart" size={25} color={colors.text} />
                 </Pressable>
+              }
+              microphone={
                 <VoiceMicButton
                   active={visible && listening}
                   review={review}
-                  label={microphoneLabel}
+                  label={typing ? 'Voltar ao microfone' : microphoneLabel}
                   disabled={busy || (review && !voice.text.trim())}
                   onPress={
-                    review
+                    typing
+                      ? () => changeMode('voice')
+                      : review
                       ? confirm
                       : voice.phase === 'error'
                       ? restart
                       : voice.stop
                   }
                 />
+              }
+              cancelControl={
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Fechar microfone"
-                  disabled={sending}
+                  disabled={typing || sending}
                   onPress={close}
                   hitSlop={4}
                   style={({ pressed }) => [
@@ -342,19 +493,8 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                 >
                   <Icon name="close" size={25} color={colors.text} />
                 </Pressable>
-              </View>
-              <Text style={styles.caption}>
-                {review
-                  ? sending
-                    ? 'Analisando…'
-                    : reviewLabel
-                  : listening
-                  ? 'Toque no microfone para parar e revisar'
-                  : voice.phase === 'error'
-                  ? 'Toque no microfone para tentar novamente'
-                  : 'Aguarde o microfone'}
-              </Text>
-            </View>
+              }
+            />
           </View>
         </KeyboardAvoidingView>
       </DrawerPanel>
@@ -388,6 +528,8 @@ const createStyles = colors =>
       justifyContent: 'center',
     },
     headerCopy: { flex: 1 },
+    modeCopy: { position: 'relative', width: '100%', height: 58 },
+    sceneLayer: { ...StyleSheet.absoluteFill },
     headerTitle: {
       fontFamily: fontFamilyBold,
       fontSize: 16,
@@ -422,6 +564,7 @@ const createStyles = colors =>
       color: colors.secondary,
       marginTop: 4,
       fontVariant: ['tabular-nums'],
+      textAlign: 'center',
     },
     transcript: {
       fontFamily: fontFamilyMedium,
@@ -471,14 +614,6 @@ const createStyles = colors =>
       color: colors.secondary,
       marginTop: 4,
     },
-    footer: { flexShrink: 0, paddingTop: 24, paddingBottom: 6 },
-    footerCompact: { paddingTop: 16 },
-    controls: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-evenly',
-      gap: 24,
-    },
     iconButton: {
       width: 48,
       height: 48,
@@ -491,14 +626,6 @@ const createStyles = colors =>
       transform: [{ scale: 0.96 }],
     },
     disabled: { opacity: 0.45 },
-    caption: {
-      fontFamily,
-      fontSize: 12,
-      lineHeight: 18,
-      color: colors.secondary,
-      textAlign: 'center',
-      marginTop: 20,
-    },
     recovery: { padding: 12, marginTop: 12 },
     recoveryText: {
       fontFamily: fontFamilyMedium,

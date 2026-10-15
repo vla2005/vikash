@@ -96,3 +96,21 @@ antigos. Renovação de token do mesmo perfil mantém a tela atual.
 
 
 Falhas na análise por voz são exibidas dentro do drawer, abaixo da transcrição preservada, por `VoiceAnalysisFeedback`. A API entrega code, missingFields e fieldErrors. VOICE_INFORMATION_REQUIRED e VOICE_INPUT_INVALID usam o ícone amarelo e mostram rótulos legíveis com a orientação de cada campo; VOICE_ANALYSIS_UNAVAILABLE, rede e demais falhas técnicas usam ícone vermelho. HTTP 400/422 é apenas o fallback para a API antiga. Título, texto e superfície opaca continuam neutros nos dois temas. Corrigir o texto, regravar, reenviar ou reabrir limpa o aviso anterior. O drawer continua aberto no erro; o controle central permite confirmar novamente ou tentar novamente. Somente o sucesso do registro emite toast. Os campos mostrados são exclusivamente os apontados pela API, sem inferência ou enumeração de dados já preenchidos.
+
+
+## Registro por voz ou texto
+
+| Capacidade | Responsável canônico | Verificação |
+| --- | --- | --- |
+| Entrada e confirmação | VoiceDrawer, VoiceComposer, VoiceComposerLayout | voiceDrawer.test.jsx, voiceComposer.test.jsx |
+| Input animado | Reacticx animated-input-bar | animatedInputBar.test.jsx, inspeção web clara/escura |
+| Análise e criação | MainTabs.confirmTranscription, services/transactions.createTransaction | mainTabs.test.jsx, transactionsApi.test.js |
+| Avisos e recuperação | VoiceAnalysisFeedback, utils/voiceAnalysisFeedback | voiceDrawer.test.jsx, voiceAnalysisFeedback.test.jsx |
+
+O drawer oferece fala e digitação no mesmo cenário, sem abas. O pequeno botão de teclado abaixo do microfone se expande no próprio campo de vidro e sobe, enquanto os controles laterais desaparecem em fade e o próprio microfone desce e diminui de 72 para 44 px, permanecendo abaixo do campo. Tocar nesse microfone recolhe e desce o input até o botão de teclado; o microfone sobe e cresce, trazendo regravar e fechar em escala e opacidade. O ícone de teclado dentro do campo apenas devolve foco à edição. A instância do contêiner, do campo já aberto e do orbe permanece durante a alternância. O foco só é solicitado ao concluir a expansão e somente se o drawer continuar visível em digitação e em primeiro plano.
+
+A entrada padrão por voz mantém a captura existente; expandir o campo cancela o serviço, o relógio e o temporizador de finalização, ignorando callbacks antigos. Fechar limpa o modo, rascunho, transcrição, aviso, relógio e estado de envio; cada nova abertura começa pela voz. O rascunho permanece apenas ao recolher e expandir durante a mesma abertura. Respostas atrasadas de uma análise encerrada não fecham nem alteram um novo registro. Voltar ao microfone inicia uma captura nova. O orbe continua animado com opacidade reduzida ao digitar, enquanto as ondas ficam paradas sem captura.
+
+Digitar não envia automaticamente: o usuário revisa no campo e toca na seta de envio, rotulada Confirmar e analisar. O campo cresce até 128 px e permite rolar textos longos; os controles permanecem fora da rolagem. Texto vazio ou só com espaços não habilita confirmação. O envio remove espaços externos e utiliza o mesmo contrato da análise de voz; não há mudança de endpoint nem de autorização. Enquanto aguarda, entrada, modos e fechamento ficam bloqueados, e cliques repetidos não criam pedidos extras.
+
+Sucesso reutiliza atualização e toast do fluxo existente. Falha mantém o drawer e o texto: informações faltantes usam aviso amarelo com os campos apontados pela API; indisponibilidade ou outra falha técnica usa vermelho. Corrigir texto devolve foco ao campo e editar limpa o aviso. A mensagem de preservação usa “Seu texto foi preservado.” no modo digitado. O layout mantém a ação acessível com teclado/altura reduzida; verificação web usou respostas simuladas, sem capturar áudio nem gravar transações reais. Validação física do teclado Android/iOS ainda precisa ser feita no aparelho.

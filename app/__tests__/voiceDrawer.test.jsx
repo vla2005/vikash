@@ -253,3 +253,173 @@ test('drawer mostra exatamente os campos faltantes vindos da API', async () => {
   expect(renderer.root.findByType(TextInput).props.value).toBe('Gastei R$ 50 na farmácia pelo Pix.');
   expect(close).not.toHaveBeenCalled();
 });
+
+
+test('Digitar encerra o microfone, ignora eventos tardios e analisa apenas o texto digitado', async () => {
+  const confirm = jest.fn(async () => {});
+  await open({ onConfirm: confirm });
+  const previous = events;
+  await act(async () => button('Digitar').props.onPress());
+  expect(capture.dispose).toHaveBeenCalled();
+  expect(renderer.root.findByType('ListeningOrb').props.active).toBe(true);
+  expect(renderer.root.findByType('ListeningWave').props.active).toBe(false);
+  expect(button('Confirmar e analisar').props.disabled).toBe(true);
+  const field = () => renderer.root.findByType(TextInput);
+  expect(field().props.accessibilityLabel).toBe('Descrição do lançamento');
+  await act(async () => field().props.onChangeText('  Mercado R$ 50 por Pix no Inter  '));
+  await act(async () => { previous.onResult('Fala atrasada'); previous.onEnd(); });
+  expect(field().props.value).toBe('  Mercado R$ 50 por Pix no Inter  ');
+  expect(confirm).not.toHaveBeenCalled();
+  await act(async () => button('Confirmar e analisar').props.onPress());
+  expect(confirm).toHaveBeenCalledWith('Mercado R$ 50 por Pix no Inter');
+  expect(close).toHaveBeenCalledTimes(1);
+});
+
+test('preserva rascunho ao alternar, mas limpa e volta à voz depois de fechar', async () => {
+  await open();
+  await act(async () => button('Digitar').props.onPress());
+  await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Meu rascunho'));
+  await act(async () => button('Voltar ao microfone').props.onPress());
+  expect(texts()).toContain('Ouvindo você');
+  await act(async () => button('Digitar').props.onPress());
+  expect(renderer.root.findByType(TextInput).props.value).toBe('Meu rascunho');
+  const starts = createSpeechRecognition.mock.calls.length;
+  await act(async () => renderer.update(<VoiceDrawer visible={false} onClose={close} />));
+  await act(async () => renderer.update(<VoiceDrawer visible onClose={close} />));
+  expect(createSpeechRecognition).toHaveBeenCalledTimes(starts + 1);
+  expect(button('Parar e revisar').props.accessibilityState.selected).toBe(true);
+  await act(async () => button('Digitar').props.onPress());
+  expect(renderer.root.findByType(TextInput).props.value).toBe('');
+});
+
+test.each([400, 503])('erro da análise digitada (%s) mantém texto e usa aviso no drawer', async status => {
+  const confirm = jest.fn().mockRejectedValueOnce(new ApiError('Falha de teste', status)).mockResolvedValueOnce();
+  await open({ onConfirm: confirm });
+  await act(async () => button('Digitar').props.onPress());
+  const field = () => renderer.root.findByType(TextInput);
+  await act(async () => field().props.onChangeText('Mercado R$ 50'));
+  await act(async () => button('Confirmar e analisar').props.onPress());
+  expect(field().props.value).toBe('Mercado R$ 50');
+  expect(renderer.root.findByType(VoiceAnalysisFeedback).props.feedback.type).toBe(status === 400 ? 'warn' : 'error');
+  expect(close).not.toHaveBeenCalled();
+  if (status === 400) { expect(button('Corrigir texto')).toBeDefined(); }
+  else { expect(texts()).toContain('Seu texto foi preservado.'); }
+  await act(async () => field().props.onChangeText('Mercado R$ 50, Pix no Inter'));
+  await act(async () => button('Confirmar e analisar').props.onPress());
+  expect(confirm).toHaveBeenLastCalledWith('Mercado R$ 50, Pix no Inter');
+  expect(close).toHaveBeenCalledTimes(1);
+});
+
+test('análise digitada bloqueia duplicação e troca de modo até terminar', async () => {
+  let finish;
+  const confirm = jest.fn(() => new Promise(resolve => { finish = resolve; }));
+  await open({ onConfirm: confirm });
+  await act(async () => button('Digitar').props.onPress());
+  await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Mercado, R$ 50, Pix no Inter'));
+  let pending;
+  await act(async () => {
+    const send = button('Confirmar e analisar').props.onPress;
+    pending = send();
+    await send();
+  });
+  expect(confirm).toHaveBeenCalledTimes(1);
+  expect(renderer.root.findByType(TextInput).props.editable).toBe(false);
+  expect(button('Voltar ao microfone').props.disabled).toBe(true);
+  await act(async () => button('Voltar ao microfone').props.onPress());
+  expect(renderer.root.findByType(TextInput).props.editable).toBe(false);
+  await act(async () => { finish(); await pending; });
+  expect(close).toHaveBeenCalledTimes(1);
+});
+
+
+test('cada abertura começa em voz, sem campo digitado aberto', async () => {
+  const before = createSpeechRecognition.mock.calls.length;
+  await open();
+  expect(createSpeechRecognition).toHaveBeenCalledTimes(before + 1);
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+  expect(button('Parar e revisar').props.accessibilityState.selected).toBe(true);
+});
+
+
+test('botão de teclado e input compartilham o mesmo contêiner e não criam abas', async () => {
+  await open();
+  const shell = renderer.root.findAllByProps({ testID: 'voice-keyboard-shell' })[0];
+  const orb = renderer.root.findByType('ListeningOrb');
+  expect(renderer.root.findAll(node => node.props.accessibilityRole === 'tab')).toHaveLength(0);
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+  await act(async () => button('Digitar').props.onPress());
+  expect(renderer.root.findAllByProps({ testID: 'voice-keyboard-shell' })[0]).toBe(shell);
+  expect(renderer.root.findByType('ListeningOrb')).toBe(orb);
+  const field = renderer.root.findByType(TextInput);
+  await act(async () => field.props.onChangeText('Rascunho preservado'));
+  await act(async () => button('Voltar ao microfone').props.onPress());
+  expect(renderer.root.findAllByProps({ testID: 'voice-keyboard-shell' })[0]).toBe(shell);
+  await act(async () => button('Digitar').props.onPress());
+  expect(renderer.root.findByType(TextInput)).toBe(field);
+  expect(field.props.value).toBe('Rascunho preservado');
+});
+
+test('expandir o teclado pausa o relógio de captura e permite texto longo com rolagem', async () => {
+  await open();
+  await act(async () => button('Digitar').props.onPress());
+  await act(async () => jest.advanceTimersByTime(3000));
+  expect(texts()).toContain('00:00');
+  const field = renderer.root.findByType(TextInput);
+  const longText = 'Mercado por Pix no Inter. '.repeat(50);
+  await act(async () => {
+    field.props.onChangeText(longText);
+    field.props.onContentSizeChange({ nativeEvent: { contentSize: { height: 800 } } });
+  });
+  expect(field.props.scrollEnabled).toBe(true);
+  expect(field.props.value).toBe(longText);
+  expect(field.props.style.flat().some(style => style?.height === 88)).toBe(true);
+});
+
+
+test('fechar após falha de voz limpa transcrição, aviso, relógio e callbacks antigos', async () => {
+  const confirm = jest.fn().mockRejectedValue(new ApiError('Informe o banco.', 422));
+  await open({ onConfirm: confirm });
+  const oldCapture = events;
+  await act(async () => {
+    jest.advanceTimersByTime(3000);
+    events.onResult('Uma transcrição antiga');
+    events.onEnd();
+  });
+  await act(async () => button('Confirmar e analisar').props.onPress());
+  expect(renderer.root.findAllByType(VoiceAnalysisFeedback)).toHaveLength(1);
+  await act(async () => renderer.update(<VoiceDrawer visible={false} onClose={close} onConfirm={confirm} />));
+  await act(async () => {
+    oldCapture.onResult('Evento antigo depois de fechar');
+    oldCapture.onEnd();
+  });
+  await act(async () => renderer.update(<VoiceDrawer visible onClose={close} onConfirm={confirm} />));
+  expect(renderer.root.findAllByType(VoiceAnalysisFeedback)).toHaveLength(0);
+  expect(texts()).toContain('00:00');
+  expect(texts()).not.toContain('Uma transcrição antiga');
+  expect(texts()).not.toContain('Evento antigo depois de fechar');
+  expect(button('Parar e revisar').props.disabled).toBe(false);
+});
+
+test.each(['success', 'error'])('resposta %s de análise anterior não interfere em uma nova abertura', async result => {
+  let complete, reject;
+  const confirm = jest.fn(() => new Promise((resolve, fail) => { complete = resolve; reject = fail; }));
+  await open({ onConfirm: confirm });
+  await act(async () => button('Digitar').props.onPress());
+  await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Registro antigo'));
+  let pending;
+  await act(async () => { pending = button('Confirmar e analisar').props.onPress(); });
+  await act(async () => renderer.update(<VoiceDrawer visible={false} onClose={close} onConfirm={confirm} />));
+  await act(async () => renderer.update(<VoiceDrawer visible onClose={close} onConfirm={confirm} />));
+  await act(async () => button('Digitar').props.onPress());
+  await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Registro novo'));
+  await act(async () => {
+    if (result === 'success') { complete(); }
+    else { reject(new ApiError('Erro antigo', 503)); }
+    await pending;
+  });
+  expect(close).not.toHaveBeenCalled();
+  expect(renderer.root.findByType(TextInput).props.value).toBe('Registro novo');
+  expect(renderer.root.findByType(TextInput).props.editable).toBe(true);
+  expect(button('Confirmar e analisar').props.disabled).toBe(false);
+  expect(renderer.root.findAllByType(VoiceAnalysisFeedback)).toHaveLength(0);
+});
