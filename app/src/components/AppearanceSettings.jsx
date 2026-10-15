@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import Icon from './Icon';
+import { lightThemeEnabled } from '../config/appearance';
 import InlineNotice from './InlineNotice';
 import { fontFamily, fontFamilyBold } from '../theme';
 
@@ -29,6 +30,7 @@ export default function AppearanceSettings() {
       setSaving(false);
     }
   }
+  if (!lightThemeEnabled) return null;
   return (
     <View style={styles.section}>
       <Text accessibilityRole="header" style={styles.heading}>

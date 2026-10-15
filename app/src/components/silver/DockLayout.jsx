@@ -53,7 +53,7 @@ export function DockTabButton({
         <Icon
           name={item.icon}
           size={28}
-          color={active ? dock.activeText : dock.text}
+          color={active ? dock.activeIcon : dock.text}
         />
       </Box>
       <Box style={[s.tabLabel, labelStyle]}>
@@ -107,7 +107,7 @@ export default function DockLayout({
             onPress={onAssistant}
             style={({ pressed }) => [s.voiceButton, pressed && s.pressed]}
           >
-            <Icon name="sparkles" size={20} color={dock.voiceText} />
+            <Icon name="sparkles" size={20} color={dock.assistantIcon} />
             <Text
               numberOfLines={1}
               maxFontSizeMultiplier={1.3}

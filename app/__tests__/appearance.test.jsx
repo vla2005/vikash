@@ -1,3 +1,5 @@
+// Exercita também o suporte preservado para futura reativação do tema claro.
+jest.mock('../src/config/appearance', () => ({ lightThemeEnabled: true }));
 import React, { useState } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Text, TextInput, StyleSheet, Switch } from 'react-native';

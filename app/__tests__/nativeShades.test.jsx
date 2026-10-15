@@ -1,3 +1,5 @@
+// Cobre também a paleta clara preservada, apesar de desabilitada no app.
+jest.mock('../src/config/appearance', () => ({ lightThemeEnabled: true }));
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Image, Platform, StyleSheet } from 'react-native';

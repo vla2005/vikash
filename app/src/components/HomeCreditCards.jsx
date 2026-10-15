@@ -6,6 +6,7 @@ import { Platform, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, Vi
 import Svg, { Path } from 'react-native-svg';
 import InstitutionLogo from './InstitutionLogo';
 import Icon from './Icon';
+import ScrollableCreditCardStack from './ScrollableCreditCardStack';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { formatCurrency } from '../utils/money';
 import { hiddenAmount } from '../utils/dashboard';
@@ -22,7 +23,7 @@ function orderedCards(cards, selectedUuid) {
   return [...cards].sort((a, b) => Number(b.uuid === selectedUuid) - Number(a.uuid === selectedUuid));
 }
 
-export default function HomeCreditCards({ cards, profile, hidden = false, onOpenCard, onViewCards, title = 'Meus cartões', compactHeading = false }) {
+export default function HomeCreditCards({ cards, profile, hidden = false, onOpenCard, onViewCards, title = 'Meus cartões', compactHeading = false, scrollable = false, onStackInteractionChange }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const [selectedUuid, setSelectedUuid] = useState(cards[0]?.uuid);
@@ -31,6 +32,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
   const [width, setWidth] = useState(320);
   const progress = useRef(new Animated.Value(0)).current;
   const switching = useRef(false);
+  const scrollStack = useRef(null);
   const animation = useRef(null);
   const animationVersion = useRef(0);
   const reducedMotion = useReducedMotion();
@@ -64,7 +66,15 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
     switching.current = false;
   }, [reducedMotion, transition, cancelAnimation]);
 
-  function chooseCard(uuid) {
+function chooseCard(uuid) {
+    if (scrollable) {
+      if (uuid === selectedId) {
+        scrollStack.current?.showSelected();
+      } else {
+        setSelectedUuid(uuid);
+      }
+      return;
+    }
     if (switching.current || uuid === selectedId) { return; }
     if (reducedMotion) { setSelectedUuid(uuid); return; }
     switching.current = true;
@@ -97,6 +107,22 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
   const usedPercentage = selected?.creditLimit > 0 ? usedLimit / selected.creditLimit * 100 : 0;
   const visibleIds = new Set([...currentOrder.slice(0, 3), ...nextOrder.slice(0, 3)].map(card => card.uuid));
 
+  function renderCard(card) {
+    const cardStyle = [s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }];
+    const cardContent = <>
+        <Svg width="100%" height="100%" viewBox="0 0 320 202" preserveAspectRatio="none" style={StyleSheet.absoluteFill} accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>
+          <Path d="M-20 180C50 180 72 54 142 96S220 172 340 32V230H-20Z" fill="#FFFFFF" opacity="0.045" />
+          <Path d="M-20 234C86 168 142 204 202 118S286 70 350 136V230Z" fill="#051747" opacity="0.16" />
+        </Svg>
+        <View style={s.bankRow}><InstitutionLogo institution={card.financialInstitution} size={26} /><Text numberOfLines={1} style={s.bankName}>{card.financialInstitution?.name ?? 'Cartão de crédito'}</Text><Contactless /></View>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={s.cardNumber}>{`•••• •••• •••• ${formatLastFourDigits(card.lastFourDigits) || '----'}`}</Text>
+        <View style={s.cardFooter}><Text numberOfLines={1} style={s.holder}>{profile?.name ?? ''}</Text><Text style={s.credit}>Crédito</Text></View>
+    </>;
+    return <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${creditCardLabel(card)}`}
+      accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition}
+      onPress={() => chooseCard(card.uuid)} style={cardStyle}>{cardContent}</Pressable>;
+  }
+
   return <View style={s.section}>
     <View style={s.heading}>
       <Text accessibilityRole="header" style={[s.title, compactHeading && s.compactTitle]}>{title}</Text>
@@ -108,9 +134,9 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
       <Icon name="creditCard" size={28} color={colors.primary} />
       <View style={s.emptyCopy}><Text style={s.emptyTitle}>Seus cartões, em um só lugar</Text><Text style={s.caption}>Adicione um cartão para acompanhar suas faturas e limites.</Text></View>
     </View> : <>
-      <View onLayout={event => { const measured = event.nativeEvent.layout.width; if (measured > 0) { setWidth(measured); } }}
+      <View testID={scrollable ? "credit-card-stack" : undefined} onLayout={event => { const measured = event.nativeEvent.layout.width; if (measured > 0) { setWidth(measured); } }}
         style={[s.stack, { height: cardHeight + frontY }]}>
-        {cards.filter(card => visibleIds.has(card.uuid)).map(card => {
+        {scrollable ? <ScrollableCreditCardStack ref={scrollStack} cards={cards} selectedUuid={selectedId} cardHeight={cardHeight} height={cardHeight + frontY} step={reveal} renderCard={renderCard} onInteractionChange={onStackInteractionChange} /> : cards.filter(card => visibleIds.has(card.uuid)).map(card => {
           const oldRank = currentOrder.findIndex(item => item.uuid === card.uuid);
           const newRank = nextOrder.findIndex(item => item.uuid === card.uuid);
           const incoming = transition === card.uuid;
@@ -133,22 +159,8 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
             : moving && newRank >= 3 ? progress.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }) : 1;
           const zIndex = 4 - (moving && layersSwapped ? newRank : oldRank);
           const animatedStyle = { height: cardHeight, zIndex, transform, opacity };
-          const cardStyle = [s.card, { backgroundColor: getInstitutionCardColor(card.financialInstitution) }];
-          const cardContent = <>
-              <Svg width="100%" height="100%" viewBox="0 0 320 202" preserveAspectRatio="none" style={StyleSheet.absoluteFill} accessible={Platform.OS === 'web' ? undefined : false} aria-hidden={Platform.OS === 'web' || undefined}>
-                <Path d="M-20 180C50 180 72 54 142 96S220 172 340 32V230H-20Z" fill="#FFFFFF" opacity="0.045" />
-                <Path d="M-20 234C86 168 142 204 202 118S286 70 350 136V230Z" fill="#051747" opacity="0.16" />
-              </Svg>
-              <View style={s.bankRow}><InstitutionLogo institution={card.financialInstitution} size={26} /><Text numberOfLines={1} style={s.bankName}>{card.financialInstitution?.name ?? 'Cartão de crédito'}</Text><Contactless /></View>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={s.cardNumber}>{`•••• •••• •••• ${formatLastFourDigits(card.lastFourDigits) || '----'}`}</Text>
-              <View style={s.cardFooter}><Text numberOfLines={1} style={s.holder}>{profile?.name ?? ''}</Text><Text style={s.credit}>Crédito</Text></View>
-          </>;
           return <Animated.View key={card.uuid} style={[s.cardPosition, animatedStyle]}>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar cartão ${creditCardLabel(card)}`}
-              accessibilityState={{ selected: card.uuid === selectedId, disabled: !!transition }} disabled={!!transition}
-              onPress={() => chooseCard(card.uuid)} style={cardStyle}>
-              {cardContent}
-            </Pressable>
+            {renderCard(card)}
           </Animated.View>;
         })}
       </View>
@@ -161,7 +173,7 @@ export default function HomeCreditCards({ cards, profile, hidden = false, onOpen
         </ScrollView>
         <Text style={s.hint}>Toque em um cartão para selecionar</Text>
       </>}
-      <View accessibilityLiveRegion="polite" style={[s.details, cards.length === 1 && s.singleDetails]}>
+      <View testID={scrollable ? "credit-card-stack-details" : undefined} accessibilityLiveRegion="polite" style={[s.details, cards.length === 1 && s.singleDetails]}>
         <Pressable accessibilityRole={onOpenCard ? 'button' : undefined} accessibilityLabel={onOpenCard ? `Abrir detalhes de ${creditCardLabel(selected)}` : undefined} disabled={!!transition || !onOpenCard} onPress={() => onOpenCard?.(selected.uuid)} style={({ pressed }) => [s.detailsLink, pressed && s.pressed]}>
         <View style={s.detailsCopy}>
         <View style={s.detailsHeading}><Text numberOfLines={2} style={s.detailsName}>{creditCardLabel(selected)}</Text>

@@ -58,8 +58,8 @@ test.each([[' Viktor  Lucena ', 'VL'], ['Viktor', 'V'], ['', 'V']])('iniciais de
   expect(getProfileInitials(name)).toBe(expected);
 });
 
-test('perfil contém um único toggle claro/escuro e não oferece ajuda e suporte', async () => {
+test('perfil oculta o toggle enquanto o modo claro está desabilitado e não oferece ajuda e suporte', async () => {
   await act(async () => { renderer = TestRenderer.create(<ProfileScreen profile={{ name: 'Ana Martins' }} />); });
-  expect(renderer.root.findAllByType(Switch)).toHaveLength(1);
+  expect(renderer.root.findAllByType(Switch)).toHaveLength(0);
   expect(button('Ajuda e suporte')).toBeUndefined();
 });

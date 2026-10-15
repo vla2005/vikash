@@ -32,6 +32,7 @@ function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard,
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerYear, setPickerYear] = useState(period.year);
   const [hidden, setHidden] = useState(false);
+  const [stackInteracting, setStackInteracting] = useState(false);
   const reduced = useReducedMotion();
   const [hour, setHour] = useState(() => new Date().getHours());
   useEffect(() => {
@@ -55,7 +56,7 @@ function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard,
   }
 
   return <>
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
+    <ScrollView testID="dashboard-scroll" scrollEnabled={!stackInteracting} showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
       <View style={s.topRow}>
         <Text style={[s.greeting, s.balanceCopy]}>{greeting}{name ? <Text style={s.name}>, {name}</Text> : ''}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={hidden ? 'Mostrar valores' : 'Ocultar valores'}
@@ -97,7 +98,7 @@ function HomeScreen({ profile, accessToken, revision, onOpenAccount, onOpenCard,
         <PendingInvoices invoices={credit.data?.upcomingInvoices} loading={credit.loading} error={credit.error}
           onRetry={credit.retry} hidden={hidden} onOpenCard={onOpenCard} onViewAll={onViewCards} />
         <HomeAccountsAndCards accounts={data.accounts ?? []} cards={data.creditCards ?? []} profile={profile} hidden={hidden}
-          onOpenAccount={onOpenAccount} onOpenCard={onOpenCard} onViewAll={onViewCards} />
+          onOpenAccount={onOpenAccount} onOpenCard={onOpenCard} onViewAll={onViewCards} onStackInteractionChange={setStackInteracting} />
         <RecentTransactions rows={data.recentTransactions} creditRows={recentPurchases} hidden={hidden}
           onOpenTransaction={onOpenTransaction} onViewStatement={onViewStatement} onViewCards={onViewCards}
           creditLoading={credit.loading} creditError={credit.error} onRetryCredit={credit.retry} />

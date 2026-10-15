@@ -17,6 +17,7 @@ function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, c
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const [section, setSection] = useState('accounts');
+  const [stackInteracting, setStackInteracting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const refreshStarted = useRef(false);
 
@@ -48,13 +49,13 @@ function AccountsScreen({ accounts, loading, error, onRetry, onCreate, onEdit, c
       </View>
       {cardsLoading ? <CreditCardSkeleton /> : cardsError || !cards.length ? feedback(cardsError, onRetryCards, 'Tentar carregar cartões novamente', 'Seu primeiro cartão começa aqui', 'Organize suas faturas e seu limite de crédito.')
         : <>
-          <HomeCreditCards cards={cards} profile={profile} onOpenCard={onOpenCard} title="Meus cartões" compactHeading />
+          <HomeCreditCards cards={cards} profile={profile} onOpenCard={onOpenCard} title="Meus cartões" compactHeading scrollable onStackInteractionChange={setStackInteracting} />
           <View style={s.listHeading}><Text accessibilityRole="header" style={s.sectionTitle}>Todos os cartões</Text><Text style={s.caption}>{cards.length} {cards.length === 1 ? 'cartão' : 'cartões'}</Text></View>
           {cards.map(card => <CreditCardSummary key={card.uuid} card={card} onOpen={() => onOpenCard?.(card.uuid)} onInvoice={() => onOpenCard?.(card.uuid, card.currentInvoice?.uuid)} />)}
         </>}
     </GlassPanel>;
   }
-  return <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" />}>
+  return <ScrollView testID="accounts-screen-scroll" scrollEnabled={!stackInteracting} showsVerticalScrollIndicator={false} contentContainerStyle={s.content} refreshControl={<RefreshControl enabled={!stackInteracting} refreshing={refreshing} onRefresh={refresh} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" />}>
     <Text accessibilityRole="header" style={s.title}>Contas e cartões</Text><Text style={s.subtitle}>Seu dinheiro, do seu jeito.</Text>
     <GlassPanel style={s.workspace}>
       <SegmentedControl value={section} onChange={setSection} options={[{ value: 'accounts', label: 'Contas', accessibilityLabel: 'Mostrar contas' }, { value: 'cards', label: 'Cartões', accessibilityLabel: 'Mostrar cartões' }]} />

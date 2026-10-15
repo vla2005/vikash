@@ -1,3 +1,5 @@
+import ScrollableCreditCardStack from '../src/components/ScrollableCreditCardStack';
+import DockScrollView from '../src/components/silver/DockScrollView';
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Animated, StyleSheet, Text } from 'react-native';
@@ -439,4 +441,33 @@ test('seleção de Crédito permanece ao mudar o mês e recarregar os dados do d
   await act(async () => button('Mês anterior').props.onPress());
   expect(renderer.root.findByType(CategoryExpensesChart.type).props.scope).toBe('credit');
   expect(text()).toContain('Valor integral das compras no crédito feitas no mês.');
+});
+
+test('dashboard reuses the same scrollable card stack and contains its gestures without scrolling the page on selection', async () => {
+  const cards = Array.from({ length: 10 }, (_, index) => ({
+    ...dashboard.creditCards[0], uuid: `shared-card-${index}`, lastFourDigits: 4000 + index,
+  }));
+  request.mockImplementation(async url => ({
+    ok: true, status: 200,
+    json: async () => url.includes('/dashboard/credit') ? credit : { ...dashboard, creditCards: cards },
+  }));
+  await home();
+  const stack = renderer.root.findByType(HomeCreditCards);
+  expect(stack.props.scrollable).toBe(true);
+  expect(stack.findAllByType(ScrollableCreditCardStack)).toHaveLength(1);
+  expect(stack.props.onCardSelected).toBeUndefined();
+  const page = () => renderer.root.findByType(DockScrollView);
+  const region = () => renderer.root.findAllByProps({ testID: 'credit-card-stack-scroll-region' })[0];
+  expect(page().props.scrollEnabled).toBe(true);
+  await act(async () => region().props.onTouchStartCapture());
+  expect(page().props.scrollEnabled).toBe(false);
+  await act(async () => region().props.onTouchCancel());
+  await act(async () => jest.advanceTimersByTime(100));
+  expect(page().props.scrollEnabled).toBe(true);
+  await act(async () => button('Mostrar cartão Cartão final 4009').props.onPress());
+  expect(button('Selecionar cartão Cartão final 4009').props.accessibilityState.selected).toBe(true);
+  expect(page().props.scrollEnabled).toBe(true);
+  for (const card of cards) {
+    expect(button(`Selecionar cartão Cartão final ${card.lastFourDigits}`)).toBeTruthy();
+  }
 });

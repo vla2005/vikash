@@ -8,6 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { lightThemeEnabled } from '../config/appearance';
 import { categoryPalettes } from '../theme/categoryPalette';
 import { readAppearance, writeAppearance } from '../services/appearanceStorage';
 import { silverThemes } from '../theme/silver';
@@ -23,11 +24,12 @@ const ThemeContext = createContext({
 
 export function ThemeProvider({ children }) {
   const [preference, setPreferenceState] = useState('dark');
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(!lightThemeEnabled);
   const saving = useRef(false);
-  const scheme = preference;
+  const scheme = lightThemeEnabled ? preference : 'dark';
 
   useEffect(() => {
+    if (!lightThemeEnabled) return;
     let active = true;
     readAppearance()
       .then(saved => {
@@ -49,6 +51,7 @@ export function ThemeProvider({ children }) {
   }, []);
 
   const setPreference = useCallback(async next => {
+    if (!lightThemeEnabled) return;
     if (!validPreference(next)) {
       throw new Error('Escolha Claro ou Escuro.');
     }

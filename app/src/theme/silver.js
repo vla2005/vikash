@@ -1,9 +1,12 @@
 import { renderingEffects } from '../config/renderingEffects';
 import { darkColors, lightColors, themes } from './index';
 
+// Acentos compartilhados; o tema claro usa um âmbar mais profundo.
+export const amberAccent = { dark: '#E6A64C', light: '#96601E' };
+
 // A luz de todas as telas fica aqui. Troque as cores sem alterar os layouts.
 export const ambientLight = {
-  colors: ['#D8D9DB', '#B7B9BC'],
+  colors: [amberAccent.dark, '#B97432'],
   fields: [
     { x: 0.3, y: 130, radiusX: 240, radiusY: 400 },
     { x: 0.74, y: 220, radiusX: 190, radiusY: 360 },
@@ -77,7 +80,7 @@ export const voiceOrb = {
     fillBottom: '#AAB1BC',
     rim: '#E2E6EC',
     icon: '#17191D',
-    glow: '#D4DAE4',
+    glow: amberAccent.dark,
   },
 };
 
@@ -106,6 +109,8 @@ export const dock = {
   sheen: 'rgba(255,255,255,0.28)',
   text: '#E2E3E6',
   activeText: '#FFFFFF',
+  activeIcon: amberAccent.dark,
+  assistantIcon: amberAccent.dark,
   voiceText: '#F1F2F4',
   shadow: '0 6px 18px rgba(0,0,0,0.24)',
   androidShadow: '0 4px 12px rgba(0,0,0,0.40)',
@@ -145,7 +150,8 @@ const colors = {
   handle: '#727277',
   logoSurface: '#252527',
   toggleTrackOff: '#878A91',
-  toggleTrackOn: '#62656A',
+  toggleTrackOn: '#A66A22',
+  accent: amberAccent.dark,
   toggleThumb: '#FFFFFF',
 };
 
@@ -185,7 +191,8 @@ const lightPalette = {
   backdrop: 'rgba(0,0,0,0.46)',
   dialogBackdrop: 'rgba(0,0,0,0.58)',
   toggleTrackOff: '#878A91',
-  toggleTrackOn: '#44464B',
+  toggleTrackOn: amberAccent.light,
+  accent: amberAccent.light,
   toggleThumb: '#FFFFFF',
 };
 const lightEffects = {
@@ -219,7 +226,7 @@ const lightEffects = {
       fillBottom: '#111213',
       rim: '#62656A',
       icon: '#FFFFFF',
-      glow: '#55585E',
+      glow: amberAccent.light,
     },
   },
   dock: {
@@ -242,6 +249,7 @@ const lightEffects = {
     controlSheen: 'rgba(255,255,255,0.8)',
     text: '#34363B',
     activeText: '#FFFFFF',
+    assistantIcon: amberAccent.light,
     voiceText: '#111214',
     microphoneText: '#FFFFFF',
     shadow: '0 6px 18px rgba(0,0,0,0.12)',

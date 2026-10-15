@@ -7,7 +7,7 @@ import HomeCreditCards from './HomeCreditCards';
 import Icon from './Icon';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
-export default function HomeAccountsAndCards({ accounts = [], cards = [], profile, hidden, onOpenAccount, onOpenCard, onViewAll }) {
+export default function HomeAccountsAndCards({ accounts = [], cards = [], profile, hidden, onOpenAccount, onOpenCard, onViewAll, onStackInteractionChange }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   return <View style={s.section}>
@@ -24,7 +24,7 @@ export default function HomeAccountsAndCards({ accounts = [], cards = [], profil
       </View>) : <Text style={s.empty}>Adicione uma conta para acompanhar seu saldo.</Text>}
       {accounts.length > 3 && <Text style={s.note}>Até 3 contas. Acesse “Ver todos” para a lista completa.</Text>}
     </GlassPanel>
-    <HomeCreditCards cards={cards} profile={profile} hidden={hidden} onOpenCard={onOpenCard} title="Cartões de crédito" compactHeading />
+    <HomeCreditCards cards={cards} profile={profile} hidden={hidden} onOpenCard={onOpenCard} title="Cartões de crédito" compactHeading scrollable onStackInteractionChange={onStackInteractionChange} />
   </View>;
 }
 const createStyles = (colors) => StyleSheet.create({
