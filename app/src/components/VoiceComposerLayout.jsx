@@ -26,6 +26,8 @@ export default function VoiceComposerLayout({
   sending,
   value,
   inputRef,
+  inputAreaRef,
+  onFocusInput,
   onChangeText,
   onExpand,
   onExpanded,
@@ -98,7 +100,7 @@ export default function VoiceComposerLayout({
         </Box>
         <Box
           testID="voice-keyboard-shell"
-          ref={shellRef}
+          ref={shellRef || inputAreaRef}
           style={[styles.shell, shellStyle]}
         >
           <ComposerGlass>
@@ -107,7 +109,7 @@ export default function VoiceComposerLayout({
               accessibilityLabel={expanded ? 'Editar lançamento' : 'Digitar'}
               accessibilityState={{ expanded, disabled: sending }}
               disabled={sending}
-              onPress={expanded ? onExpanded : onExpand}
+              onPress={expanded ? onFocusInput || onExpanded : onExpand}
               style={({ pressed }) => [
                 styles.keyboardButton,
                 pressed && styles.pressed,

@@ -36,6 +36,33 @@ import AmbientLight from './silver/AmbientLight';
 import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
 import { voiceSceneLayout } from '../utils/voiceSceneLayout';
 
+// O frame já aplica a safe area. O KeyboardAvoidingView compensa apenas
+// a área encoberta, inclusive quando o Modal Android também redimensiona.
+function VoiceKeyboardArea({ children, style, onTouchOutside }) {
+  return (
+    <KeyboardAvoidingView
+      behavior={
+        Platform.OS === 'ios'
+          ? 'padding'
+          : Platform.OS === 'android'
+          ? 'height'
+          : undefined
+      }
+      onStartShouldSetResponderCapture={
+        Platform.OS === 'web' ? undefined : onTouchOutside
+      }
+      style={style}
+    >
+      {children}
+    </KeyboardAvoidingView>
+  );
+}
+
+const containsTarget = (node, target) =>
+  node &&
+  target &&
+  (node === target || (typeof target === 'object' && node.contains?.(target)));
+
 export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const inputTheme = useInputTheme();
   const { colors } = useTheme();
@@ -56,9 +83,12 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const session = useRef(0);
   const input = useRef(null);
   const typedInput = useRef(null);
+  const inputArea = useRef(null);
+  const pendingTypedFocus = useRef(false);
   const focusSession = useRef(null);
   focusSession.current = { visible, typing };
   const focusTyped = useCallback(() => {
+    pendingTypedFocus.current = false;
     if (
       focusSession.current?.visible &&
       focusSession.current?.typing &&
@@ -67,6 +97,29 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     ) {
       typedInput.current?.focus();
     }
+  }, []);
+  const focusAfterExpansion = useCallback(() => {
+    if (pendingTypedFocus.current) {
+      focusTyped();
+    }
+  }, [focusTyped]);
+  const dismissOutsideInput = useCallback(event => {
+    const target = event.target;
+    if (
+      !target ||
+      containsTarget(inputArea.current, target) ||
+      containsTarget(input.current, target) ||
+      containsTarget(typedInput.current, target)
+    ) {
+      return false;
+    }
+    // Observar na captura, sem ganhar o responder nem cancelar o gesto filho.
+    // Blur explícito também cobre o primeiro responder nativo do iOS.
+    pendingTypedFocus.current = false;
+    input.current?.blur();
+    typedInput.current?.blur();
+    Keyboard.dismiss();
+    return false;
   }, []);
   const review = !typing && voice.phase === 'review';
   const listening = !typing && voice.phase === 'listening';
@@ -77,6 +130,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   useEffect(() => {
     const currentSession = ++session.current;
     if (!visible) {
+      pendingTypedFocus.current = false;
       setMode('voice');
       setFeedback(null);
       setTypedText('');
@@ -96,6 +150,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     if (submitting.current) {
       return;
     }
+    pendingTypedFocus.current = false;
     voice.cancel();
     input.current?.blur();
     typedInput.current?.blur();
@@ -111,6 +166,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     typedInput.current?.blur();
     Keyboard.dismiss();
     setFeedback(null);
+    pendingTypedFocus.current = next === 'text';
     setMode(next);
   }
   function restart() {
@@ -191,9 +247,9 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     >
       <DrawerPanel fullScreen testID="voice-fullscreen" style={styles.drawer}>
         <AmbientLight />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <VoiceKeyboardArea
           style={styles.keyboard}
+          onTouchOutside={dismissOutsideInput}
         >
           <View
             style={[
@@ -279,6 +335,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                   style={styles.scroll}
                   contentContainerStyle={styles.transcriptContent}
                   keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
                   showsVerticalScrollIndicator={false}
                 >
                   {review ? (
@@ -408,6 +465,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                   style={styles.scroll}
                   contentContainerStyle={styles.transcriptContent}
                   keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
                 >
                   {!!feedback && typing && (
                     <VoiceAnalysisFeedback
@@ -426,12 +484,14 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
               sending={sending}
               value={typedText}
               inputRef={typedInput}
+              inputAreaRef={inputArea}
+              onFocusInput={focusTyped}
               onChangeText={text => {
                 setFeedback(null);
                 setTypedText(text);
               }}
               onExpand={() => changeMode('text')}
-              onExpanded={focusTyped}
+              onExpanded={focusAfterExpansion}
               onConfirm={confirm}
               confirmLabel={reviewLabel}
               caption={
@@ -496,7 +556,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
               }
             />
           </View>
-        </KeyboardAvoidingView>
+        </VoiceKeyboardArea>
       </DrawerPanel>
     </DrawerModal>
   );

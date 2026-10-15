@@ -208,13 +208,16 @@ test('greeting follows system time without repeating API requests', async () => 
   expect(request).toHaveBeenCalledTimes(calls);
 });
 
-test('donut groups additional categories without dropping totals and expands all category identities', async () => {
+test('donut preserva todas as categorias e pagina a legenda acima de cinco', async () => {
   const categories = Array.from({ length: 6 }, (_, index) => ({ customCategoryUuid: String(index), name: 'Categoria ' + index, color: 'sage', total: (6 - index) * 100 }));
   await act(async () => { renderer = TestRenderer.create(<CategoryExpensesChart categories={categories} />); });
   expect(text()).toContain('2.100,00');
   expect(text()).not.toContain('Categoria 5');
-  await act(async () => button('Ver todas as categorias').props.onPress());
-  expect(text()).toContain('Categoria 5');
+  expect(renderer.root.findAllByProps({ accessibilityLabel: 'Ver todas as categorias' })).toHaveLength(0);
+  await act(async () => renderer.root.findAllByProps({ testID: 'category-legend' })[0].props.onLayout({ nativeEvent: { layout: { width: 350 } } }));
+  await act(async () => button('Página 2 de 2 das categorias').props.onPress());
+  expect(button('Página 2 de 2 das categorias').props.accessibilityState.selected).toBe(true);
+  expect(button('Categoria 5: 4,8%, R$\u00a0100,00').props.disabled).toBe(false);
   expect(text()).toContain('4,8%');
 });
 

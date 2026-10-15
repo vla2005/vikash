@@ -40,6 +40,9 @@ interface IPieChartContext {
 interface IPieChartRoot {
   children?: ReactNode;
   readonly data: readonly IPieChartPoint[];
+  readonly trackColor?: string;
+  readonly selectedIndex?: number;
+  readonly onSelectionChange?: (index: number) => void;
   readonly radius?: number;
   readonly innerRadius?: number;
   readonly startAngle?: number;
