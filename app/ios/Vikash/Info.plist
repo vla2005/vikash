@@ -45,6 +45,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Permita que o Vikash use o microfone para transcrever seus lançamentos.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Permita que o Vikash transforme sua fala em texto para você revisar.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
 	<key>UILaunchStoryboardName</key>
