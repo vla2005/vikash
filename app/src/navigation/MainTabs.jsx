@@ -1,10 +1,12 @@
+import { createAssistantStartupTrace } from '../utils/assistantStartup';
+import { assistantDockAnchor, measureAssistantNode } from '../utils/assistantMotion';
 import runSceneUpdate from '../utils/runSceneUpdate';
 import { ThemeVariant, useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import AmbientLight from '../components/silver/AmbientLight';
 import { header } from '../theme/silver';
 import DockProvider from '../components/silver/DockProvider';
 import DockBackdrop from '../components/silver/DockBackdrop';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
   Platform,
@@ -39,6 +41,7 @@ import BottomNavigator from '../components/BottomNavigator';
 import FloatingAppHeader from '../components/silver/FloatingAppHeader';
 import ProfileSwitcherDrawer from '../components/ProfileSwitcherDrawer';
 import VoiceDrawer from '../components/VoiceDrawer';
+import AssistantExperience from '../components/assistant/AssistantExperience';
 import ScreenTransition from '../components/ScreenTransition';
 import { createTransaction } from '../services/transactions';
 
@@ -47,6 +50,27 @@ export default function MainTabs({ navigation }) {
   const { colors, scheme } = useTheme();
   const [selected, setSelected] = useState('Home');
   const [voiceVisible, setVoiceVisible] = useState(false);
+  const [startupTrace,setStartupTrace]=useState(null);
+  const [assistantVisible, setAssistantVisible] = useState(false);
+  const appFrame = useRef(null), assistantButton = useRef(null);
+  const measureAssistantDock = useCallback(async () => {
+    const [rect,viewport] = await Promise.all([measureAssistantNode(assistantButton.current),measureAssistantNode(appFrame.current)]);
+    return assistantDockAnchor(rect,viewport);
+  },[]);
+  const [assistantCovered,setAssistantCovered] = useState(false);
+  const coverAssistantDock = useCallback(() => setAssistantCovered(true),[]);
+  const closeAssistant = useCallback(() => {setAssistantVisible(false);setAssistantCovered(false);},[]);
+  const [assistantOrigin, setAssistantOrigin] = useState(null);
+  const openAssistant = useCallback(async node => {
+    const trace=createAssistantStartupTrace(Platform.OS);
+    assistantButton.current=node;
+    const anchor=await measureAssistantDock();
+    trace?.mark('dock-measured');
+    setStartupTrace(trace);
+    setAssistantCovered(false);
+    setAssistantOrigin(anchor);
+    setAssistantVisible(true);
+  }, [measureAssistantDock]);
   const [profileVisible, setProfileVisible] = useState(false);
   const [profilesVisible, setProfilesVisible] = useState(false);
   const [profileForm, setProfileForm] = useState(null);
@@ -527,6 +551,8 @@ export default function MainTabs({ navigation }) {
         bottomInset={insets.bottom}
         headerHeight={showAppHeader ? header.height : 0}
       >
+        <AssistantExperience captureScope={`${onboarding?.activeProfileId || "none"}:${scene.key}:${scheme}`} key={onboarding?.activeProfileId || 'no-profile'} visible={assistantVisible} dockOrigin={assistantOrigin} startupTrace={startupTrace} appFrameRef={appFrame} getDockOrigin={measureAssistantDock} onDockCovered={coverAssistantDock} onClose={closeAssistant}
+          profileId={onboarding?.activeProfileId} accessToken={onboarding?.session?.accessToken}>
         <View
           style={[
             styles.background,
@@ -538,10 +564,10 @@ export default function MainTabs({ navigation }) {
             backgroundColor={colors.background}
           />
           <View style={[styles.canvas, { paddingTop: insets.top }]}>
-            {Platform.OS === 'android' && <AmbientLight enabled={!voiceVisible} />}
+            {Platform.OS === 'android' && <AmbientLight enabled={!voiceVisible && !assistantVisible} />}
             <DockBackdrop style={styles.backdrop}>
               {/* No Android, a luz do topo não precisa entrar na amostra do dock. */}
-              {Platform.OS !== 'android' && <AmbientLight enabled={!voiceVisible} />}
+              {Platform.OS !== 'android' && <AmbientLight enabled={!voiceVisible && !assistantVisible} />}
               <ScreenTransition
                 sceneKey={scene.key}
                 depth={scene.depth}
@@ -620,12 +646,8 @@ export default function MainTabs({ navigation }) {
               <BottomNavigator
                 selected={selected}
                 onSelect={changeTab}
-                onAssistant={() =>
-                  showToast({
-                    type: 'info',
-                    message: 'Essa função estará disponível em breve.',
-                  })
-                }
+                onAssistant={openAssistant}
+                assistantOpen={assistantCovered}
                 onMicrophone={() => setVoiceVisible(true)}
                 microphoneOpen={voiceVisible}
               />
@@ -656,6 +678,7 @@ export default function MainTabs({ navigation }) {
             }}
           />
         </View>
+        </AssistantExperience>
       </DockProvider>
     </ThemeVariant>
   );

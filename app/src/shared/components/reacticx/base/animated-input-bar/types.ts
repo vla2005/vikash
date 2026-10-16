@@ -7,6 +7,7 @@ import type {
 export interface IAnimatedInput extends Omit<TextInputProps, 'placeholder'> {
   placeholders: string[];
   active?: boolean;
+  animatePlaceholder?: boolean;
   animationInterval?: number;
   containerStyle?: StyleProp<ViewStyle>;
   inputWrapperStyle?: StyleProp<ViewStyle>;

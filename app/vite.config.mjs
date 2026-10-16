@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
   define: {
     global: 'globalThis',
     __DEV__: JSON.stringify(mode !== 'production'),
+    'process.env.EXPO_PUBLIC_ASSISTANT_PATH': JSON.stringify(env.VITE_ASSISTANT_PATH || env.EXPO_PUBLIC_ASSISTANT_PATH || ''),
     'process.env.EXPO_PUBLIC_API_URL': JSON.stringify(env.VITE_API_URL || env.EXPO_PUBLIC_API_URL || ''),
   },
   server: { port: 5173, strictPort: true },

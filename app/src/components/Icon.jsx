@@ -6,6 +6,11 @@ import Svg, { Path, Circle, Rect, Line, Polyline } from 'react-native-svg';
 
 // Drawing factories create only the selected SVG, without allocating the full catalog.
 const shapes = {
+    camera: ({ props }) => <><Path d="M3 7h4l2-3h6l2 3h4v14H3z" {...props} /><Circle cx="12" cy="13" r="4" {...props} /></>,
+    image: ({ props }) => <><Rect x="3" y="3" width="18" height="18" rx="3" {...props} /><Circle cx="8" cy="8" r="1.5" {...props} /><Path d="M3 17l5-5 4 4 4-6 5 7" {...props} /></>,
+    history: ({ props }) => <><Path d="M3 11a9 9 0 119 10M3 4v7h7M12 6v6l-4 3" {...props} /></>,
+    arrowUp: ({ props }) => <Path d="M12 20V4M6 10l6-6 6 6" {...props} />,
+    stop: ({ color }) => <Rect x="6" y="6" width="12" height="12" rx="2" fill={color} />,
     keyboard: ({ props }) => <><Rect x="2" y="5" width="20" height="14" rx="3" {...props} /><Path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10" {...props} /></>,
     sparkles: ({ props }) => <><Path d="M10 6.5c.9 4.8 2.7 6.6 7.5 7.5-4.8.9-6.6 2.7-7.5 7.5-.9-4.8-2.7-6.6-7.5-7.5 4.8-.9 6.6-2.7 7.5-7.5Z" {...props} /><Path d="M17.5 4.5v6M14.5 7.5h6M4 19v3M2.5 20.5h3" {...props} /></>,
     sun: ({ props }) => <><Circle cx="12" cy="12" r="4" {...props} /><Path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5" {...props} /></>,

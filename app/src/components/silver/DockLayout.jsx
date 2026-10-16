@@ -1,5 +1,7 @@
+import {markAssistantCaptureTrigger} from '../../services/assistantCaptureCache';
 import { pointerEventsStyles } from '../../theme/interaction';
-import React from 'react';
+import React, { useRef } from 'react';
+import DockAssistantContent, { assistantDockContentStyle } from './DockAssistantContent';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../Icon';
@@ -79,7 +81,9 @@ export default function DockLayout({
   onMicrophone,
   onAssistant,
   microphoneOpen,
+  assistantOpen = false,
 }) {
+  const assistantButton = useRef(null);
   const { dock } = useThemeTokens();
   const s = useThemeStyles(createStyles);
   const insets = useSafeAreaInsets();
@@ -98,23 +102,17 @@ export default function DockLayout({
         <GlassMaterial navigation lens style={s.fill} />
       </Box>
       {dockTabs.map(renderTab)}
-      <Box style={[s.voice, voiceStyle]}>
+      <Box ref={assistantButton} collapsable={false} style={[s.voice, voiceStyle, assistantOpen && s.assistantHidden]}>
         <GlassMaterial navigation blurred={Platform.OS !== 'android'} style={s.fill}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Pergunte ao ViKash"
-            accessibilityHint="Disponível em breve"
-            onPress={onAssistant}
-            style={({ pressed }) => [s.voiceButton, pressed && s.pressed]}
+            accessibilityHint="Abre o assistente para perguntas, imagens e documentos"
+            onTouchStart={Platform.OS === 'android' ? markAssistantCaptureTrigger : undefined}
+            onPress={() => onAssistant?.(assistantButton.current)}
+            style={({ pressed }) => [assistantDockContentStyle, pressed && s.pressed]}
           >
-            <Icon name="sparkles" size={20} color={dock.assistantIcon} />
-            <Text
-              numberOfLines={1}
-              maxFontSizeMultiplier={1.3}
-              style={s.voiceLabel}
-            >
-              Pergunte ao ViKash
-            </Text>
+            <DockAssistantContent />
           </Pressable>
         </GlassMaterial>
       </Box>
@@ -176,6 +174,7 @@ const createStyles = (_colors, _type, { dock }) =>
     },
     smallLabel: { fontSize: 10 },
     activeLabel: { color: dock.activeText, fontFamily: fontFamilyBold },
+    assistantHidden: { opacity:0, pointerEvents:'none' },
     voice: {
       position: 'absolute',
       left: 0,
@@ -183,21 +182,6 @@ const createStyles = (_colors, _type, { dock }) =>
       height: dock.voiceHeight,
       borderRadius: 40,
       boxShadow: Platform.OS === 'android' ? dock.androidShadow : dock.shadow,
-    },
-    voiceButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 10,
-      gap: 9,
-      minHeight: 44,
-    },
-    voiceLabel: {
-      fontFamily: fontFamilyMedium,
-      color: dock.voiceText,
-      fontSize: 13,
-      lineHeight: 18,
     },
     microphone: {
       position: 'absolute',

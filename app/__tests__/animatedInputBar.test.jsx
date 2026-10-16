@@ -115,3 +115,18 @@ test('placeholders giram só enquanto o input está vazio, sem foco, ativo e em 
   expect(rotations()).toBe(beforeTyping);
   expect(characters()).toBe('');
 });
+
+test('startup mode uses one text node, retains the placeholder and restores characters after focus', async () => {
+  const textNodes=()=>renderer.root.findAll(node=>node.type==='Text' && typeof node.props.children==='string');
+  await act(async()=>{renderer=TestRenderer.create(<AnimatedInputBar placeholders={placeholders} value="" animatePlaceholder={false}/>);});
+  expect(characters()).toBe(placeholders[0]);
+  expect(textNodes()).toHaveLength(1);
+  await act(async()=>jest.advanceTimersByTime(5000));
+  expect(characters()).toBe(placeholders[0]);
+  await act(async()=>propsOfInput().onFocus({}));
+  await act(async()=>renderer.update(<AnimatedInputBar placeholders={placeholders} value="" animatePlaceholder/>));
+  expect(characters()).toBe('');
+  expect(propsOfInput().placeholder).toBe(placeholders[0]);
+  await act(async()=>propsOfInput().onBlur({}));
+  expect(textNodes()).toHaveLength(placeholders[0].length);
+});

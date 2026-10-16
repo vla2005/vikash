@@ -1,9 +1,11 @@
+import {invalidateAssistantCapture,trackAssistantResponse} from './assistantCaptureCache';
 import { API_BASE_URL } from '../config/api';
 
 let tokenResolver;
 let profileGeneration = 0;
 const pendingRequests = new Set();
 export function cancelAuthenticatedRequests() {
+  invalidateAssistantCapture();
   profileGeneration += 1;
   for (const controller of pendingRequests) { controller.abort(); }
   pendingRequests.clear();
@@ -44,7 +46,7 @@ export async function authenticatedFetch(path, options = {}, accessToken) {
       ensureCurrent();
       if (response.status === 401) { await tokenResolver(token, 'invalidate'); }
     }
-    return response;
+    return trackAssistantResponse(response);
   } finally {
     pendingRequests.delete(controller);
     options.signal?.removeEventListener('abort', abort);

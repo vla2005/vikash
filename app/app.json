@@ -16,6 +16,15 @@
     "plugins": [
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita que o ViKash selecione imagens para anexar às suas perguntas.",
+          "cameraPermission": "Permita que o ViKash fotografe documentos para anexar às suas perguntas.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-document-picker",
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "Permita que o Vikash use o microfone para transcrever seus lançamentos.",

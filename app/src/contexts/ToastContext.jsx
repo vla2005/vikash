@@ -1,3 +1,4 @@
+import useAssistantCaptureInvalidation from '../hooks/useAssistantCaptureInvalidation';
 import { pointerEventsStyles } from '../theme/interaction';
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -8,6 +9,7 @@ export const ToastContext = createContext(null);
 
 export function ToastProvider({ children }) {
   const [toast, setToast] = useState(null);
+  useAssistantCaptureInvalidation();
   const timer = useRef(null);
   const sequence = useRef(0);
   const insets = useSafeAreaInsets();

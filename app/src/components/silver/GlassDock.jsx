@@ -76,6 +76,7 @@ export default function GlassDock({
   onSelect,
   onMicrophone,
   onAssistant,
+  assistantOpen,
   microphoneOpen,
 }) {
   const windowWidth = useWindowDimensions().width;
@@ -135,6 +136,7 @@ export default function GlassDock({
       onLayout={event => setWidth(event.nativeEvent.layout.width)}
       onMicrophone={onMicrophone}
       onAssistant={onAssistant}
+      assistantOpen={assistantOpen}
       microphoneOpen={microphoneOpen}
       renderTab={(item, tabIndex) => (
         <Tab

@@ -1,13 +1,14 @@
 // Adaptado do Animated Input Bar do Reacticx: valor controlado, pausa em
 // segundo plano e placeholders sem desfoque ou trabalho JS por frame.
 import React, { useEffect, useState } from 'react';
-import { AppState, StyleSheet, TextInput, View } from 'react-native';
+import { AppState, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export function InputBar({
   Character,
   inputRef,
   placeholders,
   active = true,
+  animatePlaceholder = true,
   animationInterval = 4200,
   value,
   onChangeText,
@@ -51,7 +52,7 @@ export function InputBar({
     };
   }, []);
   useEffect(() => {
-    if (!rotating || placeholders.length < 2) {
+    if (!rotating || !animatePlaceholder || placeholders.length < 2) {
       return;
     }
     const timer = setTimeout(
@@ -59,7 +60,7 @@ export function InputBar({
       animationInterval,
     );
     return () => clearTimeout(timer);
-  }, [rotating, index, placeholders.length, animationInterval]);
+  }, [rotating, animatePlaceholder, index, placeholders.length, animationInterval]);
   return (
     <View style={[styles.wrapper, containerStyle]}>
       <View style={[styles.inputWrapper, inputWrapperStyle]}>
@@ -74,7 +75,7 @@ export function InputBar({
             !rotating && styles.hidden,
           ]}
         >
-          {rotating &&
+          {rotating && (animatePlaceholder ?
             Array.from(placeholder).map((char, characterIndex) => (
               <Character
                 key={`${placeholder}-${characterIndex}`}
@@ -85,7 +86,7 @@ export function InputBar({
                 delayIncrement={characterDelayIncrement}
                 style={[styles.character, placeholderStyle]}
               />
-            ))}
+            )) : <Text style={[styles.character,placeholderStyle]}>{placeholder}</Text>)}
         </View>
         <TextInput
           {...props}

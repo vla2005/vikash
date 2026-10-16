@@ -1,3 +1,6 @@
+import useAssistantCaptureInvalidation from '../../hooks/useAssistantCaptureInvalidation';
+import {invalidateAssistantCapture} from '../../services/assistantCaptureCache';
+import {Platform} from 'react-native';
 import React, { forwardRef } from 'react';
 import Animated, {
   useAnimatedScrollHandler,
@@ -12,6 +15,7 @@ export default forwardRef(function DockScrollView(
   { onReachEnd, contentContainerStyle, ...props },
   ref,
 ) {
+  useAssistantCaptureInvalidation();
   const context = useDock();
   const dockPadding = useDockPadding(contentContainerStyle);
   const target = context?.target;
@@ -51,6 +55,8 @@ export default forwardRef(function DockScrollView(
     <Animated.ScrollView
       {...props}
       ref={ref}
+      onScrollBeginDrag={Platform.OS === 'android' ? event => {invalidateAssistantCapture();props.onScrollBeginDrag?.(event);} : props.onScrollBeginDrag}
+      onMomentumScrollBegin={Platform.OS === 'android' ? event => {invalidateAssistantCapture();props.onMomentumScrollBegin?.(event);} : props.onMomentumScrollBegin}
       onScroll={scroll}
       scrollEventThrottle={16}
       contentContainerStyle={[contentContainerStyle, dockPadding]}

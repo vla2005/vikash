@@ -2,6 +2,7 @@ import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { Platform, RefreshControl, Text } from 'react-native';
 import DockBackdrop from '../src/components/silver/DockBackdrop';
+import AssistantExperience from '../src/components/assistant/AssistantExperience';
 import MainTabs from '../src/navigation/MainTabs';
 jest.mock('../src/hooks/useCreditDashboard', () => () => ({ data: null, loading: false, error: '', retry: jest.fn() }));
 jest.mock('../src/components/DashboardInsights', () => 'DashboardInsights');
@@ -47,15 +48,18 @@ jest.mock('../src/services/speechRecognition', () => ({ createSpeechRecognition:
 
 let renderer;
 
-test('assistente informa disponibilidade futura sem abrir a captura; microfone continua independente', async () => {
+test('assistente abre entrada de pergunta sem abrir a captura; microfone continua independente', async () => {
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Pergunte ao ViKash').props.onPress());
-  expect(useToast().showToast).toHaveBeenCalledWith({ type: 'info', message: 'Essa função estará disponível em breve.' });
+  await act(async () => renderer.root.findByProps({ testID:'assistant-presentation' }).props.onShow());
+  expect(renderer.root.findAllByProps({ testID: 'assistant-overlay' }).length).toBeGreaterThan(0);
+  expect(useToast().showToast).not.toHaveBeenCalled();
+  await act(async () => button('Fechar assistente').props.onPress());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(false);
   expect(createTransaction).not.toHaveBeenCalled();
   await act(async () => button('Registrar por voz').props.onPress());
   expect(renderer.root.findByType(VoiceDrawer).props.visible).toBe(true);
-  expect(useToast().showToast).toHaveBeenCalledTimes(1);
+  expect(useToast().showToast).not.toHaveBeenCalled();
 });
 
 test('detalhes abrem distribuição e recarregam cartão após PATCH bem sucedido', async () => {
@@ -670,4 +674,14 @@ test('abrir e fechar drawers não recalcula o dashboard que continua atrás dele
   expect(dashboard).toHaveBeenCalledTimes(renders);
   await act(async () => button('Fechar microfone').props.onPress());
   expect(dashboard).toHaveBeenCalledTimes(renders);
+});
+
+test('o dock só é ocultado quando a superfície nativa já assumiu o botão', async () => {
+  await act(async()=>{renderer=TestRenderer.create(<MainTabs/>);});
+  await act(async()=>button('Pergunte ao ViKash').props.onPress());
+  expect(renderer.root.findByType(BottomNavigator).props.assistantOpen).toBe(false);
+  await act(async()=>renderer.root.findByType(AssistantExperience).props.onDockCovered());
+  expect(renderer.root.findByType(BottomNavigator).props.assistantOpen).toBe(true);
+  await act(async()=>renderer.root.findByType(AssistantExperience).props.onClose());
+  expect(renderer.root.findByType(BottomNavigator).props.assistantOpen).toBe(false);
 });

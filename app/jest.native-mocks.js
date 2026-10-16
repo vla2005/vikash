@@ -83,3 +83,20 @@ jest.mock('@shopify/react-native-skia', () => ({
   Canvas: require('react-native').View,
   Path: require('react-native').View,
 }));
+
+// Seletores e arquivos exigem o SO; os testes do assistente simulam suas fronteiras.
+jest.mock('expo-image-picker', () => ({
+  requestCameraPermissionsAsync: jest.fn(async () => ({ granted:true })),
+  launchCameraAsync: jest.fn(async () => ({ canceled:true })),
+  launchImageLibraryAsync: jest.fn(async () => ({ canceled:true })),
+}));
+jest.mock('expo-document-picker', () => ({ getDocumentAsync:jest.fn(async () => ({ canceled:true })) }));
+jest.mock('expo-file-system', () => ({
+  File: class {}, Directory: class {}, Paths:{ document:'file://documents' },
+}));
+jest.mock('./src/components/assistant/AssistantIntelligence', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return function AssistantIntelligenceMock({ children, renderOverlay }) { return React.createElement(View, null, children, renderOverlay?.(null)); };
+});
+jest.mock('./src/config/assistantEndpoint', () => ({ assistantEndpoint:'' }));
