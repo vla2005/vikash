@@ -43,6 +43,8 @@ export default function VoiceComposerLayout({
   microphoneStyle,
   sideControlsStyle,
   stageStyle,
+  footerStyle,
+  captionsStyle,
   editorStyle,
   sendStyle,
   voiceCaptionStyle,
@@ -54,7 +56,7 @@ export default function VoiceComposerLayout({
   const inputTheme = useInputTheme();
   const inputSize = { height: value ? metrics.textHeight : 24 };
   return (
-    <View style={styles.footer}>
+    <Box style={[styles.footer, footerStyle]}>
       <Box style={[styles.stage, stageStyle]} onLayout={metrics.onLayout}>
         <Box
           testID="voice-microphone-controls"
@@ -192,7 +194,7 @@ export default function VoiceComposerLayout({
           </ComposerGlass>
         </Box>
       </Box>
-      <View style={styles.captions}>
+      <Box style={[styles.captions, captionsStyle]}>
         <Box
           style={[
             styles.captionLayer,
@@ -217,8 +219,8 @@ export default function VoiceComposerLayout({
             {sending ? 'Analisando…' : ''}
           </Text>
         </Box>
-      </View>
-    </View>
+      </Box>
+    </Box>
   );
 }
 const createStyles = colors =>

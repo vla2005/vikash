@@ -47,7 +47,11 @@ float3 rotateSurface(float3 n, float c, float s) {
 
 half4 main(float2 position) {
   float2 q = (position * 2.0 / size - 1.0);
-  float halo = haloOpacity * pow(max(0.0, 1.0 - length(q) / 0.96), 2.0);
+  float q2 = dot(q, q);
+  if (q2 >= 0.9216) {
+    return half4(0.0);
+  }
+  float halo = haloOpacity * pow(max(0.0, 1.0 - sqrt(q2) / 0.96), 2.0);
   float theta = atan(q.y, q.x);
   float bulge = 1.0 + deformation * (
     0.48 * sin(theta * 3.0 + phase) +

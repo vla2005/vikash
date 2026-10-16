@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -17,15 +17,30 @@ const config = {
   reduceMotion: ReduceMotion.Never,
 };
 export default function VoiceComposer(props) {
-  const { expanded, visible, onExpanded } = props;
+  const { expanded, visible, onExpanded, keyboardDocked = false } = props;
   const metrics = useComposerMetrics(expanded, props.value);
   const progress = useSharedValue(expanded ? 1 : 0);
-  const height = useSharedValue(expanded ? metrics.expandedHeight : 44);
+  const targetHeight = expanded ? metrics.expandedHeight : 44;
+  const height = useSharedValue(targetHeight);
+  const docked = useSharedValue(keyboardDocked ? 1 : 0);
+  useEffect(() => {
+    docked.set(withTiming(keyboardDocked ? 1 : 0, { ...config, duration: 250 }));
+    return () => cancelAnimation(docked);
+  }, [docked, keyboardDocked]);
+  const footerStyle = useAnimatedStyle(() => ({ paddingBottom: 6 * (1 - docked.get()) }));
+  const captionsStyle = useAnimatedStyle(() => ({ height: 36 * (1 - docked.get()), marginTop: 4 * (1 - docked.get()), opacity: 1 - docked.get() }));
+  const prevExpanded = useRef(expanded);
+  const prevHeight = useRef(targetHeight);
   useEffect(() => {
     if (!visible) {
       cancelAnimation(progress);
-      return;
+      prevExpanded.current = expanded;
+      return undefined;
     }
+    if (prevExpanded.current === expanded) {
+      return undefined;
+    }
+    prevExpanded.current = expanded;
     progress.set(
       withTiming(expanded ? 1 : 0, config, finished => {
         if (finished && expanded && onExpanded) {
@@ -36,9 +51,13 @@ export default function VoiceComposer(props) {
     return () => cancelAnimation(progress);
   }, [expanded, visible, onExpanded, progress]);
   useEffect(() => {
-    height.set(withTiming(expanded ? metrics.expandedHeight : 44, config));
+    if (prevHeight.current === targetHeight) {
+      return undefined;
+    }
+    prevHeight.current = targetHeight;
+    height.set(withTiming(targetHeight, config));
     return () => cancelAnimation(height);
-  }, [expanded, metrics.expandedHeight, height]);
+  }, [targetHeight, height]);
   const shellStyle = useAnimatedStyle(() => {
     const p = progress.get();
     const width = 44 + (metrics.width - 44) * p;
@@ -61,7 +80,7 @@ export default function VoiceComposer(props) {
   }));
   const stageStyle = useAnimatedStyle(() => ({
     height: Math.max(
-      voiceOrb.composer.stageHeight,
+      voiceOrb.composer.stageHeight * (1 - docked.get()),
       (height.get() + 84) * progress.get(),
     ),
   }));
@@ -88,6 +107,8 @@ export default function VoiceComposer(props) {
       microphoneStyle={microphoneStyle}
       sideControlsStyle={sideControlsStyle}
       stageStyle={stageStyle}
+      footerStyle={footerStyle}
+      captionsStyle={captionsStyle}
       editorStyle={editorStyle}
       sendStyle={sendStyle}
       voiceCaptionStyle={voiceCaptionStyle}

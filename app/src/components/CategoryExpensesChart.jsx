@@ -1,8 +1,8 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { pointerEventsStyles } from '../theme/interaction';
 import GlassPanel from './silver/GlassPanel';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import SegmentedControl from './SegmentedControl';
 import { ListSkeleton } from './Skeleton';
 import { hiddenAmount } from '../utils/dashboard';
@@ -10,14 +10,17 @@ import { formatCurrency } from '../utils/money';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 import Donut from './CategoryDonut';
 import CategoryExpensesLegend from './CategoryExpensesLegend';
+
 const keyFor = category =>
   category.customCategoryUuid
     ? `custom:${category.customCategoryUuid}`
     : category.defaultCategoryId != null
     ? `default:${category.defaultCategoryId}`
     : 'uncategorized';
+
 const percentage = fraction =>
   `${(fraction * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+
 function CategoryExpensesChart({
   categories = [],
   creditCategories = [],
@@ -69,9 +72,11 @@ function CategoryExpensesChart({
       ? slices.findIndex(slice => slice.key === selection.key)
       : -1;
   const selected = slices[selectedIndex];
+
   useEffect(() => {
     setSelection(null);
   }, [scope, periodLabel, hidden]);
+
   useEffect(() => {
     setSelection(previous =>
       previous &&
@@ -80,6 +85,7 @@ function CategoryExpensesChart({
         : previous,
     );
   }, [slices, loading, error]);
+
   const select = useCallback(
     index => {
       if (hidden) {
@@ -99,13 +105,18 @@ function CategoryExpensesChart({
     },
     [hidden, slices, scope, periodLabel],
   );
+
   const money = value => (hidden ? hiddenAmount : formatCurrency(value));
+
   return (
     <GlassPanel style={s.card}>
       <View style={s.heading}>
-        <Text accessibilityRole="header" style={s.title}>
-          Gastos do mês
-        </Text>
+        <View style={s.titleGroup}>
+          <Text style={s.eyebrow}>DISTRIBUIÇÃO • CATEGORIAS</Text>
+          <Text accessibilityRole="header" style={s.title}>
+            Gastos do mês
+          </Text>
+        </View>
         {!!onChangeScope && (
           <SegmentedControl
             style={s.tabs}
@@ -232,29 +243,40 @@ function CategoryExpensesChart({
     </GlassPanel>
   );
 }
+
 const createStyles = colors =>
   StyleSheet.create({
     card: {
-      marginTop: 24,
+      marginTop: 20,
       backgroundColor: colors.surface,
       borderRadius: 24,
-      padding: 18,
+      padding: 20,
     },
     heading: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       gap: 10,
       flexWrap: 'wrap',
     },
-    title: {
+    titleGroup: {
       flexGrow: 1,
+      gap: 2,
+    },
+    eyebrow: {
+      fontFamily: fontFamilyBold,
+      fontSize: 10,
+      letterSpacing: 1.1,
+      color: colors.primary,
+    },
+    title: {
       fontFamily: fontFamilyBold,
       fontWeight: '700',
       fontSize: 18,
-      lineHeight: 26,
+      lineHeight: 24,
       color: colors.text,
     },
-    tabs: { width: 150 },
+    tabs: { width: 162 },
     subtitle: {
       fontFamily,
       fontSize: 13,
@@ -262,13 +284,21 @@ const createStyles = colors =>
       color: colors.secondary,
       marginTop: 3,
     },
-    metric: { marginTop: 12, minHeight: 68 },
+    metric: {
+      marginTop: 14,
+      minHeight: 68,
+      padding: 14,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
     total: {
       fontFamily: fontFamilyBold,
       fontWeight: '700',
       fontSize: 32,
-      lineHeight: 42,
-      letterSpacing: -0.7,
+      lineHeight: 40,
+      letterSpacing: -0.8,
       fontVariant: ['tabular-nums'],
       color: colors.text,
     },
@@ -277,7 +307,7 @@ const createStyles = colors =>
       maxWidth: 280,
       aspectRatio: 1,
       alignSelf: 'center',
-      marginTop: 8,
+      marginTop: 12,
       marginBottom: 18,
     },
     center: {
@@ -324,4 +354,5 @@ const createStyles = colors =>
     linkButton: { minHeight: 44, justifyContent: 'center', marginBottom: 8 },
     link: { fontFamily: fontFamilyMedium, fontSize: 13, color: colors.primary },
   });
+
 export default React.memo(CategoryExpensesChart);

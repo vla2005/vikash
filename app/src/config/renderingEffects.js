@@ -1,12 +1,15 @@
 import { Platform } from 'react-native';
 
 // iPhone usa blur/Liquid Glass; web usa blur CSS equivalente.
-// Android mantém o material sem desfoque para preservar a fluidez.
+// Android mantém superfícies sólidas de alto contraste sem transparência sobreposta
+// para eliminar overdraw na GPU e garantir 60-120 FPS constantes na rolagem.
 export const renderingEffects = {
   backgroundBlur: Platform.OS === 'ios' || Platform.OS === 'web',
-  // Teste temporário no Android: reflexos dos cards desativados.
   cardReflections: Platform.OS !== 'android',
-  cardShadows: true,
+  cardShadows: Platform.OS !== 'android',
   ambientLight: true,
-  cardTransparency: true,
+  ambientMotion: Platform.OS !== 'android',
+  cardTransparency: Platform.OS !== 'android',
+  dockBlur: Platform.OS === 'ios' || Platform.OS === 'web',
+  edgeBlur: Platform.OS === 'ios' || Platform.OS === 'web',
 };

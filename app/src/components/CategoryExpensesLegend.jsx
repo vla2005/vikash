@@ -16,6 +16,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { AnimatedProgressBar } from './motion/AnimatedPrimitives';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 import { hiddenAmount } from '../utils/dashboard';
@@ -25,7 +26,6 @@ const PAGE_SIZE = 5;
 const percentage = fraction =>
   `${(fraction * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
 
-// No celular, React atualiza somente no fim do gesto. A rolagem fica no sistema.
 function CategoryExpensesLegend({ slices, selectedIndex, onSelect, hidden }) {
   const { scheme } = useTheme();
   const s = useThemeStyles(createStyles);
@@ -43,10 +43,9 @@ function CategoryExpensesLegend({ slices, selectedIndex, onSelect, hidden }) {
     return result;
   }, [slices]);
   const paged = pages.length > 1;
-  // Reserva duas linhas para nomes longos, inclusive na última página incompleta.
   const rowHeight = Math.max(
-    52,
-    Math.ceil(40 * fontScale + 24 + StyleSheet.hairlineWidth),
+    58,
+    Math.ceil(44 * fontScale + 24 + StyleSheet.hairlineWidth),
   );
   const showPage = useCallback(
     (index, animated = true) => {
@@ -61,9 +60,9 @@ function CategoryExpensesLegend({ slices, selectedIndex, onSelect, hidden }) {
   );
 
   useLayoutEffect(() => {
-    // Rotação/redimensionamento preserva a página e corrige seu alinhamento.
     showPage(currentPage.current, false);
   }, [showPage]);
+
   useEffect(() => {
     if (lastSelection.current === selectedIndex) {
       return;
@@ -72,7 +71,6 @@ function CategoryExpensesLegend({ slices, selectedIndex, onSelect, hidden }) {
     if (selectedIndex >= 0) {
       showPage(Math.floor(selectedIndex / PAGE_SIZE));
     }
-    // Trocar a página manualmente não desfaz nem reposiciona uma seleção anterior.
   }, [selectedIndex, showPage]);
 
   const onLayout = useCallback(event => {
@@ -81,11 +79,11 @@ function CategoryExpensesLegend({ slices, selectedIndex, onSelect, hidden }) {
       setWidth(previous => (previous === next ? previous : next));
     }
   }, []);
+
   const onPageSettled = useCallback(
     event => {
       if (width > 0) {
         const next = Math.round(event.nativeEvent.contentOffset.x / width);
-        // Não inicia outro scrollTo ao terminar o gesto.
         currentPage.current = Math.max(0, Math.min(next, pages.length - 1));
         setPage(currentPage.current);
       }
@@ -123,8 +121,6 @@ function CategoryExpensesLegend({ slices, selectedIndex, onSelect, hidden }) {
           showsHorizontalScrollIndicator={false}
           bounces={false}
           onMomentumScrollEnd={onPageSettled}
-          // RN Web não emite momentum-end. Recebe início/fim e ticks espaçados,
-          // atualizando React somente quando o índice da página muda.
           onScroll={Platform.OS === 'web' ? onPageSettled : undefined}
           scrollEventThrottle={Platform.OS === 'web' ? 100 : undefined}
           style={s.scroller}
@@ -212,31 +208,41 @@ const LegendRow = memo(function LegendRow({
       onPress={() => onSelect(index)}
       style={({ pressed }) => [
         s.row,
+        active && s.activeRow,
         rowHeight && { height: rowHeight },
         pressed && s.pressed,
       ]}
     >
-      <View
-        style={[
-          s.dot,
-          { backgroundColor: slice.color },
-          selectedIndex >= 0 && !active && s.dim,
-        ]}
+      <View style={s.topLine}>
+        <View
+          style={[
+            s.dot,
+            { backgroundColor: slice.color },
+            selectedIndex >= 0 && !active && s.dim,
+          ]}
+        />
+        <Text numberOfLines={2} style={[s.name, active && s.selectedText]}>
+          {slice.name}
+        </Text>
+        <Text style={[s.percentage, active && s.selectedText]}>
+          {hidden ? '•••' : percentage(slice.fraction)}
+        </Text>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.65}
+          style={[s.amount, active && s.selectedText]}
+        >
+          {hidden ? hiddenAmount : formatCurrency(slice.total)}
+        </Text>
+      </View>
+      <AnimatedProgressBar
+        progress={hidden ? 0 : slice.fraction}
+        color={slice.color}
+        trackColor="rgba(255, 255, 255, 0.05)"
+        height={3.5}
+        delay={40 + (index % PAGE_SIZE) * 35}
       />
-      <Text numberOfLines={2} style={[s.name, active && s.selectedText]}>
-        {slice.name}
-      </Text>
-      <Text style={[s.percentage, active && s.selectedText]}>
-        {hidden ? '•••' : percentage(slice.fraction)}
-      </Text>
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.65}
-        style={[s.amount, active && s.selectedText]}
-      >
-        {hidden ? hiddenAmount : formatCurrency(slice.total)}
-      </Text>
     </Pressable>
   );
 });
@@ -246,42 +252,51 @@ const createStyles = colors =>
     legend: {
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.border,
-      marginBottom: 14,
+      marginBottom: 8,
     },
     scroller: { flexGrow: 0 },
     row: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      justifyContent: 'center',
       gap: 6,
-      minHeight: 52,
-      paddingVertical: 12,
+      minHeight: 58,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      borderRadius: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
-    dot: { width: 9, height: 9, borderRadius: 5 },
+    activeRow: {
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    topLine: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    dot: { width: 10, height: 10, borderRadius: 5 },
     name: {
       flex: 1,
       minWidth: 0,
       fontFamily: fontFamilyMedium,
       fontSize: 13,
-      lineHeight: 20,
+      lineHeight: 18,
       color: colors.secondary,
     },
     percentage: {
-      width: 42,
+      width: 44,
       textAlign: 'right',
       fontFamily,
       fontSize: 12,
-      lineHeight: 20,
+      lineHeight: 18,
       fontVariant: ['tabular-nums'],
       color: colors.secondary,
     },
     amount: {
-      width: 90,
+      width: 92,
       textAlign: 'right',
       fontFamily: fontFamilyMedium,
       fontSize: 13,
-      lineHeight: 20,
+      lineHeight: 18,
       fontVariant: ['tabular-nums'],
       color: colors.secondary,
     },
@@ -291,16 +306,16 @@ const createStyles = colors =>
       color: colors.text,
     },
     dim: { opacity: 0.35 },
-    pressed: { opacity: 0.7 },
+    pressed: { opacity: 0.72 },
     pagination: {
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      paddingTop: 4,
+      paddingTop: 6,
     },
     pageButton: {
       width: 24,
-      height: 44,
+      height: 40,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -314,4 +329,5 @@ const createStyles = colors =>
       opacity: 1,
     },
   });
+
 export default memo(CategoryExpensesLegend);

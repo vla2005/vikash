@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Platform, StyleSheet, Text } from 'react-native';
+import { Animated, Easing, Image, Platform, StyleSheet, Text, View } from 'react-native';
 import appIcon from '../assets/appIcon';
 import useReducedMotion from '../hooks/useReducedMotion';
 import { hideNativeSplash } from '../services/nativeSplash';
@@ -51,18 +51,21 @@ export default function AnimatedSplash({ ready, onFinish }) {
 
   return <Animated.View testID="animated-splash" accessibilityLabel="Abrindo Vikash" accessibilityState={{ busy: true }}
     onLayout={() => setLayoutReady(true)} style={[styles.overlay, { opacity }]}>
+    <View style={styles.brand}>
     <Animated.View style={{ transform: [{ scale }] }}>
       <Image source={appIcon} style={styles.symbol} resizeMode="contain" onLoadEnd={() => setImageReady(true)} />
     </Animated.View>
     {ready && <Animated.View style={[styles.wordmark, { opacity: reveal, transform: [{ translateY: reduced ? 0 : reveal.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }]}>
       <Text style={styles.name}>vikash</Text>
     </Animated.View>}
+    </View>
   </Animated.View>;
 }
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: '#000000', alignItems: 'center', justifyContent: 'center' },
+  brand: { width: 180, height: 230, alignItems: 'center' },
   symbol: { width: 180, height: 180 },
-  wordmark: { position: 'absolute', top: '50%', marginTop: 92 },
+  wordmark: { position: 'absolute', top: 182 },
   name: { fontFamily: fontFamilyBold, fontSize: 36, lineHeight: 48, letterSpacing: -1.6, color: '#FFFFFF' },
 });

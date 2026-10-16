@@ -1,6 +1,6 @@
 import { pointerEventsStyles } from '../../theme/interaction';
 import React, { useEffect, useState } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -14,7 +14,7 @@ import DockLayout, { DockTabButton, dockTabs, s } from './DockLayout';
 
 const settle = {
   duration: 400,
-  dampingRatio: 1,
+  dampingRatio: 0.88,
   reduceMotion: ReduceMotion.Never,
 };
 
@@ -29,18 +29,23 @@ function Tab({
   onExpand,
   onTouch,
 }) {
+  const isAndroid = Platform.OS === 'android';
   const active = selected === item.key;
-  const style = useAnimatedStyle(() => ({
-    width: width + (54 - width) * progress.get(),
-    height: 64 - 10 * progress.get(),
-    opacity: active ? 1 : 1 - progress.get(),
-    transform: [
-      {
-        translateX: (8 + index * width) * (1 - progress.get()),
-      },
-      { translateY: 5 * progress.get() },
-    ],
-  }));
+  const style = useAnimatedStyle(() => {
+    const p = progress.get();
+    return {
+      width: isAndroid ? width : width + (54 - width) * p,
+      height: isAndroid ? 64 : 64 - 10 * p,
+      opacity: active ? 1 : 1 - p,
+      transform: [
+        {
+          translateX: (8 + index * width) * (1 - p) +
+            (isAndroid ? (54 - width) * p / 2 : 0),
+        },
+        { translateY: isAndroid ? 0 : 5 * p },
+      ],
+    };
+  });
   const label = useAnimatedStyle(() => ({ opacity: 1 - progress.get() }));
   const icon = useAnimatedStyle(() => ({
     transform: [{ translateY: -6 * (1 - progress.get()) }],
@@ -48,7 +53,10 @@ function Tab({
   return (
     <Animated.View
       aria-hidden={collapsed && !active}
-      style={[[s.tabFrame, style], pointerEventsStyles[collapsed && !active ? 'none' : 'auto']]}
+      style={[
+        [s.tabFrame, style],
+        pointerEventsStyles[collapsed && !active ? 'none' : 'auto'],
+      ]}
     >
       <DockTabButton
         item={item}
@@ -65,7 +73,11 @@ function Tab({
             onTouch(true);
           }
         }}
-        onPressOut={() => onTouch(false)}
+        onPressOut={() => {
+          if (active && !collapsed) {
+            onTouch(false);
+          }
+        }}
       />
     </Animated.View>
   );
@@ -95,14 +107,25 @@ export default function GlassDock({
   );
   const index = useSharedValue(selectedIndex);
   const pressed = useSharedValue(0);
+
   useEffect(() => {
-    // Só a seleção confirmada move a lente; soltar um toque não muda sua posição.
     index.set(reduced ? selectedIndex : withSpring(selectedIndex, settle));
     pressed.set(0);
   }, [selectedIndex, reduced, index, pressed]);
+
   function touch(down) {
     pressed.set(reduced ? 0 : withSpring(down ? 1 : 0, settle));
   }
+
+  function handleSelect(key) {
+    const nextIndex = dockTabs.findIndex(item => item.key === key);
+    if (nextIndex >= 0 && nextIndex !== selectedIndex) {
+      index.set(reduced ? nextIndex : withSpring(nextIndex, settle));
+      pressed.set(0);
+    }
+    onSelect?.(key);
+  }
+
   const rail = useAnimatedStyle(() => ({
     width: railWidth + (54 - railWidth) * progress.get(),
     height: 64 - 10 * progress.get(),
@@ -127,6 +150,7 @@ export default function GlassDock({
       { scaleY: 1 + Math.max(0, pressed.get()) * 0.12 },
     ],
   }));
+
   return (
     <DockLayout
       Box={Animated.View}
@@ -148,7 +172,7 @@ export default function GlassDock({
           progress={progress}
           collapsed={context?.collapsed}
           onExpand={context?.expand}
-          onSelect={onSelect}
+          onSelect={handleSelect}
           onTouch={touch}
         />
       )}

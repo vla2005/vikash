@@ -25,7 +25,6 @@ const fieldViewBox = `${-overscanX} ${-overscanY} ${460 + overscanX * 2} ${
   defaultAmbientLight.height + overscanY * 2
 }`;
 
-// A queda fica parada enquanto os focos se movem; as bordas nunca revelam o recorte.
 const EdgeFade = memo(function EdgeFade({ id }) {
   const { horizontal, top, bottomStart } = defaultAmbientLight.edgeFade;
   const color = useTheme().colors.background;
@@ -122,7 +121,6 @@ const Field = memo(function Field({ field, index, active, reduced, id }) {
       };
   return (
     <Animated.View
-      // A imagem já é uma textura pequena: não criar outro cache do tamanho da tela.
       testID={'ambient-field-' + index}
       renderToHardwareTextureAndroid={false}
       style={[styles.field, { opacity: opacity * 0.8 }, motion]}
@@ -188,7 +186,9 @@ const Field = memo(function Field({ field, index, active, reduced, id }) {
   );
 });
 
-const AmbientLightContent = memo(function AmbientLightContent({ enabled = true }) {
+const AmbientLightContent = memo(function AmbientLightContent({
+  enabled = true,
+}) {
   const { ambientLight } = useThemeTokens();
   const reduced = useReducedMotion();
   const [active, setActive] = useState(AppState.currentState !== 'background');
@@ -224,8 +224,11 @@ const AmbientLightContent = memo(function AmbientLightContent({ enabled = true }
     </View>
   );
 });
+
 export default memo(function AmbientLight(props) {
-  return renderingEffects.ambientLight ? <AmbientLightContent {...props} /> : null;
+  return renderingEffects.ambientLight ? (
+    <AmbientLightContent {...props} />
+  ) : null;
 });
 
 const styles = StyleSheet.create({

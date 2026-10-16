@@ -100,17 +100,28 @@ export const SHADER_SKSL = `
 
     float2 st   = uv;
     float  r    = uWaveSpeed * range;
-    float  c1   = circle(st, uWaveOrigin, r);
+    float  c1   = range >= 0.999 ? 0.0 : circle(st, uWaveOrigin, r);
     float  wpct = 1.0 - (c1 * (1.0 - c1));
-    float3 cc   = pow(mix(float3(1.069, 1.077, 1.100), float3(1.0), wpct), float3(8.0));
+    float3 cc   = wpct >= 0.9999
+      ? float3(1.0)
+      : pow(mix(float3(1.069, 1.077, 1.100), float3(1.0), wpct), float3(8.0));
     float  wS   = st.y * uWaveStrength * range * (wpct - st.y);
     st.y += wS * (1.0 - range);
 
     half4 foreground = contents.eval(st * iResolution);
 
-    float vol   = 0.35 + 0.15 * sin(iTime * 2.0);
-    float noise = max(0.0, snoise3(float3(uv * uNoiseScale, iTime / uNoiseSpeed)) * (vol * uNoiseStrength));
-    float alpha = smoothstep(uMargin / uRadius, (uMargin + uExcess) / uRadius, dist + noise);
+    float alpha = 0.0;
+    if (dist + 0.5 * uNoiseStrength > uMargin / uRadius) {
+      float vol   = 0.35 + 0.15 * sin(iTime * 2.0);
+      float noise = max(0.0, snoise3(float3(uv * uNoiseScale, iTime / uNoiseSpeed)) * (vol * uNoiseStrength));
+      alpha = smoothstep(uMargin / uRadius, (uMargin + uExcess) / uRadius, dist + noise);
+    }
+
+    float edge   = alpha * (1.0 - c1);
+    float bgMask = 1.0 - (1.0 - edge) * (1.0 - (1.0 - c1) * (1.0 - range) * 0.5);
+    if (bgMask <= 0.0001) {
+      return foreground * half4(half3(cc), 1.0);
+    }
 
     float angle = atan(uv.y - 0.5, uv.x - 0.5);
     float t     = fract((angle / 6.2832) + iTime * uGlowSpeed);
@@ -125,8 +136,6 @@ export const SHADER_SKSL = `
     float shimmer = 0.5 + 0.5 * sin(angle * 3.0 + iTime * uShimmerSpeed);
     glow = mix(glow, glow * 1.4, shimmer * uShimmerAmount);
     half4 background = half4(half3(glow), 1.0);
-    float edge   = alpha * (1.0 - c1);
-    float bgMask = 1.0 - (1.0 - edge) * (1.0 - (1.0 - c1) * (1.0 - range) * 0.5);
     float2 q      = abs(fragCoord - iResolution * 0.5) - iResolution * 0.5 + uRadius;
     float  boxSDF = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - uRadius;
     float  clip   = 1.0 - smoothstep(-1.0, 0.5, boxSDF);

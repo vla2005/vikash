@@ -16,14 +16,17 @@ export default function FloatingAppHeader({
       testID="app-header"
       accessibilityElementsHidden={!visible}
       importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}
-      style={[[
-        styles.overlay,
-        {
-          height: topInset + header.height,
-          paddingTop: topInset + header.paddingTop,
-        },
-        !visible && styles.hidden,
-      ], pointerEventsStyles["box-none"]]}
+      style={[
+        [
+          styles.overlay,
+          {
+            height: topInset + header.height,
+            paddingTop: topInset + header.paddingTop,
+          },
+          !visible && styles.hidden,
+        ],
+        pointerEventsStyles['box-none'],
+      ]}
     >
       {visible && <HeaderBackdrop topInset={topInset} />}
       <AppHeader profile={profile} onOpenProfile={onOpenProfile} />

@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Platform } from "react-native";
 import { useSharedValue, useDerivedValue, useFrameCallback } from "react-native-reanimated";
 import type {
   ISiriToggleOptions,
@@ -17,6 +18,8 @@ import {
 } from "./const";
 import { hexToRgb, mergeConfig } from "./helpers";
 
+const isAndroid = Platform.OS === "android";
+
 function useSiriUniforms<T extends IUseSiriUniformsOptions>({
   layout,
   defaultWave,
@@ -29,7 +32,11 @@ function useSiriUniforms<T extends IUseSiriUniformsOptions>({
   const intensity = useSharedValue<number>(0);
 
   const frameCallback = useFrameCallback((frameInfo) => {
-    iTime.value = frameInfo.timeSinceFirstFrame / 1000;
+    const nextSeconds = frameInfo.timeSinceFirstFrame / 1000;
+    if (isAndroid && intensity.value >= 0.99 && nextSeconds - iTime.value < 0.032) {
+      return;
+    }
+    iTime.value = nextSeconds;
   }, false);
 
   const uMargin = useSharedValue<number>(DEFAULT_BORDER.margin);

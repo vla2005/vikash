@@ -10,6 +10,9 @@ import {
   View,
 } from 'react-native';
 import VoiceDrawer from '../src/components/VoiceDrawer';
+import VoiceScene from '../src/components/VoiceScene';
+import VoiceComposer from '../src/components/VoiceComposer';
+import ListeningOrb from '../src/components/ListeningOrb';
 import { createSpeechRecognition } from '../src/services/speechRecognition';
 
 jest.mock('../src/services/speechRecognition', () => ({
@@ -249,3 +252,43 @@ test('tocar fora durante a expansão cancela o foco pendente; a animação não 
   await act(async () => button('Editar lançamento').props.onPress());
   expect(input.instance.focus).toHaveBeenCalledTimes(1);
 });
+
+
+test.each(['android', 'ios'])(
+  'o orbe continua visível em %s quando o teclado encurta a cena de digitação',
+  async platform => {
+    await mount(platform);
+    await act(async () => button('Digitar').props.onPress());
+    const scene = renderer.root.findByType(VoiceScene);
+    await act(async () => scene.props.onLayout({ nativeEvent: { layout: { height: 180 } } }));
+    expect(renderer.root.findByType(ListeningOrb).props.size).toBeGreaterThan(100);
+    expect(scene.props.visualOffset).toBe(0);
+    const input = renderer.root.findByType(TextInput);
+    await act(async () => scene.props.onLayout({ nativeEvent: { layout: { height: 500 } } }));
+    expect(renderer.root.findByType(ListeningOrb).props.size).toBeGreaterThan(100);
+    expect(renderer.root.findByType(TextInput)).toBe(input);
+  },
+);
+
+
+test.each(['android', 'ios'])(
+  'em %s o rodapé aproxima do teclado e restaura ao dispensar sem perder texto',
+  async platform => {
+    await mount(platform);
+    await act(async () => button('Digitar').props.onPress());
+    const input = renderer.root.findByType(TextInput);
+    await act(async () => input.props.onChangeText('Mercado 50 reais no Pix do Inter'));
+    const composer = () => renderer.root.findByType(VoiceComposer);
+    expect(composer().props.keyboardDocked).toBe(false);
+    await keyboard(platform === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow');
+    expect(composer().props.keyboardDocked).toBe(true);
+    const scene = renderer.root.findByType(VoiceScene);
+    await act(async () => scene.props.onLayout({ nativeEvent: { layout: { height: 380 } } }));
+    expect(renderer.root.findByType(ListeningOrb).props.size).toBe(280);
+    expect(scene.props.visualOffset).toBeGreaterThan(0);
+    await keyboard(platform === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide');
+    expect(composer().props.keyboardDocked).toBe(false);
+    expect(renderer.root.findByType(TextInput)).toBe(input);
+    expect(input.props.value).toBe('Mercado 50 reais no Pix do Inter');
+  },
+);

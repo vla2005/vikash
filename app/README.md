@@ -2,6 +2,8 @@
 
 Expo SDK **57**, React Native **0.86.3**, React **19.2.3** e código de interface em **JavaScript/JSX**, sem TypeScript. A versão do React Native segue a compatibilidade do Expo Go.
 
+> **Guia de Performance Android (Obrigatório para IAs e Devs):** Consulte [README-ANDROID-PERFORMANCE.md](./README-ANDROID-PERFORMANCE.md) antes de criar ou modificar componentes, animações, modais ou shaders para evitar regressões de FPS no Android.
+
 ## Escopo desta etapa
 
 - Login com validação visual, mostrar/ocultar senha e acesso ao cadastro.

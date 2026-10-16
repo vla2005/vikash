@@ -1,69 +1,158 @@
-import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { memo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import InstitutionLogo from './InstitutionLogo';
 import Icon from './Icon';
-import useReducedMotion from '../hooks/useReducedMotion';
+import {
+  AnimatedPressable,
+  AnimatedRevealValue,
+} from './motion/AnimatedPrimitives';
+import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import { getAccountType } from '../constants/accountTypes';
 import { getInstitutionCardColor } from '../constants/financialInstitutionColors';
+import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 import { hiddenAmount } from '../utils/dashboard';
 import { formatCurrency } from '../utils/money';
-import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
-export default function HomeAccountRow({ account, hidden, onOpen }) {
+function HomeAccountRow({ account, hidden, onOpen }) {
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const type = getAccountType(account.type);
-  const scale = useRef(new Animated.Value(1)).current;
-  const animation = useRef(null);
-  const reducedMotion = useReducedMotion();
-  const accent = account.financialInstitution ? getInstitutionCardColor(account.financialInstitution) : type.color;
+  const accent = account.financialInstitution
+    ? getInstitutionCardColor(account.financialInstitution)
+    : type.color;
 
-  useEffect(() => {
-    animation.current?.stop();
-    scale.setValue(1);
-    return () => animation.current?.stop();
-  }, [reducedMotion, scale]);
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={`Abrir conta ${account.description}`}
+      disabled={!onOpen}
+      scaleActive={0.975}
+      onPress={() => onOpen?.(account.uuid)}
+      style={s.cardRow}
+    >
+      <View style={[s.accentBar, { backgroundColor: accent }]} />
 
-  function animatePress(pressed) {
-    animation.current?.stop();
-    if (reducedMotion) { return; }
-    animation.current = Animated.timing(scale, {
-      toValue: pressed ? 0.985 : 1,
-      duration: pressed ? 90 : 180,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: Platform.OS !== 'web',
-    });
-    animation.current.start();
-  }
+      <InstitutionLogo
+        institution={account.financialInstitution}
+        size={42}
+        fallbackIcon={type.icon}
+        fallbackColor={accent}
+        backgroundColor={`${accent}18`}
+      />
 
-  return <Animated.View style={{ transform: [{ scale }] }}>
-    <Pressable accessibilityRole="button" accessibilityLabel={`Abrir conta ${account.description}`}
-      disabled={!onOpen} onPress={() => onOpen(account.uuid)}
-      onPressIn={() => animatePress(true)} onPressOut={() => animatePress(false)}
-      style={({ pressed }) => [s.row, pressed && s.pressed]}>
-      <InstitutionLogo institution={account.financialInstitution} size={44} fallbackIcon={type.icon}
-        fallbackColor={accent} backgroundColor={`${accent}12`} />
       <View style={s.copy}>
-        <Text numberOfLines={2} style={s.name}>{account.description}</Text>
-        <Text style={s.caption}>{type.label}</Text>
+        <Text numberOfLines={1} style={s.name}>
+          {account.description}
+        </Text>
+        <View style={s.badgeRow}>
+          <View style={[s.typeBadge, { backgroundColor: `${accent}1A` }]}>
+            <Text style={[s.caption, { color: accent }]}>{type.label}</Text>
+          </View>
+        </View>
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}
-        style={[s.amount, !hidden && account.balance > 0 && s.positive, !hidden && account.balance < 0 && s.negative]}>
-        {hidden ? hiddenAmount : formatCurrency(account.balance)}
-      </Text>
-      <Icon name="chevron" size={16} color={colors.secondary} />
-    </Pressable>
-  </Animated.View>;
+
+      <View style={s.rightCol}>
+        <AnimatedRevealValue
+          hidden={hidden}
+          visibleContent={
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              style={[
+                s.amount,
+                account.balance > 0 && s.positive,
+                account.balance < 0 && s.negative,
+              ]}
+            >
+              {formatCurrency(account.balance)}
+            </Text>
+          }
+          hiddenContent={<Text style={s.amount}>{hiddenAmount}</Text>}
+        />
+      </View>
+
+      <View style={s.chevronWrap}>
+        <Icon name="chevron" size={14} color={colors.secondary} />
+      </View>
+    </AnimatedPressable>
+  );
 }
 
-const createStyles = (colors) => StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 88, paddingVertical: 16, borderRadius: 14 },
-  copy: { flex: 1, minWidth: 0, gap: 4 },
-  name: { fontFamily: fontFamilyMedium, fontWeight: '600', fontSize: 15, lineHeight: 22, color: colors.text },
-  caption: { fontFamily, fontSize: 13, lineHeight: 20, color: colors.secondary },
-  amount: { maxWidth: '40%', flexShrink: 1, textAlign: 'right', fontFamily: fontFamilyBold, fontWeight: '700',
-    fontSize: 16, lineHeight: 24, fontVariant: ['tabular-nums'], color: colors.text },
-  positive: { color: colors.positive }, negative: { color: colors.negative },
-  pressed: { backgroundColor: colors.surfaceMuted },
-});
+const createStyles = colors =>
+  StyleSheet.create({
+    cardRow: {
+      position: 'relative',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      minHeight: 74,
+      paddingVertical: 13,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    accentBar: {
+      position: 'absolute',
+      left: 0,
+      top: 14,
+      bottom: 14,
+      width: 3.5,
+      borderTopRightRadius: 4,
+      borderBottomRightRadius: 4,
+    },
+    copy: {
+      flex: 1,
+      minWidth: 0,
+      gap: 4,
+    },
+    name: {
+      fontFamily: fontFamilyBold,
+      fontWeight: '700',
+      fontSize: 15,
+      lineHeight: 20,
+      color: colors.text,
+    },
+    badgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    typeBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+    },
+    caption: {
+      fontFamily: fontFamilyMedium,
+      fontSize: 11,
+      lineHeight: 15,
+    },
+    rightCol: {
+      maxWidth: '40%',
+      alignItems: 'flex-end',
+    },
+    amount: {
+      textAlign: 'right',
+      fontFamily: fontFamilyBold,
+      fontWeight: '700',
+      fontSize: 15,
+      lineHeight: 21,
+      fontVariant: ['tabular-nums'],
+      color: colors.text,
+    },
+    positive: { color: colors.positive },
+    negative: { color: colors.negative },
+    chevronWrap: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+
+export default memo(HomeAccountRow);

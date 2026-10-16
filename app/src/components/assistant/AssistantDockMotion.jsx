@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, cancelAnimation, Easing, ReduceMotion } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import DockAssistantContent, { assistantDockContentStyle } from '../silver/DockAssistantContent';
@@ -33,7 +33,7 @@ export default function AssistantDockMotion({ children, backdrop, transition, op
   return <>
     <Animated.View style={[StyleSheet.absoluteFill,styles.passive,backgroundStyle]}>{backdrop}</Animated.View>
     <Animated.View testID="assistant-morph-content" style={[StyleSheet.absoluteFill,bodyStyle,(closing || opening) && styles.passive]}>{children}</Animated.View>
-    {transition && <Animated.View key={entering ? "open" : "close"} ref={flightRef} onLayout={entering ? onDockCovered : undefined} collapsable={false} testID={entering ? "assistant-open-flight" : "assistant-return-flight"} accessible={false} accessibilityElementsHidden
+    {transition && <Animated.View key={entering ? "open" : "close"} ref={flightRef} onLayout={entering ? onDockCovered : undefined} collapsable={false} renderToHardwareTextureAndroid={Platform.OS === 'android'} testID={entering ? "assistant-open-flight" : "assistant-return-flight"} accessible={false} accessibilityElementsHidden
       style={[styles.flight,{borderColor:dock.rim},flightStyle]}>
       <AssistantReturnSurface><Animated.View style={[assistantDockContentStyle,labelStyle]}><DockAssistantContent /></Animated.View></AssistantReturnSurface>
     </Animated.View>}

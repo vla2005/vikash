@@ -73,6 +73,17 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
   const [mode, setMode] = useState('voice');
   const [typedText, setTypedText] = useState('');
   const typing = mode === 'text';
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const keyboardDocked = typing && keyboardVisible && Platform.OS !== 'web';
+  useEffect(() => {
+    if (!visible || Platform.OS === 'web') {
+      setKeyboardVisible(false);
+      return undefined;
+    }
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { show.remove(); hide.remove(); };
+  }, [visible]);
   const voice = useVoiceTranscription(visible && !typing);
   const entryText = typing ? typedText : voice.text;
   const [feedback, setFeedback] = useState(null);
@@ -227,7 +238,9 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
     orbSize,
     distance: travel,
     visualOffset,
-  } = voiceSceneLayout(width, sceneHeight, compact);
+    showWave,
+    showStatus,
+  } = voiceSceneLayout(width, sceneHeight, compact, typing && Platform.OS !== 'web', keyboardDocked);
   const reviewLabel =
     feedback?.type === 'warn'
       ? 'Confirmar novamente'
@@ -246,7 +259,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
       navigationBarTranslucent
     >
       <DrawerPanel fullScreen testID="voice-fullscreen" style={styles.drawer}>
-        <AmbientLight />
+        {Platform.OS !== 'android' && <AmbientLight />}
         <VoiceKeyboardArea
           style={styles.keyboard}
           onTouchOutside={dismissOutsideInput}
@@ -256,7 +269,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
               styles.frame,
               {
                 paddingTop: insets.top + 8,
-                paddingBottom: Math.max(insets.bottom, 16),
+                paddingBottom: keyboardDocked ? 8 : Math.max(insets.bottom, 16),
               },
             ]}
           >
@@ -293,13 +306,16 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                       size={orbSize}
                     />
                   </VoiceModeFade>
-                  <VoiceModeFade visible={!typing} minOpacity={0.3}>
+                  {showWave && (
+                    <VoiceModeFade visible={!typing} minOpacity={0.3}>
                     <ListeningWave
                       active={visible && listening}
                       compact={compact}
                     />
                   </VoiceModeFade>
-                  <View style={styles.modeCopy}>
+                  )}
+                  {showStatus && (
+                    <View style={styles.modeCopy}>
                     <VoiceModeFade visible={!typing} style={styles.sceneLayer}>
                       <Text accessibilityRole="header" style={styles.title}>
                         {listening
@@ -323,6 +339,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
                       </Text>
                     </VoiceModeFade>
                   </View>
+                  )}
                 </>
               }
             >
@@ -480,6 +497,7 @@ export default function VoiceDrawer({ visible, onClose, onConfirm }) {
             </VoiceScene>
             <VoiceComposer
               expanded={typing}
+              keyboardDocked={keyboardDocked}
               visible={visible}
               sending={sending}
               value={typedText}

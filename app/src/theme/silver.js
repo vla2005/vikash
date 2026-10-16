@@ -1,7 +1,8 @@
+import { Platform } from 'react-native';
 import { renderingEffects } from '../config/renderingEffects';
 import { darkColors, lightColors, themes } from './index';
 
-// Acentos compartilhados; o tema claro usa um âmbar mais profundo.
+// Acentos compartilhados: Ouro Champagne luminoso no escuro e âmbar profundo no claro.
 export const amberAccent = { dark: '#E6A64C', light: '#96601E' };
 
 // A luz de todas as telas fica aqui. Troque as cores sem alterar os layouts.
@@ -23,11 +24,13 @@ export const ambientLight = {
 };
 
 const glass = {
-  fill: renderingEffects.cardTransparency ? 'rgba(23, 23, 24, 0.68)' : '#171718',
+  fill: renderingEffects.cardTransparency
+    ? 'rgba(20, 22, 30, 0.72)'
+    : '#14161F',
   rim: 'rgba(255, 255, 255, 0.12)',
-  highlight: 'rgba(255, 255, 255, 0.10)',
+  highlight: 'rgba(255, 255, 255, 0.12)',
   radius: 24,
-  shadow: '0 6px 18px rgba(0,0,0,0.10)',
+  shadow: '0 6px 18px rgba(0,0,0,0.16)',
 };
 
 export const header = {
@@ -37,14 +40,14 @@ export const header = {
   fadeStart: 60,
   blurIntensity: 40,
   webBlurRadius: 18,
-  fill: 'rgba(5, 5, 5, 0.22)',
-  androidShade: { color: '#050505', opacity: 1, overhang: 52 },
+  fill: 'rgba(5, 6, 10, 0.24)',
+  androidShade: { color: '#05060A', opacity: 1, overhang: 52 },
 };
 
 export const toast = {
-  fill: '#1B1B1D',
-  text: '#F4F4F5',
-  secondary: '#C7C7CC',
+  fill: '#181A22',
+  text: '#F8FAFC',
+  secondary: '#C7CCD6',
   success: '#4ADE80',
   error: '#F87171',
   warning: '#FACC15',
@@ -65,7 +68,13 @@ export const voiceOrb = {
   backOpacity: 0.16,
   haloOpacity: 0.16,
   transition: { duration: 280 },
-  composer: { duration: 480, expandedHeight: 64, maxHeight: 128, lift: 56, stageHeight: 164 },
+  composer: {
+    duration: 480,
+    expandedHeight: 64,
+    maxHeight: 128,
+    lift: 56,
+    stageHeight: 164,
+  },
   wave: {
     height: 64,
     compactHeight: 48,
@@ -90,65 +99,86 @@ export const dock = {
   voiceHeight: 44,
   gap: 10,
   margin: 16,
-  fill: 'rgba(35,35,38,0.94)',
-  controlFill: 'rgba(23,23,25,0.84)',
-  lens: 'rgba(222,224,230,0.22)',
-  nativeTint: 'rgba(16,16,18,0.36)',
-  nativeNavigationTint: 'rgba(35,35,38,0.48)',
-  nativeLensTint: 'rgba(212,214,220,0.18)',
-  rim: 'rgba(255,255,255,0.28)',
-  controlRim: 'rgba(255,255,255,0.18)',
-  solidFill: '#252528',
-  solidLens: '#515257',
-  solidControl: '#202022',
-  strongFill: 'rgba(35,35,38,0.94)',
-  solidStrong: '#252528',
-  nativeStrongTint: 'rgba(35,35,38,0.48)',
+  fill: 'rgba(30, 32, 42, 0.94)',
+  controlFill: 'rgba(20, 22, 30, 0.86)',
+  lens: 'rgba(222, 224, 230, 0.22)',
+  nativeTint: 'rgba(16, 17, 24, 0.38)',
+  nativeNavigationTint: 'rgba(30, 32, 42, 0.48)',
+  nativeLensTint: 'rgba(212, 214, 220, 0.18)',
+  rim: 'rgba(255, 255, 255, 0.28)',
+  controlRim: 'rgba(255, 255, 255, 0.18)',
+  solidFill: '#20222C',
+  solidLens: '#4B4E5C',
+  solidControl: '#1A1C24',
+  strongFill: 'rgba(30, 32, 42, 0.94)',
+  solidStrong: '#20222C',
+  nativeStrongTint: 'rgba(30, 32, 42, 0.48)',
   microphoneText: '#FFFFFF',
-  controlSheen: 'rgba(255,255,255,0.23)',
-  sheen: 'rgba(255,255,255,0.28)',
-  text: '#E2E3E6',
+  controlSheen: 'rgba(255, 255, 255, 0.23)',
+  sheen: 'rgba(255, 255, 255, 0.28)',
+  text: '#E6E8EE',
   activeText: '#FFFFFF',
   activeIcon: amberAccent.dark,
   assistantIcon: amberAccent.dark,
   voiceText: '#F1F2F4',
   shadow: '0 6px 18px rgba(0,0,0,0.24)',
   androidShadow: '0 4px 12px rgba(0,0,0,0.40)',
-  androidShade: { overhang: 104, opacity: 0.98, color: '#050505', middleOpacity: 0.18, lowerOpacity: 0.8 },
-  shade: { overhang: 64, opacity: 0.92, color: '#050505' },
+  androidShade: {
+    overhang: 104,
+    opacity: 0.98,
+    color: '#05060A',
+    middleOpacity: 0.18,
+    lowerOpacity: 0.8,
+  },
+  shade: { overhang: 64, opacity: 0.92, color: '#05060A' },
   blurIntensity: 60,
   scrollThreshold: 24,
   scrollStart: 90,
 };
 
+// Cores calibradas para contraste WCAG AA >= 4.5 em todas as superfícies (background, surface, surfaceMuted, dialogSurface)
 const colors = {
   ...darkColors,
-  background: '#050505',
+  background: '#05060A',
+  backgroundSubtle: '#0C0E16',
+  backgroundElevated: '#121520',
   surface: glass.fill,
-  dialogSurface: '#1C1C1F',
-  surfaceMuted: '#252527',
-  text: '#F4F4F3',
-  secondary: '#B0B0B4',
-  placeholder: '#A1A1A6',
-  primary: '#E0E1E3',
-  primaryPressed: '#BFC1C5',
-  primarySoft: '#292A2C',
-  brandPrimary: '#D8DADC',
-  brandPressed: '#BFC1C5',
-  onBrand: '#151516',
-  onPrimary: '#151516',
+  surfaceStrong: '#181B26',
+  dialogSurface: '#181A22',
+  surfaceMuted: '#22242E',
+  surfaceElevated: '#1E2230',
+  card: glass.fill,
+  text: '#F8FAFC',
+  textSecondary: '#B8BEC9',
+  textMuted: '#A2A8B4',
+  secondary: '#B8BEC9',
+  placeholder: '#A2A8B4',
+  primary: '#E6A64C',
+  primaryStrong: '#D97706',
+  primaryPressed: '#F0BC70',
+  primarySoft: '#26221C',
+  brandPrimary: '#E6A64C',
+  brandPressed: '#F0BC70',
+  onBrand: '#141519',
+  onPrimary: '#141519',
   border: 'rgba(255,255,255,0.10)',
+  borderStrong: 'rgba(255,255,255,0.16)',
+  insetTop: 'rgba(255,255,255,0.14)',
   balanceSurface: glass.fill,
-  avatar: '#292A2C',
-  chartMask: '#181819',
+  avatar: '#262936',
+  chartMask: '#161820',
   positive: '#79DDB6',
-  positiveSoft: '#17372C',
+  positiveSoft: '#16352B',
   negative: '#F79B9F',
-  negativeSoft: '#3A2427',
-  onBalance: '#F4F4F3',
-  balanceSecondary: '#B0B0B4',
-  handle: '#727277',
-  logoSurface: '#252527',
+  negativeSoft: '#392226',
+  warning: '#FBBF24',
+  warningSoft: 'rgba(251, 191, 36, 0.14)',
+  info: '#60A5FA',
+  infoSoft: 'rgba(96, 165, 250, 0.14)',
+  onBalance: '#F8FAFC',
+  balanceSecondary: '#B8BEC9',
+  handle: '#727682',
+  logoSurface: '#22242E',
   toggleTrackOff: '#878A91',
   toggleTrackOn: '#A66A22',
   accent: amberAccent.dark,
@@ -157,7 +187,9 @@ const colors = {
 
 const lightGlass = {
   ...glass,
-  fill: renderingEffects.cardTransparency ? 'rgba(255,255,255,0.82)' : '#FFFFFF',
+  fill: renderingEffects.cardTransparency
+    ? 'rgba(255,255,255,0.82)'
+    : '#FFFFFF',
   rim: 'rgba(17,18,20,0.10)',
   highlight: 'rgba(255,255,255,0.8)',
   shadow: '0 8px 20px rgba(0,0,0,0.06)',
@@ -168,7 +200,9 @@ const lightPalette = {
   surface: lightGlass.fill,
   dialogSurface: '#FFFFFF',
   surfaceMuted: '#ECECEE',
+  card: lightGlass.fill,
   text: '#111214',
+  textSecondary: '#5D5E64',
   secondary: '#5D5E64',
   placeholder: '#62646B',
   primary: '#242527',
@@ -284,3 +318,46 @@ export const silverThemes = {
   light: createTheme('light', lightPalette, lightEffects),
 };
 
+export const silverColors = colors;
+
+const fontSans = Platform.select({
+  ios: 'System',
+  android: 'sans-serif',
+  default: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+});
+const fontSansMedium = Platform.select({
+  ios: 'System',
+  android: 'sans-serif-medium',
+  default: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+});
+const fontMono = Platform.select({
+  ios: 'Menlo',
+  android: 'monospace',
+  default: '"JetBrains Mono", monospace',
+});
+
+export const silverTheme = {
+  colors: silverColors,
+  radii: {
+    xs: 10,
+    sm: 14,
+    md: 18,
+    lg: 24,
+    xl: 28,
+    pill: 999,
+  },
+  spacing: {
+    xs: 6,
+    sm: 10,
+    md: 16,
+    lg: 20,
+    xl: 26,
+    xxl: 34,
+  },
+  typography: {
+    fontFamily: fontSans,
+    fontFamilyMedium: fontSansMedium,
+    fontFamilyBold: fontSansMedium,
+    fontFamilyMono: fontMono,
+  },
+};

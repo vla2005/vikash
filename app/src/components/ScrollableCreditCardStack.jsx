@@ -32,13 +32,14 @@ function ScrollableCreditCardStack(
   ref,
 ) {
   const { colors, scheme } = useTheme();
-  // The selected card is always the last/front slot. Other cards keep their
-  // relative order, so the previous front can never remain large below it.
-  const ordered = useMemo(() => [
-    ...cards.filter(card => card.uuid !== selectedUuid).reverse(),
-    ...cards.filter(card => card.uuid === selectedUuid),
-  ], [cards, selectedUuid]);
-const maxScroll = Math.max(0, ordered.length - 1) * step;
+  const ordered = useMemo(
+    () => [
+      ...cards.filter(card => card.uuid !== selectedUuid).reverse(),
+      ...cards.filter(card => card.uuid === selectedUuid),
+    ],
+    [cards, selectedUuid],
+  );
+  const maxScroll = Math.max(0, ordered.length - 1) * step;
   const anchor = Math.max(0, height - cardHeight);
   const selectedIndex = Math.max(
     0,
@@ -132,7 +133,6 @@ const maxScroll = Math.max(0, ordered.length - 1) * step;
     [stop],
   );
 
-  // Browsing stays contained; explicit selection also lets the parent focus details.
   useEffect(() => {
     if (!measured.current) return;
     const changed = selection.current !== selectedUuid;
@@ -140,6 +140,7 @@ const maxScroll = Math.max(0, ordered.length - 1) * step;
     scroller.current?.scrollTo({ y: selectedIndex * step, animated: changed });
     if (!changed) reset(selectedIndex * step);
   }, [selectedUuid, selectedIndex, step, reset]);
+
   const measureContent = useCallback(() => {
     if (measured.current) return;
     measured.current = true;
@@ -234,7 +235,7 @@ const maxScroll = Math.max(0, ordered.length - 1) * step;
   );
 }
 const s = StyleSheet.create({
-  viewport: { flex: 1, overflow: 'hidden', borderRadius: 20 },
+  viewport: { flex: 1, overflow: 'hidden', borderRadius: 22 },
   scroller: { flex: 1 },
   webScroller: { overscrollBehaviorY: 'contain', touchAction: 'pan-y' },
   shade: { position: 'absolute', left: 0, right: 0, height: 36, zIndex: 30 },

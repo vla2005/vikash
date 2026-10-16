@@ -1,7 +1,7 @@
 jest.mock('../src/config/renderingEffects', () => ({ renderingEffects: { backgroundBlur: true } }));
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import {
   isGlassEffectAPIAvailable,
@@ -279,3 +279,33 @@ test.each([GlassDock, WebGlassDock])('destaque cobre ícone e rótulo tanto aber
     expect(lens.transform.find(item => 'translateY' in item).translateY).toBe(collapsed ? 5 : 0);
   }
 });
+
+
+test.each(['Home', 'Statement', 'AccountManagement', 'Categories'])(
+  'Android centraliza %s no círculo recolhido mantendo o frame estável',
+  async selected => {
+    const original = Platform.OS;
+    Platform.OS = 'android';
+    try {
+      await act(async () => {
+        renderer = TestRenderer.create(
+          <DockContext.Provider value={{ collapsed: true, progress: { get: () => 1 }, expand: jest.fn() }}>
+            <GlassDock selected={selected} onSelect={jest.fn()} />
+          </DockContext.Provider>,
+        );
+      });
+      const frames = renderer.root.findAll(node => node.props['aria-hidden'] === false && node.props.style)
+        .map(node => StyleSheet.flatten(node.props.style))
+        .filter(style => style?.top === 52 && style.width > 0);
+      expect(frames.length).toBeGreaterThan(0);
+      const frame = frames[0];
+      const lens = StyleSheet.flatten(renderer.root.findByType(DockLayout).props.lensStyle);
+      const offset = (style, axis) => style.transform.find(item => axis in item)?.[axis] || 0;
+      expect(frame.width / 2 + offset(frame, 'translateX')).toBeCloseTo(lens.width / 2 + offset(lens, 'translateX'));
+      expect(frame.height / 2 + offset(frame, 'translateY')).toBeCloseTo(lens.height / 2 + offset(lens, 'translateY'));
+      expect(frame.height).toBe(64);
+    } finally {
+      Platform.OS = original;
+    }
+  },
+);

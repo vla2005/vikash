@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -17,7 +17,12 @@ export default function VoiceModeFade({
   children,
 }) {
   const progress = useSharedValue(visible ? 1 : 0);
+  const previous = useRef(visible);
   useEffect(() => {
+    if (previous.current === visible) {
+      return undefined;
+    }
+    previous.current = visible;
     progress.set(
       withTiming(visible ? 1 : 0, {
         duration: voiceOrb.composer.duration,

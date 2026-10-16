@@ -88,6 +88,26 @@ export default function MainTabs({ navigation }) {
   const [invoiceToOpen, setInvoiceToOpen] = useState(null);
   const { showToast } = useToast();
   const onboarding = useOnboarding();
+  const isAndroid = Platform.OS === 'android';
+  const [visitedTabs, setVisitedTabs] = useState({ Home: true });
+  useEffect(() => {
+    if (isAndroid) {
+      setVisitedTabs(prev =>
+        prev[selected] ? prev : { ...prev, [selected]: true },
+      );
+    }
+  }, [isAndroid, selected]);
+  const [categoryForm, setCategoryForm] = useState(null);
+  const categoriesActive = isAndroid
+    ? !!(visitedTabs.Categories || selected === 'Categories')
+    : selected === 'Categories';
+  const accountsActive =
+    (isAndroid
+      ? !!(visitedTabs.AccountManagement || selected === 'AccountManagement')
+      : selected === 'AccountManagement') &&
+    !accountForm &&
+    !cardUuid &&
+    !accountUuid;
   const {
     categories,
     defaultCategories,
@@ -97,24 +117,14 @@ export default function MainTabs({ navigation }) {
     saving,
     saveCategory: persistCategory,
     removeCategory,
-  } = useCategories(
-    onboarding?.session?.accessToken,
-    selected === 'Categories',
-  );
-  const [categoryForm, setCategoryForm] = useState(null);
+  } = useCategories(onboarding?.session?.accessToken, categoriesActive);
   const accountList = useAccounts(
     onboarding?.session?.accessToken,
-    selected === 'AccountManagement' &&
-      !accountForm &&
-      !cardUuid &&
-      !accountUuid,
+    accountsActive,
   );
   const cardList = useCreditCards(
     onboarding?.session?.accessToken,
-    selected === 'AccountManagement' &&
-      !accountForm &&
-      !cardUuid &&
-      !accountUuid,
+    accountsActive,
   );
   const retryAccounts = accountList.retry;
   const retryCards = cardList.retry;
@@ -127,59 +137,8 @@ export default function MainTabs({ navigation }) {
       (accountForm || cardUuid || accountUuid)
     ) &&
     !(selected === 'Categories' && categoryForm);
-  useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-    const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        if (profileVisible && profileForm) {
-          setProfileForm(null);
-          return true;
-        }
-        if (profileVisible) {
-          setProfileVisible(false);
-          return true;
-        }
-        if (itemEdit) {
-          if (!itemSaving) {
-            setItemEdit(null);
-          }
-          return true;
-        }
-        if (itemDetails) {
-          setItemDetails(null);
-          return true;
-        }
-        if (initialBalanceUuid) {
-          return false;
-        }
-        if (accountForm) {
-          setAccountForm(null);
-          return true;
-        }
-        if (cardUuid) {
-          setCardUuid(null);
-          return true;
-        }
-        if (accountUuid) {
-          setAccountUuid(null);
-          return true;
-        }
-        if (categoryForm) {
-          setCategoryForm(null);
-          return true;
-        }
-        if (selected === 'Home') {
-          return false;
-        }
-        setSelected('Home');
-        return true;
-      },
-    );
-    return () => subscription.remove();
-  }, [
+  const backState = useRef(null);
+  backState.current = {
     selected,
     categoryForm,
     accountForm,
@@ -191,7 +150,64 @@ export default function MainTabs({ navigation }) {
     profileVisible,
     profileForm,
     initialBalanceUuid,
-  ]);
+  };
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return undefined;
+    }
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        const current = backState.current;
+        if (!current) {
+          return false;
+        }
+        if (current.profileVisible && current.profileForm) {
+          setProfileForm(null);
+          return true;
+        }
+        if (current.profileVisible) {
+          setProfileVisible(false);
+          return true;
+        }
+        if (current.itemEdit) {
+          if (!current.itemSaving) {
+            setItemEdit(null);
+          }
+          return true;
+        }
+        if (current.itemDetails) {
+          setItemDetails(null);
+          return true;
+        }
+        if (current.initialBalanceUuid) {
+          return false;
+        }
+        if (current.accountForm) {
+          setAccountForm(null);
+          return true;
+        }
+        if (current.cardUuid) {
+          setCardUuid(null);
+          return true;
+        }
+        if (current.accountUuid) {
+          setAccountUuid(null);
+          return true;
+        }
+        if (current.categoryForm) {
+          setCategoryForm(null);
+          return true;
+        }
+        if (current.selected === 'Home') {
+          return false;
+        }
+        setSelected('Home');
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, []);
   const openDetails = useCallback((row, invoiceUuid) => {
     runSceneUpdate(() => {
       setInvoiceToOpen(null);
@@ -256,12 +272,16 @@ export default function MainTabs({ navigation }) {
   async function confirmTranscription(transcription) {
     await createTransaction(transcription, onboarding?.session?.accessToken);
     setDashboardRevision(value => value + 1);
+    setStatementRevision(value => value + 1);
     showToast({
       type: 'success',
       title: 'Transação registrada!',
       message: 'Seu lançamento foi salvo com sucesso.',
     });
-    if (selected === 'AccountManagement') {
+    if (
+      selected === 'AccountManagement' ||
+      (isAndroid && visitedTabs.AccountManagement)
+    ) {
       accountList.retry();
       cardList.retry();
     }
@@ -288,7 +308,228 @@ export default function MainTabs({ navigation }) {
     setAccountUuid(null);
     setSelected(key);
   }), []);
+  function renderAccountManagementSubscreen() {
+    if (initialBalanceUuid) {
+      return (
+        <CreditCardInitialInvoicesScreen
+          key={initialBalanceUuid}
+          uuid={initialBalanceUuid}
+          accessToken={onboarding?.session?.accessToken}
+          onBack={() => setInitialBalanceUuid(null)}
+          onSaved={() => {
+            setInitialBalanceUuid(null);
+            setCardRevision(value => value + 1);
+            setDashboardRevision(value => value + 1);
+            cardList.retry();
+          }}
+        />
+      );
+    }
+    if (accountForm) {
+      const close = () => setAccountForm(null);
+      if (accountForm.kind === 'card') {
+        return (
+          <CreateCreditCardScreen
+            key={accountForm.card?.uuid || 'new-card'}
+            card={accountForm.card}
+            onCancel={close}
+            onCreated={() => {
+              close();
+              setCardRevision(value => value + 1);
+              setDashboardRevision(value => value + 1);
+            }}
+          />
+        );
+      }
+      return (
+        <CreateAccountScreen
+          key={accountForm.account?.uuid || 'new-account'}
+          route={{
+            params: { fromManagement: true, account: accountForm.account },
+          }}
+          navigation={{
+            goBack: close,
+            reset: () => {
+              close();
+              setAccountRevision(value => value + 1);
+            },
+          }}
+        />
+      );
+    }
+    if (cardUuid) {
+      return (
+        <CreditCardDetailsScreen
+          key={cardUuid}
+          uuid={cardUuid}
+          accessToken={onboarding?.session?.accessToken}
+          onBack={() => {
+            setCardUuid(null);
+            setInvoiceToOpen(null);
+          }}
+          onDistribute={() => setInitialBalanceUuid(cardUuid)}
+          onEdit={card => setAccountForm({ kind: 'card', card })}
+          revision={cardRevision}
+          onPayment={() => {
+            accountList.retry();
+            cardList.retry();
+          }}
+          onOpenTransaction={openDetails}
+          initialInvoiceUuid={invoiceToOpen}
+          onDeleted={refreshAfterDeletion}
+        />
+      );
+    }
+    if (accountUuid) {
+      return (
+        <AccountDetailsScreen
+          key={accountUuid}
+          uuid={accountUuid}
+          accessToken={onboarding?.session?.accessToken}
+          onBack={() => setAccountUuid(null)}
+          onEdit={account => setAccountForm({ kind: 'account', account })}
+          revision={accountRevision}
+          onOpenTransaction={openDetails}
+          onDeleted={refreshAfterDeletion}
+        />
+      );
+    }
+    return null;
+  }
   function renderContent() {
+    if (isAndroid) {
+      const accountSubscreen =
+        selected === 'AccountManagement'
+          ? renderAccountManagementSubscreen()
+          : null;
+      const showHome = !!(visitedTabs.Home || selected === 'Home');
+      const showStatement = !!(
+        visitedTabs.Statement || selected === 'Statement'
+      );
+      const showAccounts = !!(
+        visitedTabs.AccountManagement || selected === 'AccountManagement'
+      );
+      const showCategories = !!(
+        visitedTabs.Categories || selected === 'Categories'
+      );
+      return (
+        <>
+          {showHome && (
+            <View
+              accessibilityElementsHidden={selected !== 'Home'}
+              importantForAccessibility={
+                selected !== 'Home' ? 'no-hide-descendants' : 'auto'
+              }
+              style={[styles.tabPane, selected !== 'Home' && styles.hidden]}
+            >
+              <HomeScreen
+                profile={onboarding?.profile}
+                accessToken={onboarding?.session?.accessToken}
+                revision={dashboardRevision}
+                onOpenAccount={openAccount}
+                onOpenCard={openInvoice}
+                onViewCards={viewCards}
+                onOpenTransaction={openDetails}
+                onViewStatement={viewStatement}
+              />
+            </View>
+          )}
+          {showStatement && (
+            <View
+              accessibilityElementsHidden={selected !== 'Statement'}
+              importantForAccessibility={
+                selected !== 'Statement' ? 'no-hide-descendants' : 'auto'
+              }
+              style={[
+                styles.tabPane,
+                selected !== 'Statement' && styles.hidden,
+              ]}
+            >
+              <StatementScreen
+                accessToken={onboarding?.session?.accessToken}
+                onOpenTransaction={openDetails}
+                revision={statementRevision}
+                onDeleted={refreshAfterDeletion}
+              />
+            </View>
+          )}
+          {showAccounts && (
+            <View
+              accessibilityElementsHidden={selected !== 'AccountManagement'}
+              importantForAccessibility={
+                selected !== 'AccountManagement'
+                  ? 'no-hide-descendants'
+                  : 'auto'
+              }
+              style={[
+                styles.tabPane,
+                selected !== 'AccountManagement' && styles.hidden,
+              ]}
+            >
+              <View
+                style={[styles.tabPane, !!accountSubscreen && styles.hidden]}
+              >
+                <AccountsScreen
+                  {...accountList}
+                  profile={onboarding?.profile}
+                  cards={cardList.cards}
+                  cardsLoading={cardList.loading}
+                  cardsError={cardList.error}
+                  onRetryCards={cardList.retry}
+                  onOpenCard={openInvoice}
+                  onRetry={accountList.retry}
+                  onCreate={createAccount}
+                  onCreateCard={createCard}
+                  onEdit={editAccount}
+                />
+              </View>
+              {accountSubscreen}
+            </View>
+          )}
+          {showCategories && (
+            <View
+              accessibilityElementsHidden={selected !== 'Categories'}
+              importantForAccessibility={
+                selected !== 'Categories' ? 'no-hide-descendants' : 'auto'
+              }
+              style={[
+                styles.tabPane,
+                selected !== 'Categories' && styles.hidden,
+              ]}
+            >
+              {categoryForm ? (
+                <CategoryFormScreen
+                  key={
+                    categoryForm.category?.uuid ??
+                    categoryForm.category?.name ??
+                    'new-category'
+                  }
+                  category={categoryForm.category}
+                  existingCategories={[...defaultCategories, ...categories]}
+                  saving={saving}
+                  onSave={saveCategory}
+                  onDelete={deleteCategory}
+                  onCancel={() => setCategoryForm(null)}
+                />
+              ) : (
+                <CategoriesScreen
+                  categories={categories}
+                  defaultCategories={defaultCategories}
+                  accessToken={onboarding?.session?.accessToken}
+                  revision={dashboardRevision + statementRevision}
+                  loading={loading}
+                  error={error}
+                  onRetry={retry}
+                  onCreate={createCategory}
+                  onEdit={editCategory}
+                  onDelete={deleteCategory}
+                />
+              )}
+            </View>
+          )}
+        </>
+      );
+    }
     if (selected === 'Home') {
       return (
         <HomeScreen
@@ -314,90 +555,9 @@ export default function MainTabs({ navigation }) {
       );
     }
     if (selected === 'AccountManagement') {
-      if (initialBalanceUuid) {
-        return (
-          <CreditCardInitialInvoicesScreen
-            key={initialBalanceUuid}
-            uuid={initialBalanceUuid}
-            accessToken={onboarding?.session?.accessToken}
-            onBack={() => setInitialBalanceUuid(null)}
-            onSaved={() => {
-              setInitialBalanceUuid(null);
-              setCardRevision(value => value + 1);
-              setDashboardRevision(value => value + 1);
-              cardList.retry();
-            }}
-          />
-        );
-      }
-      if (accountForm) {
-        const close = () => setAccountForm(null);
-        if (accountForm.kind === 'card') {
-          return (
-            <CreateCreditCardScreen
-              key={accountForm.card?.uuid || 'new-card'}
-              card={accountForm.card}
-              onCancel={close}
-              onCreated={() => {
-                close();
-                setCardRevision(value => value + 1);
-                setDashboardRevision(value => value + 1);
-              }}
-            />
-          );
-        }
-        return (
-          <CreateAccountScreen
-            key={accountForm.account?.uuid || 'new-account'}
-            route={{
-              params: { fromManagement: true, account: accountForm.account },
-            }}
-            navigation={{
-              goBack: close,
-              reset: () => {
-                close();
-                setAccountRevision(value => value + 1);
-              },
-            }}
-          />
-        );
-      }
-      if (cardUuid) {
-        return (
-          <CreditCardDetailsScreen
-            key={cardUuid}
-            uuid={cardUuid}
-            accessToken={onboarding?.session?.accessToken}
-            onBack={() => {
-              setCardUuid(null);
-              setInvoiceToOpen(null);
-            }}
-            onDistribute={() => setInitialBalanceUuid(cardUuid)}
-            onEdit={card => setAccountForm({ kind: 'card', card })}
-            revision={cardRevision}
-            onPayment={() => {
-              accountList.retry();
-              cardList.retry();
-            }}
-            onOpenTransaction={openDetails}
-            initialInvoiceUuid={invoiceToOpen}
-            onDeleted={refreshAfterDeletion}
-          />
-        );
-      }
-      if (accountUuid) {
-        return (
-          <AccountDetailsScreen
-            key={accountUuid}
-            uuid={accountUuid}
-            accessToken={onboarding?.session?.accessToken}
-            onBack={() => setAccountUuid(null)}
-            onEdit={account => setAccountForm({ kind: 'account', account })}
-            revision={accountRevision}
-            onOpenTransaction={openDetails}
-            onDeleted={refreshAfterDeletion}
-          />
-        );
+      const subscreen = renderAccountManagementSubscreen();
+      if (subscreen) {
+        return subscreen;
       }
       return (
         <AccountsScreen
@@ -689,6 +849,7 @@ const createStyles = colors =>
     canvas: { flex: 1, width: '100%', maxWidth: 460, alignSelf: 'center' },
     backdrop: { flex: 1 },
     content: { flex: 1, paddingBottom: 18 },
+    tabPane: { flex: 1 },
     profile: { flex: 1 },
     hidden: { display: 'none' },
   });
