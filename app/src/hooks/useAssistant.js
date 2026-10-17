@@ -13,6 +13,8 @@ export default function useAssistant({ visible, profileId, accessToken }) {
   const [loading, setLoading] = useState(false);
   const [picking, setPicking] = useState(false);
   const [sending, setSending] = useState(false);
+  const [revealingReplyId, setRevealingReplyId] = useState(null);
+  const finishReplyReveal = useCallback(id => setRevealingReplyId(current => current === id ? null : current), []);
   const [error, setError] = useState('');
   const [storageError, setStorageError] = useState('');
   const records = useRef([]);
@@ -42,7 +44,7 @@ export default function useAssistant({ visible, profileId, accessToken }) {
     request.current?.abort();
     request.current = null;
     busy.current = false;
-    if (mounted.current) setSending(false);
+    if (mounted.current) { setSending(false); setRevealingReplyId(null); }
     const pending = records.current.some(c => c.messages.some(m => m.status === 'sending'));
     if (pending) persist(records.current.map(c => ({ ...c, messages: c.messages.map(m =>
       m.status === 'sending' ? { ...m, status: 'failed', error: 'Envio interrompido. Tente novamente.' } : m) })));
@@ -148,11 +150,14 @@ export default function useAssistant({ visible, profileId, accessToken }) {
     try {
       const response = await sendAssistantMessage({ conversation, message, profileId, accessToken, signal: controller.signal });
       if (!mounted.current || epoch !== generation.current) return true;
+      const replyId = response.replyId || newAssistantId();
+      if (response.delivery !== 'received') setRevealingReplyId(replyId);
       await persist(records.current.map(c => c.id !== conversation.id ? c : ({
         ...c, remoteId: response.remoteId || c.remoteId, updatedAt: new Date().toISOString(),
-        messages: [...c.messages.map(m => m.id === message.id ? { ...m, status: 'sent', error: '' } : m),
-          { id: newAssistantId(), role: 'assistant', content: response.content,
-            attachments: [], status: 'sent', createdAt: new Date().toISOString() }],
+        messages: [...c.messages.map(m => m.id === message.id ? { ...m, status: 'sent', error: '',
+            delivery: response.delivery, serverMessageId: response.serverMessageId, receivedAt: response.receivedAt } : m),
+          ...(response.delivery === 'received' ? [] : [{ id: replyId, role: 'assistant', content: response.content,
+            attachments: [], ...(response.presentation ? {presentation:response.presentation} : {}), status: 'sent', createdAt: response.replyCreatedAt || new Date().toISOString() }])],
       })));
     } catch (cause) {
       if (!mounted.current || epoch !== generation.current) return true;
@@ -169,5 +174,5 @@ export default function useAssistant({ visible, profileId, accessToken }) {
 
   return { conversations, conversation: conversations.find(c => c.id === currentId), currentId,
     draft, setDraft, attachments, pick, removeFile, loading, picking, sending, error, storageError,
-    send, interrupt, startNew, openConversation, removeConversation };
+    send, interrupt, startNew, openConversation, removeConversation, revealingReplyId, finishReplyReveal };
 }

@@ -1,2 +1,2 @@
-// Caminho relativo à API existente. Vazio mantém o assistente em preparação.
-export const assistantEndpoint = process.env.EXPO_PUBLIC_ASSISTANT_PATH || '';
+// Endpoint autenticado na mesma API; esta etapa confirma o recebimento da pergunta.
+export const assistantEndpoint = process.env.EXPO_PUBLIC_ASSISTANT_PATH || '/api/assistant/messages';

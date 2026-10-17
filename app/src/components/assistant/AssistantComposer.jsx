@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LayoutAnimationConfig } from 'react-native-reanimated';
 import AnimatedInputBar from '../../shared/components/reacticx/base/animated-input-bar';
 import GlassMaterial from '../silver/GlassMaterial';
 import Icon from '../Icon';
@@ -12,7 +13,9 @@ export default function AssistantComposer({ controller, inputRef, onSend, onClos
   const [height, setHeight] = useState(48);
   const disabled = controller.sending || controller.picking || controller.loading;
   const canSend = !disabled && (!!controller.draft.trim() || !!controller.attachments.length);
-  return <View ref={containerRef} collapsable={false} testID="assistant-composer" style={[s.outer, Platform.OS !== 'web' && s.nativeOuter]}>
+  // Character exits may keep the native input visible after navigation. Skip
+  // them only when the whole composer unmounts; placeholder cycling stays animated.
+  return <LayoutAnimationConfig skipExiting><View ref={containerRef} collapsable={false} testID="assistant-composer" style={[s.outer, Platform.OS !== 'web' && s.nativeOuter]}>
     {!!controller.error && <Text accessibilityRole="alert" style={s.error}>{controller.error}</Text>}
     <GlassMaterial blurred={false} style={[s.glass, Platform.OS !== 'web' && (compact ? s.nativeCompactGlass : s.nativeGlass)]}>
       {!compact && <View style={s.titleRow}><View style={s.name}><Icon name="sparkles" size={18} color="#E6A64C" /><Text style={s.title}>Pergunte ao ViKash</Text></View>
@@ -51,7 +54,7 @@ export default function AssistantComposer({ controller, inputRef, onSend, onClos
           <Text style={s.limit}>Até 5 anexos · 10 MB cada{compact ? '' : '\n20 MB por mensagem'}</Text>}</View>
       </View>
     </GlassMaterial>
-  </View>;
+  </View></LayoutAnimationConfig>;
 }
 export function Action({ icon, label, onPress, disabled = false }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled}

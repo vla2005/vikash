@@ -1,0 +1,203 @@
+{
+  "version": "financial-v2-2026-10-16",
+  "dialect": "PostgreSQL 18",
+  "timezone": "America/Sao_Paulo",
+  "currency": "BRL",
+  "scope": {
+    "schema": "assistant_finance",
+    "tenant_context": "O backend aplicará o usuário autenticado na conexão. As views não expõem user_id. Nunca aceitar ou gerar filtros de outro usuário.",
+    "execution": "O planejador só propõe SQL. A API valida a AST, executa a consulta em conexão de leitura isolada por usuário e fornece os resultados ao redator."
+  },
+  "views": [
+    {
+      "name": "assistant_finance.accounts",
+      "grain": "Uma linha por conta; balance é saldo atual, não histórico.",
+      "columns": {
+        "account_uuid": "uuid",
+        "account_name": "text",
+        "account_type": "text",
+        "institution_name": "text",
+        "balance": "numeric(15,2)",
+        "active": "boolean"
+      }
+    },
+    {
+      "name": "assistant_finance.cards",
+      "grain": "Uma linha por cartão. credit_limit não é limite disponível. Não calcular disponível sem considerar compras, parcelas e saldo inicial utilizado.",
+      "columns": {
+        "card_uuid": "uuid",
+        "institution_name": "text",
+        "last_four_digits": "integer nullable",
+        "credit_limit": "numeric(15,2)",
+        "active": "boolean"
+      }
+    },
+    {
+      "name": "assistant_finance.transactions",
+      "grain": "Uma linha por movimentação de conta. Valores sempre positivos; tipo determina o efeito. TRANSFER move dinheiro próprio. INVOICE_PAYMENT é saída de caixa, não novo consumo.",
+      "columns": {
+        "transaction_uuid": "uuid",
+        "account_uuid": "uuid",
+        "account_name": "text",
+        "institution_name": "text",
+        "category_name": "text nullable",
+        "description": "text",
+        "amount": "numeric(15,2)",
+        "type": "EXPENSE|INCOME|TRANSFER|INVOICE_PAYMENT",
+        "payment_method": "CREDIT_CARD|DEBIT_CARD|PIX|BANK_TRANSFER|BANK_SLIP|CASH|OTHER",
+        "occurred_at": "timestamp sem timezone; horário America/Sao_Paulo",
+        "is_consumption": "boolean: type = EXPENSE",
+        "is_cash_outflow": "boolean: type IN (EXPENSE,INVOICE_PAYMENT)"
+      }
+    },
+    {
+      "name": "assistant_finance.purchases",
+      "grain": "Uma linha por compra de cartão. amount é valor total da compra, não valor de uma parcela. A data é a da compra.",
+      "columns": {
+        "purchase_uuid": "uuid",
+        "card_uuid": "uuid",
+        "institution_name": "text",
+        "last_four_digits": "integer nullable",
+        "category_name": "text nullable",
+        "description": "text",
+        "amount": "numeric(15,2)",
+        "installment_count": "integer",
+        "occurred_at": "timestamp sem timezone; horário America/Sao_Paulo"
+      }
+    },
+    {
+      "name": "assistant_finance.installments",
+      "grain": "Uma linha por parcela. Use amount desta view para somar parcelas por mês de fatura. Não somar de novo o total da compra.",
+      "columns": {
+        "installment_uuid": "uuid",
+        "purchase_uuid": "uuid",
+        "invoice_uuid": "uuid",
+        "card_uuid": "uuid",
+        "institution_name": "text",
+        "last_four_digits": "integer nullable",
+        "category_name": "text nullable",
+        "description": "text",
+        "amount": "numeric(15,2)",
+        "installment_number": "integer",
+        "installment_count": "integer",
+        "purchase_occurred_at": "timestamp sem timezone",
+        "reference_month": "text AAAA-MM da fatura",
+        "due_date": "date",
+        "invoice_status": "OPEN|CLOSED|PAID"
+      }
+    },
+    {
+      "name": "assistant_finance.invoices",
+      "grain": "Uma linha por fatura. total_amount = initial_amount + soma das parcelas. Já está agregado; não juntar parcelas para somar total_amount, pois duplicaria totais. Fatura pendente: status diferente de PAID.",
+      "columns": {
+        "invoice_uuid": "uuid",
+        "card_uuid": "uuid",
+        "institution_name": "text",
+        "last_four_digits": "integer nullable",
+        "reference_month": "text AAAA-MM",
+        "closing_date": "date",
+        "due_date": "date",
+        "status": "OPEN|CLOSED|PAID",
+        "initial_amount": "numeric(15,2)",
+        "installments_amount": "numeric",
+        "total_amount": "numeric"
+      }
+    },
+    {
+      "name": "assistant_finance.categories",
+      "grain": "Categorias padrão e personalizadas visíveis ao usuário. Nomes não são IDs nem necessariamente únicos.",
+      "columns": {
+        "category_key": "text chave estável prefixada default: ou custom:",
+        "category_name": "text",
+        "is_custom": "boolean"
+      }
+    }
+  ],
+  "rules": [
+    "Não inventar nomes de tabelas, colunas, IDs, categorias ou instituições. Filtrar nomes com parâmetros, sem precisar consultar contas para planejar.",
+    "Use somente as views do catálogo; nenhum acesso a users, senhas, tokens, transcrições ou tabelas base.",
+    "Consumo das contas: transactions.type = EXPENSE ou is_consumption=true. Saída de caixa das contas: EXPENSE e INVOICE_PAYMENT ou is_cash_outflow=true, pela data occurred_at da movimentação. Receitas INCOME e transferências internas TRANSFER não entram em nenhum desses totais.",
+    "Consumo combinado: despesas EXPENSE das contas + compras totais de cartão por occurred_at. Não adicionar pagamentos de fatura nem parcelas a essa soma.",
+    "Consumo mede compras/despesas no período em que ocorreram. Pagamento de fatura quita compras e não é novo consumo; excluí-lo evita contar compra e quitação duas vezes, não significa que os registros estejam duplicados.",
+    "Saída de caixa mede dinheiro que efetivamente saiu das contas no período, incluindo faturas pagas nesse período, mesmo quando as compras ocorreram antes. Não somar purchases, installments ou totais de invoices à saída de caixa: o pagamento já está em transactions.",
+    "Pedido explícito de consumo, pela data da compra ou sem pagamentos de fatura resolve o critério de consumo. Pedido de saída de caixa, dinheiro que saiu das contas ou incluindo pagamentos de fatura resolve saída de caixa. Contas/cartões/ambos é escopo, não resolve sozinho consumo versus caixa. Após definir consumo, pedir escopo somente se ausente; não exigir banco ou método para agregados de todas as contas.",
+    "Reutilizar o critério que o usuário escolheu para continuações como e no mês passado, sem perguntar de novo; uma mudança explícita de critério prevalece sobre o histórico e a memória. Se pedir as duas visões, retornar métricas separadas e nunca somá-las. Em interpretation informar a visão, o escopo, o período e o tratamento dos pagamentos de fatura para o redator explicar o resultado.",
+    "Gastos do cartão por compra: purchases e occurred_at. Compromissos mensais do cartão: installments e reference_month. Fatura a pagar: invoices e status.",
+    "Gastos, despesas e quanto gastei são ambíguos entre consumo e saída de caixa, mesmo com conta, banco, categoria e período definidos. Sem escolha explícita do usuário na pergunta ou no contexto, decision=clarify, sem SQL. Perguntar: Você quer consumo (compras e despesas, sem contar novamente as faturas pagas) ou saída de caixa (dinheiro que saiu das contas, incluindo faturas pagas)? Não escolher consumo como padrão. Uma suposição/resposta anterior do assistente não é escolha do usuário.",
+    "Quando compra versus competência da fatura mudar o resultado e não estiver claro, pedir esclarecimento.",
+    "Períodos relativos usam exclusivamente currentDateTime enviado pela API. Mês atual: primeiro dia até primeiro dia do mês seguinte; mês passado: primeiro dia do mês anterior até primeiro dia do atual. Filtros de data são >= início e < fim exclusivo.",
+    "Últimos N dias sem outra indicação: N datas de calendário incluindo hoje. Últimos N meses sem indicar meses completos: mesma data de N meses atrás até amanhã. Indicar esses critérios na interpretação.",
+    "Comparar mês atual com anterior usa os dias decorridos correspondentes; não comparar um mês parcial com um mês completo sem pedido explícito.",
+    "Fim de semana: EXTRACT(ISODOW FROM occurred_at) IN (6,7). Hoje usa America/Sao_Paulo. Não converter timestamp sem timezone como UTC.",
+    "Saldo atual vem de accounts.balance. Não há saldo histórico inicial suficiente para responder qualquer data arbitrária com precisão. Pedir esclarecimento ou indicar indisponibilidade.",
+    "AVG, SUM, COUNT e percentuais são propostos em SQL numérico, não calculados mentalmente. Usar NULLIF no denominador, COALESCE(SUM(...),0) para totais vazios. Arredondar apenas a apresentação.",
+    "Não supor que um débito recorrente é assinatura comprovada; frequência de pagamentos não revela uso do serviço. Perguntas sobre uso de assinatura não são respondíveis pelo catálogo.",
+    "Operações de escrita, acesso de outros usuários e pedidos sobre dados fora do catálogo são unsupported.",
+    "JOINs só quando a granularidade for compatível. Preferir agregação separada antes de combinar totais. UNION ALL deve harmonizar colunas e evitar duplicação.",
+    "Listagens incluem ORDER BY determinístico e LIMIT de no máximo 100. Agregados não devem carregar todos os lançamentos na resposta.",
+    "Parâmetros SQL são nomeados (:inicio, :fim, :instituicao, :valor_minimo); cada referência tem um item em parameters. Não interpolar texto do usuário em SQL nem usar $1 ou ?. Não criar parâmetro de usuário."
+  ],
+  "examples": [
+    {
+      "question": "Qual foi meu consumo nas contas por categoria em setembro de 2026, sem pagamentos de fatura?",
+      "decision": "query",
+      "sql": "SELECT COALESCE(category_name, 'Sem categoria') AS categoria, COALESCE(SUM(amount), 0) AS total FROM assistant_finance.transactions WHERE type = 'EXPENSE' AND occurred_at >= CAST(:inicio AS timestamp) AND occurred_at < CAST(:fim AS timestamp) GROUP BY category_name ORDER BY total DESC, categoria LIMIT 100",
+      "parameters": [
+        {
+          "name": "inicio",
+          "type": "date",
+          "value": "2026-09-01"
+        },
+        {
+          "name": "fim",
+          "type": "date",
+          "value": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "question": "Quanto gastei?",
+      "decision": "clarify",
+      "clarification": "Você quer consumo (compras e despesas, sem contar novamente as faturas pagas) ou saída de caixa (dinheiro que saiu das contas, incluindo faturas pagas)? E de qual período?"
+    },
+    {
+      "question": "Qual assinatura eu não uso?",
+      "decision": "unsupported",
+      "reason": "O histórico financeiro não informa uso de serviços."
+    },
+    {
+      "question": "Quanto gastei nas minhas contas nas últimas duas semanas?",
+      "decision": "clarify",
+      "clarification": "Você quer consumo (despesas, sem contar novamente as faturas pagas) ou saída de caixa (dinheiro que saiu das contas, incluindo faturas pagas)?"
+    },
+    {
+      "question": "Quanto dinheiro saiu das minhas contas em setembro de 2026, incluindo faturas pagas?",
+      "decision": "query",
+      "sql": "SELECT COALESCE(SUM(amount), 0) AS saida_de_caixa FROM assistant_finance.transactions WHERE is_cash_outflow = true AND occurred_at >= CAST(:inicio AS timestamp) AND occurred_at < CAST(:fim AS timestamp)",
+      "parameters": [
+        {
+          "name": "inicio",
+          "type": "date",
+          "value": "2026-09-01"
+        },
+        {
+          "name": "fim",
+          "type": "date",
+          "value": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "question": "E no mês passado?",
+      "context": "O usuário escolheu saída de caixa de todas as contas, incluindo faturas pagas.",
+      "decision": "query",
+      "interpretation": "Manter saída de caixa e incluir pagamentos de fatura pela data do pagamento, alterando apenas o período para o mês passado."
+    },
+    {
+      "question": "E meus gastos neste mês?",
+      "context": "O usuário perguntou genericamente sobre gastos; o assistente assumiu consumo sem pedir escolha. A métrica da memória é gastos, e apenas o assistente disse que excluiu faturas.",
+      "decision": "clarify",
+      "clarification": "Você quer consumo, sem contar novamente as faturas pagas, ou saída de caixa, incluindo os pagamentos de fatura?"
+    }
+  ]
+}

@@ -1,6 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, FlatList, Keyboard, KeyboardAvoidingView, PixelRatio, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AssistantRichAnswer from './AssistantRichAnswer';
+import AssistantThinking from './AssistantThinking';
+import useAssistantAutoScroll from '../../hooks/useAssistantAutoScroll';
 import AssistantIntelligence from './AssistantIntelligence';
 import AssistantEntryLayout from './AssistantEntryLayout';
 import { useDock } from '../../contexts/DockContext';
@@ -14,6 +17,8 @@ import useAssistant from '../../hooks/useAssistant';
 import { assistantEndpoint } from '../../config/assistant';
 import { fileSizeLabel } from '../../utils/assistant';
 import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../../theme';
+
+const EMPTY_MESSAGES = [];
 
 export default function AssistantExperience({ children, visible, onClose, profileId, accessToken, dockOrigin, appFrameRef, onDockCovered, getDockOrigin, startupTrace, captureScope }) {
   const [panelPrepared,setPanelPrepared]=useState(false);
@@ -50,6 +55,17 @@ export default function AssistantExperience({ children, visible, onClose, profil
   const status = useRef(null);
   const previousFocus = useRef(null);
   const chat = !!controller.currentId;
+  const messages = controller.conversation?.messages || EMPTY_MESSAGES;
+  const { revealingReplyId, finishReplyReveal } = controller;
+  const lastUserMessageId = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index--)
+      if (messages[index].role === 'user') return messages[index].id;
+    return undefined;
+  }, [messages]);
+  const messageScroll = useAssistantAutoScroll(list, visible && !closing && !history && chat, controller.currentId, lastUserMessageId);
+  useEffect(() => {
+    if (history && revealingReplyId) finishReplyReveal(revealingReplyId);
+  }, [history, revealingReplyId, finishReplyReveal]);
   const safeBottom = keyboardVisible ? 8 : Math.max(8, insets.bottom);
   status.current = { visible, history, chat, opening, closing, loading:controller.loading };
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -211,7 +227,7 @@ export default function AssistantExperience({ children, visible, onClose, profil
           controller.loading ? <View style={s.empty}><ActivityIndicator color="#E6A64C" accessibilityLabel="Carregando histórico" /></View> :
           history ? <FlatList data={controller.conversations} keyExtractor={item => item.id}
             keyboardShouldPersistTaps="handled" contentContainerStyle={s.historyContent}
-            ListEmptyComponent={<View style={s.empty}><Icon name="history" color="#E6A64C" size={32} /><Text style={s.emptyTitle}>Suas conversas ficam aqui</Text><Text style={s.caption}>As perguntas enviadas são salvas neste aparelho.</Text></View>}
+            ListEmptyComponent={<View style={s.empty}><Icon name="history" color="#E6A64C" size={32} /><Text style={s.emptyTitle}>Suas conversas ficam aqui</Text><Text style={s.caption}>As perguntas enviadas são salvas na sua conta.</Text></View>}
             renderItem={({ item }) => <View style={s.historyRow}>
               <Pressable accessibilityRole="button" accessibilityLabel={`Abrir conversa ${item.title}`}
                 onPress={() => { controller.openConversation(item.id); setHistory(false); }} style={s.historyOpen}>
@@ -219,19 +235,23 @@ export default function AssistantExperience({ children, visible, onClose, profil
                 <Text style={s.historyDate}>{new Date(item.updatedAt || item.createdAt).toLocaleDateString('pt-BR')} · {item.messages.length} mensagens</Text>
               </Pressable><Action icon="trash" label={`Excluir conversa ${item.title}`} onPress={() => { setDeleteError(''); setDeleteId(item.id); }} />
             </View>} /> :
-          chat ? <FlatList ref={list} testID="assistant-messages" data={controller.conversation?.messages || []}
+          chat ? <FlatList ref={list} testID="assistant-messages" data={messages} extraData={controller.revealingReplyId}
             keyExtractor={item => item.id} contentContainerStyle={s.messages}
+            windowSize={5} initialNumToRender={4} maxToRenderPerBatch={4}
             keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => list.current?.scrollToEnd({ animated:true })}
-            ListFooterComponent={controller.sending ? <View style={s.thinking}><ActivityIndicator size="small" color="#E6A64C" /><Text accessibilityLiveRegion="polite" style={s.caption}>Pensando...</Text></View> : null}
+            {...messageScroll}
+            ListFooterComponent={controller.sending && messages[messages.length - 1]?.status === 'sending' ? <AssistantThinking active={visible && !closing && !history} /> : null}
             renderItem={({ item }) => <View testID={`assistant-message-${item.id}`} style={[s.message, item.role === 'user' ? s.userRow : s.assistantRow]}>
               <View style={item.role === 'user' ? s.bubble : s.answer}>
-                {!!item.content && <Text selectable style={s.messageText}>{item.content}</Text>}
+                {!!item.content && (item.role === 'assistant' ? <AssistantRichAnswer content={item.content} presentation={item.presentation} messageId={item.id} animate={controller.revealingReplyId === item.id} active={visible && !closing && !history} onRevealComplete={controller.finishReplyReveal} /> : <Text selectable style={s.messageText}>{item.content}</Text>)}
                 {item.attachments.map(file => <View key={file.id} style={s.messageFile}>
                   <Icon name={file.mimeType.startsWith('image/') ? 'image' : 'statement'} color="#E6A64C" size={18} />
                   <View style={s.fileCopy}><Text numberOfLines={2} style={s.fileName}>{file.name}</Text><Text style={s.historyDate}>{fileSizeLabel(file.size)}</Text></View>
                 </View>)}
               </View>
+              {item.delivery === 'received' && <Text accessibilityLiveRegion="polite" style={[s.caption, s.receipt]}>
+                Pergunta recebida e salva. As respostas da IA ainda não estão disponíveis nesta etapa.
+              </Text>}
               {item.status === 'failed' && <View style={s.feedback}>
                 <Text accessibilityRole="alert" style={[s.feedbackText, !assistantEndpoint && s.preparing]}>{item.error || 'Envio interrompido. Tente novamente.'}</Text>
                 <Pressable accessibilityRole="button" accessibilityLabel="Tentar enviar pergunta novamente" disabled={controller.sending}
@@ -274,6 +294,7 @@ const s = StyleSheet.create({
   messageFile: { flexDirection:'row', alignItems:'center', gap:8, marginTop:10 }, fileCopy: { flex:1, minWidth:0 },
   fileName: { fontFamily, fontSize:12, lineHeight:18, color:'#E5E5E7' },
   feedback: { maxWidth:'88%', marginTop:10, alignItems:'flex-end' }, feedbackText: { fontFamily, fontSize:12, lineHeight:19, color:'#F79B9F' }, preparing: { color:'#DAB67E' },
+  receipt: { maxWidth:'88%', marginTop:10, textAlign:'right' },
   retry: { minHeight:44, justifyContent:'center' }, retryText: { color:'#E6A64C', fontFamily:fontFamilyMedium, fontSize:13 },
   thinking: { flexDirection:'row', gap:10, alignItems:'center', paddingVertical:10 }, caption: { color:'#B0B0B4', fontFamily, fontSize:13, lineHeight:20, textAlign:'center' },
   storageError: { marginHorizontal:20, marginVertical:8, color:'#E6A64C', fontFamily, fontSize:12, lineHeight:19 },

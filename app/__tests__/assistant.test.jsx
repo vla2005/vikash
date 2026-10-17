@@ -16,6 +16,7 @@ jest.mock('../src/services/assistantStorage', () => ({
 jest.mock('../src/services/assistantAttachments', () => ({ pickAssistantAttachments:jest.fn() }));
 jest.mock('../src/services/assistantApi', () => ({ sendAssistantMessage:jest.fn() }));
 jest.mock('../src/components/Icon', () => 'Icon');
+jest.mock('../src/config/api', () => ({ API_BASE_URL:'http://api.test' }));
 let renderer, state;
 const props = { visible:true, profileId:'profile-a', accessToken:'token-a' };
 function Probe(p) { state = useAssistant(p); return null; }
@@ -135,4 +136,96 @@ test('entry reuses the transaction Animated Input Bar and opens a plain black ch
   const send = renderer.root.findAll(node => node.props.accessibilityLabel === 'Enviar pergunta' && node.props.onPress)[0];
   await act(async () => send.props.onPress());
   expect(renderer.root.findAllByProps({ testID:'assistant-messages' }).length).toBeGreaterThan(0);
+});
+
+
+test('confirmação de recebimento salva a pergunta sem fabricar uma resposta de IA', async () => {
+  sendAssistantMessage.mockResolvedValue({ delivery: 'received', remoteId: 'remote-1', serverMessageId: 'server-1', receivedAt: '2026-10-16T12:00:00Z' });
+  await mount();
+  await ask('Quanto gastei no mercado?');
+  expect(state.conversation.remoteId).toBe('remote-1');
+  expect(state.conversation.messages).toHaveLength(1);
+  expect(state.conversation.messages[0]).toMatchObject({ role: 'user', status: 'sent', delivery: 'received', serverMessageId: 'server-1' });
+  expect(state.sending).toBe(false);
+  await ask('E no mês passado?');
+  expect(sendAssistantMessage.mock.calls[1][0].conversation.remoteId).toBe('remote-1');
+  expect(state.conversation.messages.map(item => item.role)).toEqual(['user', 'user']);
+});
+
+test('chat mostra o recebimento explicitamente sem bolha de resposta ou spinner pendente', async () => {
+  sendAssistantMessage.mockResolvedValue({ delivery: 'received', remoteId: 'remote-1', serverMessageId: 'server-1', receivedAt: '2026-10-16T12:00:00Z' });
+  await act(async () => { renderer = TestRenderer.create(<AssistantExperience {...props} onClose={jest.fn()} />); });
+  await act(async () => renderer.root.findByProps({ testID: 'assistant-presentation' }).props.onShow());
+  await act(async () => renderer.root.findByType(AnimatedInputBar).props.onChangeText('Minha pergunta'));
+  const send = renderer.root.findAll(node => node.props.accessibilityLabel === 'Enviar pergunta' && node.props.onPress)[0];
+  await act(async () => send.props.onPress());
+  const rendered = JSON.stringify(renderer.toJSON());
+  expect(rendered).toContain('Pergunta recebida e salva.');
+  expect(rendered).not.toContain('Enviando pergunta...');
+});
+
+
+test('salva a resposta oficial com ID e data estáveis após retry do planejamento', async () => {
+  sendAssistantMessage.mockRejectedValueOnce(new Error('Gemini indisponível'));
+  await mount(); await ask('Quanto gastei nas contas este mês?');
+  const id = state.conversation.messages[0].id;
+  sendAssistantMessage.mockResolvedValueOnce({ delivery: 'planned', remoteId: 'remote-1', serverMessageId: 'q-1',
+    receivedAt: '2026-10-16T12:00:00Z', replyId: 'official-reply', replyCreatedAt: '2026-10-16T12:01:00Z',
+    content: 'Proposta preparada, ainda sem consultar os dados.' });
+  await act(async () => state.send(id));
+  expect(state.conversation.messages).toHaveLength(2);
+  expect(state.conversation.messages[0]).toMatchObject({ id, status: 'sent', delivery: 'planned' });
+  expect(state.conversation.messages[1]).toMatchObject({ id: 'official-reply', role: 'assistant', createdAt: '2026-10-16T12:01:00Z' });
+});
+
+
+test('exibe resposta financeira oficial e usa os IDs estáveis após falha do redator', async () => {
+  sendAssistantMessage.mockRejectedValueOnce(new Error('A consulta foi salva, mas o Gemini não conseguiu responder agora.'));
+  await mount(); await ask('Qual o saldo atual?');
+  const id = state.conversation.messages[0].id;
+  sendAssistantMessage.mockResolvedValueOnce({ delivery: 'answered', remoteId: 'remote-1', serverMessageId: 'q-1',
+    receivedAt: '2026-10-16T12:00:00Z', replyId: 'answer-1', replyCreatedAt: '2026-10-16T12:01:00Z', content: 'Seu saldo é R$ 1.703,80.' });
+  await act(async () => state.send(id));
+  expect(state.conversation.messages).toHaveLength(2);
+  expect(state.conversation.messages[0]).toMatchObject({ id, status: 'sent', delivery: 'answered' });
+  expect(state.conversation.messages[1]).toMatchObject({ id: 'answer-1', role: 'assistant', content: 'Seu saldo é R$ 1.703,80.' });
+});
+
+test('stores official visual metadata with the assistant message for reopening history',async()=>{
+ const presentation={version:'financial-presentation-v1',queriedAt:'2026-10-16T21:00:00Z',limited:false,blocks:[{type:'metric',title:'Saldo',caption:'Consulta atual',value:'R$ 10,00',format:'money',items:[]}]};
+ sendAssistantMessage.mockResolvedValueOnce({delivery:'answered',remoteId:'remote-1',content:'Saldo consultado.',presentation,replyId:'rich-reply',replyCreatedAt:'2026-10-16T21:00:00Z'});
+ await mount();await ask('Meu saldo');expect(state.conversation.messages[1].presentation).toEqual(presentation);
+ expect(saveAssistantHistory.mock.calls.at(-1)[1][0].messages[1].presentation).toEqual(presentation);
+});
+
+
+test('reply reveal is ephemeral, only targets the new reply and cannot be cleared by an older completion', async () => {
+  sendAssistantMessage.mockResolvedValueOnce({delivery:'answered',content:'Resposta completa: R$ 200,00.',replyId:'first'});
+  await mount();await ask('Meu consumo');
+  expect(state.revealingReplyId).toBe('first');
+  expect(saveAssistantHistory.mock.calls.at(-1)[1][0].messages.at(-1).content).toBe('Resposta completa: R$ 200,00.');
+  expect(JSON.stringify(saveAssistantHistory.mock.calls.at(-1)[1])).not.toContain('revealingReplyId');
+  sendAssistantMessage.mockResolvedValueOnce({delivery:'answered',content:'Outra resposta completa.',replyId:'second'});
+  await ask('E no mês passado?');
+  await act(async()=>state.finishReplyReveal('first'));expect(state.revealingReplyId).toBe('second');
+  await act(async()=>state.finishReplyReveal('second'));expect(state.revealingReplyId).toBeNull();
+  const conversation=state.currentId;
+  await act(async()=>state.openConversation(conversation));expect(state.revealingReplyId).toBeNull();
+});
+
+
+test('pending network reply shows the message skeleton and failure removes it while preserving retry', async () => {
+  let reject;
+  sendAssistantMessage.mockImplementationOnce(()=>new Promise((resolve,rejectPromise)=>{reject=rejectPromise;}));
+  await act(async()=>{renderer=TestRenderer.create(<AssistantExperience {...props} onClose={jest.fn()}/>);});
+  await act(async()=>renderer.root.findByProps({testID:'assistant-presentation'}).props.onShow());
+  await act(async()=>renderer.root.findByType(AnimatedInputBar).props.onChangeText('Meu consumo no mês'));
+  const button=renderer.root.findAll(node=>node.props.accessibilityLabel==='Enviar pergunta' && node.props.onPress)[0];
+  let sending;
+  await act(async()=>{sending=button.props.onPress();});
+  expect(renderer.root.findAllByProps({testID:'assistant-thinking-skeleton'}).length).toBeGreaterThan(0);
+  await act(async()=>{reject(new Error('Não foi possível receber a resposta.'));await sending;});
+  expect(renderer.root.findAllByProps({testID:'assistant-thinking-skeleton'})).toHaveLength(0);
+  expect(JSON.stringify(renderer.toJSON())).toContain('Meu consumo no mês');
+  expect(renderer.root.findAll(node=>node.props.accessibilityLabel==='Tentar enviar pergunta novamente').length).toBeGreaterThan(0);
 });

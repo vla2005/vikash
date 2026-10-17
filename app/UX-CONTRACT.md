@@ -157,3 +157,27 @@ O aviso keyboardDidShow não inicia uma segunda compactação/reposição da men
 
 
 Captura decorativa do assistente: assistantCapture.android.js é o proprietário da captura Android; assistantCapture.js mantém a captura iOS. O Android transfere PNG sem perda limitado ao buffer desfocado e usa raster Skia; não armazena capturas nem reaproveita imagens de outra tela/perfil. APKs sem módulo nativo mantêm a captura existente. Blur de reserva pode ser adiado somente enquanto a camada está invisível. Nenhuma otimização pode alterar a origem/destino do dock, os tempos de morph, a safe area, o toque fora do input ou a sequência iOS. Erros de captura continuam sem bloquear o chat.
+
+
+## Respostas financeiras no chat
+
+O proprietário de apresentação é `AssistantRichAnswer`, consumindo somente `reply.presentation` validada por `assistantPresentation` e salva por `useAssistant`/`assistantStorage`. A API e seu contrato estão em `../backend/ASSISTANT.md`. Respostas mantêm o fundo preto, alinhamento à esquerda sem balão e acento âmbar de `silver.js`. Valores legíveis usam a formatação exata da API, inclusive sinais, nulos e limites do resultado. Pizza e barras são do Reacticx; a legenda permite a mesma seleção sem exigir gestos no canvas, com estado selecionado acessível. Listas/legendas mostram cinco itens por página sem descartar o restante. Gráficos inadequados viram lista; versão desconhecida/corrompida usa o texto. A nota de origem informa a consulta dos registros do ViKash, sem alegar Open Finance ou atualização bancária. Logos usam apenas assets locais reconhecidos. Nenhum gráfico roda trabalho contínuo na thread JavaScript. Verificação: `assistantPresentation.test.jsx`, `assistantApi.test.js`, `assistant.test.jsx`, `assistantStorage.test.js` e os testes de apresentação/HTTP/Gemini no backend.
+
+
+### Resposta progressiva do assistente
+
+`AssistantThinking` reutiliza `Skeleton`/`SkeletonGroup`: três linhas no lugar da
+mensagem, com uma única pulsação de opacidade no Reanimated, sem blur, reflexos,
+sombras, animação de dimensões ou loops JavaScript. A pulsação para fora de uso.
+`AssistantReplyText` revela somente a resposta recém-recebida em blocos rápidos,
+com ticks locais de 40 ms e duração limitada a 1,8 s; atrasos saltam ao progresso
+correto, sem acumular callbacks. Não há um componente por letra. O estado de
+digitação é efêmero em `useAssistant`, separado do texto completo e dos gráficos
+validados, que são salvos integralmente. Histórico/reabertura não repetem a
+digitação. Sair da conversa ou entrar em segundo plano encerra a revelação.
+`useAssistantAutoScroll` acompanha o fim em no máximo dez atualizações por segundo,
+sem animações de scroll concorrentes, e respeita o leitor que rolou para cima.
+Essa é uma apresentação progressiva da resposta já validada, não streaming da API.
+O catálogo Reacticx foi consultado: o Animated Text com blur e nó por caractere foi
+descartado para este texto longo. Nenhuma dependência foi adicionada. A política
+permanente de movimento do app permanece em vigor.

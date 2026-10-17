@@ -30,6 +30,60 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.bind.MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingHeader(Exception ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Request", "Informe os cabeçalhos obrigatórios da solicitação.", request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedContentType(Exception ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported Media Type", "Formato de envio não suportado para este endpoint.", request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(AssistantAnswerException.class)
+    public ResponseEntity<ErrorResponse> handleAssistantAnswer(AssistantAnswerException ex,HttpServletRequest request) {
+        log.info("event=assistant.answer.rejected.response reason={}",ex.getReason());
+        var status="CONTEXT_LIMIT".equals(ex.getReason())?HttpStatus.UNPROCESSABLE_ENTITY:HttpStatus.SERVICE_UNAVAILABLE;
+        var response=buildErrorResponse(status,"Assistant Answer",ex.getMessage(),request.getRequestURI(),null);
+        response.getBody().setCode("ASSISTANT_ANSWER_"+ex.getReason());return response;
+    }
+
+    @ExceptionHandler(AssistantQueryException.class)
+    public ResponseEntity<ErrorResponse> handleAssistantQuery(AssistantQueryException ex,HttpServletRequest request) {
+        log.info("event=assistant.query.rejected.response reason={}",ex.getReason());
+        HttpStatus status=switch(ex.getReason()) {
+            case "COST_LIMIT","RESULT_LIMIT","QUERY_FAILED" -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case "TIME_LIMIT" -> HttpStatus.GATEWAY_TIMEOUT;
+            default -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
+        var response=buildErrorResponse(status,"Assistant Query",ex.getMessage(),request.getRequestURI(),null);
+        response.getBody().setCode("ASSISTANT_QUERY_"+ex.getReason());return response;
+    }
+
+    @ExceptionHandler(AssistantSqlRejectedException.class)
+    public ResponseEntity<ErrorResponse> handleAssistantSql(AssistantSqlRejectedException ex, HttpServletRequest request) {
+        log.info("event=assistant.sql.rejected.response reason={} sqlExecuted=false", ex.getReason());
+        var response = buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, "Assistant SQL Rejected", ex.getMessage(), request.getRequestURI(), null);
+        response.getBody().setCode("ASSISTANT_SQL_REJECTED"); return response;
+    }
+
+    @ExceptionHandler(AssistantPlanningException.class)
+    public ResponseEntity<ErrorResponse> handleAssistantPlanning(AssistantPlanningException ex, HttpServletRequest request) {
+        SafeDiagnostics.failure(log, "assistant.plan.failed", "assistant.plan", ex, 0, true);
+        var response = buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, "Assistant Planning Unavailable",
+                "Sua pergunta foi salva, mas não foi possível prepará-la agora. Tente enviar novamente.", request.getRequestURI(), null);
+        response.getBody().setCode("ASSISTANT_PLANNING_UNAVAILABLE");
+        return response;
+    }
+
+    @ExceptionHandler(AssistantQuestionException.class)
+    public ResponseEntity<ErrorResponse> handleAssistantQuestion(AssistantQuestionException ex, HttpServletRequest request) {
+        log.info("event=assistant.question.rejected code={} status={}", ex.getCode(), ex.getStatus().value());
+        var response = buildErrorResponse(ex.getStatus(), "Assistant Question", ex.getMessage(), request.getRequestURI(), null);
+        response.getBody().setCode(ex.getCode());
+        return response;
+    }
+
     @ExceptionHandler(InvalidTransactionUpdateException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTransactionUpdate(InvalidTransactionUpdateException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Invalid Transaction Update", ex.getMessage(),

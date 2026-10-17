@@ -452,3 +452,25 @@ Abertura Android — otimização sem mudança de geometria: o conteúdo é prep
 Assistente — captura Android otimizada: react-native-view-shot 5.1 captura PNG sem perda em memória, reduzido nativamente à densidade do buffer desfocado existente, antes de passar os dados ao JavaScript. O mesmo blur/shader usa superfície raster no Android, evitando readback da GPU. O BlurView de reserva só monta quando a transição pode exibi-lo; não participa da primeira montagem oculta. A aparência e os tempos de motion permanecem. iOS mantém a captura/superfície anteriores e exclui o novo módulo do autolinking; web não muda. Há fallback compatível em APKs sem o módulo.
 
 Conferência física: C61 Pro com Expo Go, USB, 15/10/2026. Reaberturas observadas: cerca de 1,4–1,5 s até teclado, contra um registro anterior de 3,1 s. Primeiro layout quente do painel em cerca de 0,29 s; captura/leitura PNG em 358 ms, processamento em 100 ms. A primeira abertura após recarga ainda apresentou custo maior (2,7 s no ensaio anterior com RAW); não foi alegada eliminação desse custo. Bordas, vidro, fundo desfocado, teclado e compositor foram conferidos no aparelho. Não há medição de release nem FPS. ASSISTANT.md registra os limites e as etapas. Validação final: 691 testes/91 suítes, lint sem erros (um aviso anterior), Vite e bundles Expo Android/iOS/web. O novo caminho de captura exige nova build Android própria; Expo Go já contém o módulo.
+
+
+Respostas visuais do assistente: `AssistantRichAnswer` reutiliza a tipografia de `theme/index.js`, o acento canônico `amberAccent.dark` de `theme/silver.js` e a paleta de categorias do `ThemeContext`. Conserva o chat preto e respostas sem balão à esquerda. Métricas são o destaque, gráficos Reacticx comunicam distribuição/comparação e legendas mantêm valores exatos; não há nova camada de cards, blur ou animação numérica por caractere. Seleção liga gráfico e legenda, com alternativa acessível de botões. A nota de origem é discreta. Logos vêm dos assets de instituições, não de imagens livres da IA. Runtime mantém a propriedade dos tokens; esta etapa não altera a identidade global. Comportamento e provas estão em `UX-CONTRACT.md` e `../backend/ASSISTANT.md`.
+
+
+### Resposta progressiva do assistente
+
+`AssistantThinking` reutiliza `Skeleton`/`SkeletonGroup`: três linhas no lugar da
+mensagem, com uma única pulsação de opacidade no Reanimated, sem blur, reflexos,
+sombras, animação de dimensões ou loops JavaScript. A pulsação para fora de uso.
+`AssistantReplyText` revela somente a resposta recém-recebida em blocos rápidos,
+com ticks locais de 40 ms e duração limitada a 1,8 s; atrasos saltam ao progresso
+correto, sem acumular callbacks. Não há um componente por letra. O estado de
+digitação é efêmero em `useAssistant`, separado do texto completo e dos gráficos
+validados, que são salvos integralmente. Histórico/reabertura não repetem a
+digitação. Sair da conversa ou entrar em segundo plano encerra a revelação.
+`useAssistantAutoScroll` acompanha o fim em no máximo dez atualizações por segundo,
+sem animações de scroll concorrentes, e respeita o leitor que rolou para cima.
+Essa é uma apresentação progressiva da resposta já validada, não streaming da API.
+O catálogo Reacticx foi consultado: o Animated Text com blur e nó por caractere foi
+descartado para este texto longo. Nenhuma dependência foi adicionada. A política
+permanente de movimento do app permanece em vigor.

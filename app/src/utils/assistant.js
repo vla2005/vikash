@@ -1,3 +1,4 @@
+import { normalizeAssistantPresentation } from './assistantPresentation';
 import { assistantLimits, assistantTypes } from '../config/assistant';
 let sequence = 0;
 export const newAssistantId = () =>
@@ -34,6 +35,7 @@ export function validateHistory(data) {
       m && typeof m.id === 'string' && ['user', 'assistant'].includes(m.role)
       && typeof m.content === 'string').map(m => ({ ...m,
         attachments: Array.isArray(m.attachments) ? m.attachments : [],
+        presentation: m.role === 'assistant' ? normalizeAssistantPresentation(m.presentation) || undefined : undefined,
         status: m.status === 'sending' ? 'failed' : m.status,
       })) }));
 }

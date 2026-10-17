@@ -13,6 +13,7 @@ jest.mock('../src/services/assistantCaptureCache',()=>require('../src/services/a
 
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top:24, bottom:20, left:0, right:0 }) }));
 jest.mock('../src/components/Icon', () => 'Icon');
+jest.mock('../src/config/api', () => ({ API_BASE_URL:'http://api.test' }));
 jest.mock('../src/shared/components/reacticx/base/animated-input-bar', () => {
   const ReactModule = require('react');
   const { TextInput: Input } = require('react-native');
@@ -515,4 +516,32 @@ test('Android prepares shader uniforms while idle and does not resend them on op
     await act(async()=>renderer.unmount());renderer=null;
     global.requestIdleCallback=previousIdle;global.cancelIdleCallback=previousCancel;
   }
+});
+
+
+test.each(['android', 'ios'])('%s removes the composer on entering history without retaining character exits or losing the draft', async platform => {
+  jest.replaceProperty(Platform, 'OS', platform);
+  mockController.draft = 'Compare meus gastos';
+  await mount();
+  await show();
+  const input = renderer.root.findByType(TextInput);
+  expect(input.props.value).toBe('Compare meus gastos');
+  const exitBoundary = renderer.root.findByType(Reanimated.LayoutAnimationConfig);
+  expect(exitBoundary.props.skipExiting).toBe(true);
+  expect(exitBoundary.props.skipEntering).toBeUndefined();
+  expect(exitBoundary.findByProps({ testID:'assistant-composer' }).props.collapsable).toBe(false);
+
+  const press = label => renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0].props.onPress();
+  await act(async () => press('Histórico de conversas'));
+  expect(Keyboard.dismiss).toHaveBeenCalled();
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+  expect(renderer.root.findAllByType(Reanimated.LayoutAnimationConfig)).toHaveLength(0);
+  expect(renderer.root.findAllByProps({ children:'As perguntas enviadas são salvas na sua conta.' }).length).toBeGreaterThan(0);
+  const focuses = mockFocus.mock.calls.length;
+  await act(async () => jest.advanceTimersByTime(1000));
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+  expect(mockFocus).toHaveBeenCalledTimes(focuses);
+
+  await act(async () => press('Voltar à conversa'));
+  expect(renderer.root.findByType(TextInput).props.value).toBe('Compare meus gastos');
 });

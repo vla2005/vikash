@@ -22,7 +22,7 @@ public class RequestIdFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Request-Id";
     public static final String ATTRIBUTE = RequestIdFilter.class.getName() + ".id";
     private static final Set<String> METHODS = Set.of("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS");
-    private static final Set<String> AREAS = Set.of("auth", "user", "account", "accounts", "category", "categories", "credit-card", "credit-card-invoice", "credit-card-purchase", "transaction", "dashboard", "institutions");
+    private static final Set<String> AREAS = Set.of("assistant", "auth", "user", "account", "accounts", "category", "categories", "credit-card", "credit-card-invoice", "credit-card-purchase", "transaction", "dashboard", "institutions");
 
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
