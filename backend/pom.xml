@@ -127,6 +127,69 @@
 
 	<build>
 		<plugins>
+            <!-- Coolify build ARGs are inherited by Maven. Production settings and
+                 secrets must not reach the forked tests (H2/mocked integrations).
+                 Explicit *_TEST_* / *_LIVE_* opt-ins remain available. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedEnvironmentVariables>
+                        <excludedEnvironmentVariable>DB_USERNAME</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>DB_PASSWORD</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>LOCAL_API_PORT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>LOCAL_DB_PORT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>JWT_ACCESS_SECRET</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>JWT_REFRESH_SECRET</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>GEMINI_API_KEY</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>LOGIN_EMAIL_LIMIT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>LOGIN_ORIGIN_LIMIT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>LOGIN_WINDOW_SECONDS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>AI_PER_MINUTE</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>AI_PER_DAY</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>AI_GLOBAL_PER_DAY</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>AI_PER_USER_CONCURRENT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>AI_GLOBAL_CONCURRENT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>AI_MAX_INPUT_BYTES</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>AI_MAX_OUTPUT_TOKENS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_HOST</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_PORT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_USERNAME</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_PASSWORD</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_FROM</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_AUTH</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_STARTTLS_ENABLE</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SMTP_SSL_ENABLE</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>PASSWORD_RESET_URL</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_PLANNING_ENABLED</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_MAX_INPUT_BYTES</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_MAX_OUTPUT_TOKENS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_EXECUTION_ENABLED</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_READER_JDBC_URL</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_READER_USERNAME</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_READER_PASSWORD</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_READER_POOL_SIZE</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_PLAN_TIMEOUT_MS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_QUERY_TIMEOUT_MS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_TRANSACTION_TIMEOUT_MS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_MAX_QUERY_COST</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_MAX_ESTIMATED_ROWS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_ANSWER_ENABLED</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_ANSWER_MAX_INPUT_BYTES</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_ANSWER_MAX_OUTPUT_TOKENS</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_MEMORY_ENABLED</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ASSISTANT_READER_DOCKER_URL</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SPRING_DATASOURCE_URL</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SPRING_DATASOURCE_USERNAME</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SPRING_DATASOURCE_PASSWORD</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SPRING_PROFILES_ACTIVE</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SPRING_CONFIG_IMPORT</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SPRING_APPLICATION_JSON</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SPRING_JPA_HIBERNATE_DDL_AUTO</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>GEMINI_API_URL</excludedEnvironmentVariable>
+                    </excludedEnvironmentVariables>
+                </configuration>
+            </plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

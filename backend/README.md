@@ -293,3 +293,22 @@ docker compose logs --since=15m --tail=300 -f api
 Para investigar uma falha, copie X-Request-Id da resposta e procure esse UUID nos logs. Siga request.start, as operações e o primeiro evento failed/rejected até request.complete. Procure também eventos async após a resposta HTTP. Nenhum corpo de requisição é necessário para correlacionar as etapas.
 
 O Compose mantém a rotação já configurada de 3 arquivos de 10 MB por container. O driver json-file armazena esses logs no host Docker. Não há endpoint público de leitura dos logs nesta implementação.
+
+
+## Isolamento dos testes no build do Coolify
+
+O Dockerfile continua executando `mvn verify`, com todos os testes padrao obrigatorios.
+O Coolify pode injetar as variaveis da API como ARGs nas etapas do Dockerfile;
+sem isolamento, flags como `ASSISTANT_EXECUTION_ENABLED=true` tambem ativariam
+o leitor PostgreSQL nos testes H2, ou mudariam os cenarios de planejamento/memoria.
+
+O Maven Surefire exclui do processo de testes as variaveis de producao documentadas
+em `.env.example`, a URL Docker do leitor e os overrides Spring de conexao/configuracao.
+`BuildEnvironmentIsolationTest` confere a lista e a ausencia dessas variaveis no
+processo filho, sem imprimir valores. Novas variaveis de deploy devem entrar nessa lista.
+Os testes PostgreSQL/Gemini optativos continuam usando suas variaveis dedicadas
+`ASSISTANT_TEST_*`, `ASSISTANT_READER_TEST_PASSWORD`, `ASSISTANT_LIVE_*` e `VIKASH_ASSISTANT_*_TEST`.
+
+Isso afeta somente o processo de testes: flags, conexoes e segredos configurados
+no Coolify continuam sendo usados normalmente pela API em execucao. Nao e preciso
+desabilitar o assistente em producao nem pular testes para publicar a imagem.
