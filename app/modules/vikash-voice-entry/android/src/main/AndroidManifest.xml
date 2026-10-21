@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <application>
+    <service android:name="expo.modules.vikashvoiceentry.VoiceEntryTileService"
+      android:label="Registrar Gasto" android:icon="@drawable/ic_voice_entry"
+      android:exported="true" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+      <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+    </service>
+    <activity android:name="${applicationId}.VoiceEntryActivity"
+      android:theme="@style/VikashVoiceEntryTheme" android:exported="true"
+      android:launchMode="singleTask" android:taskAffinity="${applicationId}.voiceentry"
+      android:excludeFromRecents="true" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode"
+      android:windowSoftInputMode="adjustResize" />
+  </application>
+</manifest>

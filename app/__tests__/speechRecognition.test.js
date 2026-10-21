@@ -7,6 +7,7 @@ jest.mock('expo', () => ({ requireOptionalNativeModule: jest.fn() }));
 jest.mock('expo-speech-recognition', () => ({ ExpoSpeechRecognitionModule: {
   addListener: jest.fn(), getPermissionsAsync: jest.fn(), requestPermissionsAsync: jest.fn(), isRecognitionAvailable: jest.fn(() => true),
   getSpeechRecognitionServices: jest.fn(), getDefaultRecognitionService: jest.fn(),
+  supportsOnDeviceRecognition: jest.fn(() => false),
   start: jest.fn(), stop: jest.fn(), abort: jest.fn(),
 } }));
 let events;
@@ -210,4 +211,24 @@ test.each(['sync', 'async'])('falha %s ao iniciar não vaza o stack nativo nem a
   expect(handlers.onResult).not.toHaveBeenCalled();
   service.dispose();
   expect(native.abort).not.toHaveBeenCalled();
+});
+
+test('atalho prioriza reconhecimento local sem selecionar serviço remoto', async () => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  native.supportsOnDeviceRecognition.mockReturnValueOnce(true);
+  native.isRecognitionAvailable.mockReturnValue(false);
+  const service = createNativeRecognition(callbacks(), { preferOnDevice: true });
+  await service.start();
+  expect(native.start).toHaveBeenCalledWith(expect.objectContaining({ requiresOnDeviceRecognition: true, lang: 'pt-BR' }));
+  expect(native.start.mock.calls[0][0].androidRecognitionServicePackage).toBeUndefined();
+  service.dispose();
+});
+test('atalho sem mecanismo local usa o serviço padrão após consentimento no fluxo', async () => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  native.supportsOnDeviceRecognition.mockReturnValueOnce(false);
+  const service = createNativeRecognition(callbacks(), { preferOnDevice: true });
+  await service.start();
+  expect(native.start).toHaveBeenCalledWith(expect.objectContaining({ androidRecognitionServicePackage: 'com.google.android.tts' }));
+  expect(native.start.mock.calls[0][0].requiresOnDeviceRecognition).toBeUndefined();
+  service.dispose();
 });

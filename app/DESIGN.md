@@ -474,3 +474,15 @@ Essa é uma apresentação progressiva da resposta já validada, não streaming 
 O catálogo Reacticx foi consultado: o Animated Text com blur e nó por caractere foi
 descartado para este texto longo. Nenhuma dependência foi adicionada. A política
 permanente de movimento do app permanece em vigor.
+
+
+## Atalho Android de registro por voz
+
+`VoiceEntryRoot` é uma superfície compacta em Activity translúcida separada. Usa
+os tokens de `ThemeVariant`, `ListeningOrb`, `FormField`, `SelectionField`,
+`PrimaryButton` e `InlineNotice`; o dashboard e o dock não mudam. Somente essa
+superfície respeita Reduzir movimento conforme a especificação do recurso,
+sem alterar a política global. A primeira escolha informada precede o uso de
+voz/Gemini; persistência exige revisão e confirmação explícita. Estados de
+resultado incerto mantêm pedido imutável no SecureStore até confirmação,
+sem alegar sucesso antecipado. `REGISTRO_VOZ_ANDROID.md` documenta os contratos.

@@ -11,6 +11,7 @@ import { SignOut } from 'phosphor-react-native/src/icons/SignOut';
 import { User } from 'phosphor-react-native/src/icons/User';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import AppearanceSettings from '../components/AppearanceSettings';
+import VoiceEntryTileSettings from '../components/VoiceEntryTileSettings';
 import IconTile from '../components/IconTile';
 import useToast from '../hooks/useToast';
 import { getProfileInitials } from '../utils/profile';
@@ -60,6 +61,7 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
         </View>
       </View>
       <AppearanceSettings />
+      <VoiceEntryTileSettings />
       <View style={s.securitySection}>
         <Text accessibilityRole="header" style={s.heading}>Segurança</Text>
         <View style={s.group}>

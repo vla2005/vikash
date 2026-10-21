@@ -44,6 +44,7 @@ import VoiceDrawer from '../components/VoiceDrawer';
 import AssistantExperience from '../components/assistant/AssistantExperience';
 import ScreenTransition from '../components/ScreenTransition';
 import { createTransaction } from '../services/transactions';
+import { subscribeFinancialChanges } from '../services/financialChanges';
 
 export default function MainTabs({ navigation }) {
   const styles = useThemeStyles(createStyles);
@@ -226,6 +227,7 @@ export default function MainTabs({ navigation }) {
     retryAccounts();
     retryCards();
   }, [retryAccounts, retryCards]);
+  useEffect(() => subscribeFinancialChanges(refreshAfterDeletion), [refreshAfterDeletion]);
   function closeDeletedDetails() {
     setItemDetails(null);
     refreshAfterDeletion();

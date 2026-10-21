@@ -9,7 +9,7 @@ import { fontFamily } from '../theme';
 
 const normalize = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-export default function SelectionField({ label, value, options, onChange, placeholder = 'Selecione', searchable = false, error, hint, renderLeading, renderOption, numColumns = 1, disabled = false, compact = false }) {
+export default function SelectionField({ label, value, options, onChange, placeholder = 'Selecione', searchable = false, error, hint, renderLeading, renderOption, numColumns = 1, disabled = false, compact = false, reducedMotion }) {
   const inputTheme = useInputTheme();
   const { typography, colors } = useTheme();
   const styles = useThemeStyles(createStyles);
@@ -26,7 +26,7 @@ export default function SelectionField({ label, value, options, onChange, placeh
     {!compact && <Text style={typography.label}>{label}</Text>}
     <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} accessibilityState={{ expanded: visible, disabled }} aria-expanded={visible} onPress={() => { Keyboard.dismiss(); setQuery(''); setVisible(true); }} style={[styles.trigger, compact && styles.compactTrigger, error && styles.invalid]}>{selected && renderLeading?.(selected)}<Text style={[styles.value, compact && styles.compactValue, !selected && styles.placeholder]} numberOfLines={1}>{selected?.label || placeholder}</Text><Icon name="chevronDown" color={colors.secondary} size={20} /></Pressable>
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : hint && <Text style={styles.hint}>{hint}</Text>}
-    <DrawerModal visible={visible} onRequestClose={() => setVisible(false)}>
+    <DrawerModal reducedMotionOverride={reducedMotion} visible={visible} onRequestClose={() => setVisible(false)}>
       <View style={styles.overlay}><Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Fechar seleção" onPress={() => setVisible(false)} />
         <DrawerPanel style={[styles.sheet, { marginTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.header}><Text style={styles.title}>{label}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar opções" hitSlop={12} onPress={() => setVisible(false)}><Icon name="close" /></Pressable></View>

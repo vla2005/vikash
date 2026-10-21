@@ -1,4 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { getSharedOnboarding, publishOnboarding, subscribeOnboarding } from '../services/onboardingBridge';
+import { Platform } from 'react-native';
 import { registerUser, loginUser, fetchCurrentUser, refreshSession, logoutUser } from '../services/auth';
 import { ApiError, configureAuth, cancelAuthenticatedRequests } from '../services/apiClient';
 import { createAccount, fetchAccounts, updateAccount } from '../services/accounts';
@@ -10,6 +12,21 @@ const OnboardingContext = createContext(null);
 
 // A sessão salva só é liberada depois da validação na API.
 export function OnboardingProvider({ children }) {
+  if (Platform.OS !== 'android') return <OwnedOnboardingProvider>{children}</OwnedOnboardingProvider>;
+  return <AndroidOnboardingProvider>{children}</AndroidOnboardingProvider>;
+}
+const noOnboardingSubscription = () => () => {};
+const emptyOnboarding = () => null;
+function AndroidOnboardingProvider({ children }) {
+  const [owner, setOwner] = useState(() => !getSharedOnboarding());
+  const value = useSyncExternalStore(owner ? noOnboardingSubscription : subscribeOnboarding,
+    owner ? emptyOnboarding : getSharedOnboarding, emptyOnboarding);
+  useEffect(() => { if (!owner && !value) setOwner(true); }, [owner, value]);
+  if (!owner && !value) return null;
+  return owner ? <OwnedOnboardingProvider>{children}</OwnedOnboardingProvider>
+    : <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
+}
+function OwnedOnboardingProvider({ children }) {
   const [profile, setProfile] = useState({ name: '' });
   const [accounts, setAccounts] = useState([]);
   const [completed, setCompleted] = useState(false);
@@ -310,6 +327,9 @@ export function OnboardingProvider({ children }) {
     reset();
   }
 
-  return <OnboardingContext.Provider value={{ profile, profiles, activeProfileId: sessionProfileId(session), sessionEpoch, sessionStartRoute, switchProfile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, updateProfile, changePassword, completeSetup: () => setCompleted(true), logout, reset }}>{children}</OnboardingContext.Provider>;
+  const sharedValue = { profile, profiles, activeProfileId: sessionProfileId(session), sessionEpoch, sessionStartRoute, switchProfile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, updateProfile, changePassword, completeSetup: () => setCompleted(true), logout, reset };
+  useLayoutEffect(() => { if (Platform.OS === 'android') publishOnboarding(sharedValue); });
+  useLayoutEffect(() => () => { if (Platform.OS === 'android') publishOnboarding(null); }, []);
+  return <OnboardingContext.Provider value={sharedValue}>{children}</OnboardingContext.Provider>;
 }
 export const useOnboarding = () => useContext(OnboardingContext);

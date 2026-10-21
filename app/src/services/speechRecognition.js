@@ -8,7 +8,7 @@ function androidRecognitionService(module) {
   return googleServices.find(service => services.includes(service)) || services[0];
 }
 
-export function createSpeechRecognition(callbacks) {
+export function createSpeechRecognition(callbacks, options) {
   // Não importar o pacote antes desta verificação: ele exige o módulo ao carregar.
   const { requireOptionalNativeModule } = require('expo');
   const module = requireOptionalNativeModule('ExpoSpeechRecognition');
@@ -63,8 +63,9 @@ export function createSpeechRecognition(callbacks) {
       if (cancelled) { return; }
       if (!foreground) { callbacks.onError('background'); return; }
       const android = Platform.OS === 'android';
-      const service = android ? androidRecognitionService(module) : undefined;
-      if (!service && !module.isRecognitionAvailable()) { callbacks.onError('service-not-allowed'); return; }
+      const onDevice = android && options?.preferOnDevice && module.supportsOnDeviceRecognition();
+      const service = android && !onDevice ? androidRecognitionService(module) : undefined;
+      if (!onDevice && !service && !module.isRecognitionAvailable()) { callbacks.onError('service-not-allowed'); return; }
       recognitionStarted = true;
       try {
         await module.start({
@@ -74,6 +75,7 @@ export function createSpeechRecognition(callbacks) {
           continuous: !android, addsPunctuation: !android,
           // Omitir recordingOptions: persist já é false por padrão no Android e iOS.
           ...(service ? { androidRecognitionServicePackage: service } : {}),
+          ...(onDevice ? { requiresOnDeviceRecognition: true } : {}),
         });
       } catch {
         recognitionStarted = false;

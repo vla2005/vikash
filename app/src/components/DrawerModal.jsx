@@ -22,7 +22,7 @@ import useDrawerAnimation from '../hooks/useDrawerAnimation';
 export const DrawerMotionContext = createContext(null);
 
 // Medir antes da entrada; conservar o conteúdo até completar a saída.
-export default function DrawerModal({ visible = true, children, ...props }) {
+export default function DrawerModal({ visible = true, children, reducedMotionOverride, ...props }) {
   const opened = useRef(visible);
   useLayoutEffect(() => {
     if (visible) { opened.current = true; }
@@ -32,13 +32,14 @@ export default function DrawerModal({ visible = true, children, ...props }) {
   if (!visible && !opened.current) {
     return <Modal {...props} visible={false} transparent animationType="none" statusBarTranslucent hardwareAccelerated={Platform.OS === 'android'} />;
   }
-  return <DrawerPresentation {...props} visible={visible}>{children}</DrawerPresentation>;
+  return <DrawerPresentation {...props} reducedMotionOverride={reducedMotionOverride} visible={visible}>{children}</DrawerPresentation>;
 }
 
 function DrawerPresentation({
   visible = true,
   children,
   onShow,
+  reducedMotionOverride,
   ...props
 }) {
   const { height } = useWindowDimensions();
@@ -50,7 +51,8 @@ function DrawerPresentation({
   const screenOffset = useRef(offscreen);
   const panelHeight = useRef(offscreen);
   const lastContent = useRef(children);
-  const reducedMotion = useReducedMotion();
+  const preferenceReducedMotion = useReducedMotion();
+  const reducedMotion = reducedMotionOverride ?? preferenceReducedMotion;
   const initialized = useRef(false);
   const measured = useRef(false);
   const shown = useRef(Platform.OS === 'web');

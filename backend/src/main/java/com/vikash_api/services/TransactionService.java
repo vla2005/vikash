@@ -71,6 +71,25 @@ public class TransactionService {
     private final EntityManager entityManager;
     private final PlatformTransactionManager transactionManager;
     private final AiUsageService aiUsageService;
+    /** No financial write, including when the analysis contains missing fields. */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public AiAnalysisResponse preview(TransactionRequest request) {
+        Long userId = authenticatedUserService.getCurrentUserId();
+        try (var permit = aiUsageService.acquire(userId)) {
+            var read = new TransactionTemplate(transactionManager);
+            read.setReadOnly(true);
+            return aiAnalysisService.analyze(request.transcription(), read.execute(status -> getAnalysisContext()));
+        }
+    }
+
+    @Transactional
+    public void saveReviewed(com.vikash_api.dtos.requests.ReviewedTransactionRequest request) {
+        var analysis = request.analysis();
+        if (analysis.type() != TransactionType.INCOME && analysis.type() != TransactionType.EXPENSE) {
+            throw new InvalidTransactionException("O atalho registra receitas e despesas. Use o app para transferências e faturas.");
+        }
+        saveAnalysis(new TransactionRequest(request.transcription()), analysis);
+    }
 
     @Transactional(readOnly = true)
     public TransactionResponse getByUuid(UUID uuid) {

@@ -15,7 +15,7 @@ const messages = {
   'language-not-supported': 'O reconhecimento em português não está disponível neste dispositivo.',
 };
 
-export default function useVoiceTranscription(visible) {
+export default function useVoiceTranscription(visible, recognitionOptions) {
   const [phase, setPhase] = useState('starting');
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -57,7 +57,7 @@ export default function useVoiceTranscription(visible) {
           setError(messages[code] || 'A captura de voz foi interrompida. Tente novamente.');
           changePhase('error');
         },
-      });
+      }, recognitionOptions);
       capture.current = instance;
       await instance.start();
     } catch (failure) {
@@ -67,7 +67,7 @@ export default function useVoiceTranscription(visible) {
         changePhase('error');
       }
     }
-  }, [cleanup, changePhase, finish]);
+  }, [cleanup, changePhase, finish, recognitionOptions]);
   const stop = useCallback(() => {
     if (currentPhase.current !== 'listening') { return; }
     changePhase('stopping');

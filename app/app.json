@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.vikash"
     },
     "android": {
-      "package": "com.vikash"
+      "package": "com.vikash",
+      "versionCode": 16
     },
     "plugins": [
       "expo-secure-store",
@@ -58,7 +59,8 @@
           }
         }
       ],
-      "./plugins/withAndroidReleaseApks"
+      "./plugins/withAndroidReleaseApks",
+      "./plugins/withVoiceEntryShortcut"
     ]
   }
 }

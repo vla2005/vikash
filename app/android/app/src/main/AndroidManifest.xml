@@ -52,6 +52,7 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="vikash"/>
       </intent-filter>
+      <meta-data android:name="android.app.shortcuts" android:resource="@xml/voice_entry_shortcuts"/>
     </activity>
   </application>
 </manifest>
