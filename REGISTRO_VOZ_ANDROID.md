@@ -28,10 +28,10 @@ O aplicativo não usa outro banco financeiro nem outro interpretador de IA.
    tocar no orbe também encerra. Limite de 45 segundos; ao sair, libera o microfone.
    Em falha do modelo local, Regravar permite usar o serviço padrão do celular.
 6. Após a fala, aparecem a transcrição e três ações: **Confirmar**, **Regravar**
-   e **Abrir app** (menor). A análise de texto começa automaticamente uma vez,
-   por `POST /api/transaction/preview`, após o consentimento versionado v2.
-   Usa o catálogo e o Gemini já existentes; não grava transações nem saldos.
-   Confirmar fica indisponível durante a análise. Campos ausentes ou inválidos
+   e **Abrir app** (menor). Antes de tocar em Confirmar, nenhuma análise
+   é enviada à API ou ao Gemini. Confirmar inicia `POST /api/transaction/preview`
+   e, se os dados forem válidos, envia a confirmação para salvar na mesma ação.
+   O botão só apresenta loading após o toque. Campos ausentes ou inválidos
    bloqueiam o registro; é possível regravar ou abrir o app para completar.
 7. Não há formulário, cabeçalho ou botão Analisar na superfície compacta normal.
    Regravar cancela a análise em andamento e invalida respostas antigas. Abrir
@@ -40,7 +40,7 @@ O aplicativo não usa outro banco financeiro nem outro interpretador de IA.
    `POST /api/transaction/confirm-reviewed`. O backend aplica as validações
    existentes, revalida contas, cartões e categorias do usuário autenticado e
    mantém o recibo idempotente para impedir duplicidade. Nenhum registro é salvo
-   automaticamente ao terminar a fala ou ao concluir a análise.
+   ao terminar a fala. Somente o toque em Confirmar autoriza analisar e salvar.
 9. Após commit confirmado, notifica as telas já montadas para atualizar saldo,
    extrato e cartões. Mostra sucesso e encerra a Activity, retornando ao contexto
    anterior. Se o app estava fechado, as telas consultarão o servidor ao abrir.

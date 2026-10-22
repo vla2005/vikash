@@ -73,10 +73,7 @@ function VoiceEntry() {
   const [phase, setPhase] = useState('loading'),
     [consent, setConsent] = useState(false);
   const [text, setText] = useState(''),
-    [error, setError] = useState(''),
-    [analysis, setAnalysis] = useState(null);
-  const [fields, setFields] = useState(null);
-  const attempted = useRef(null);
+    [error, setError] = useState('');
   const [pending, setPending] = useState(null),
     [reduceMotion, setReduceMotion] = useState(true);
   const [foreground, setForeground] = useState(
@@ -144,9 +141,6 @@ function VoiceEntry() {
     const id = ++generation.current;
     request.current?.abort();
     setConsent(false);
-    attempted.current = null;
-    setAnalysis(null);
-    setFields(null);
     setPending(null);
     setError('');
     if (!auth?.ready || !fontsReady) {
@@ -164,8 +158,6 @@ function VoiceEntry() {
         if (saved) {
           setPending(saved);
           setText(saved.transcription);
-          setAnalysis(saved.analysis);
-          setFields(entryFields(saved.analysis));
           setPhase('pending');
         } else if (accepted) {
           setConsent(true);
@@ -190,19 +182,6 @@ function VoiceEntry() {
     }
   }, [phase, voice.phase, voice.text]);
 
-  useEffect(() => {
-    if (
-      phase === 'transcript' &&
-      !error &&
-      text.trim() &&
-      attempted.current !== text
-    ) {
-      attempted.current = text;
-      analyze();
-    }
-    // Each completed transcription is analyzed once; confirmation remains explicit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, text, error]);
   useEffect(() => {
     if (phase !== 'capture' || voice.phase !== 'listening') return;
     const timer = setTimeout(voice.stop, 45000);
@@ -240,61 +219,20 @@ function VoiceEntry() {
     request.current?.abort();
     generation.current++;
     locked.current = false;
-    attempted.current = null;
     setError('');
     setText('');
-    setAnalysis(null);
-    setFields(null);
     if (phase === 'capture' && voice.phase === 'error' && !remote)
       setRemote(true);
     else if (phase === 'capture') voice.start();
     else setPhase('capture');
   }
-  async function analyze() {
-    if (locked.current || !text.trim()) return;
-    locked.current = true;
-    setError('');
-    setPhase('analyzing');
-    voice.cancel();
-    Keyboard.dismiss();
-    const id = generation.current,
-      controller = new AbortController();
-    request.current = controller;
-    const timer = setTimeout(() => controller.abort(), 45000);
-    try {
-      const result = await previewVoiceEntry(text, token, controller.signal);
-      if (!mounted.current || generation.current !== id) return;
-      if (result.type && !['EXPENSE', 'INCOME'].includes(result.type))
-        throw new Error(
-          'Use o app para transferências ou pagamentos de fatura. Este atalho registra receitas e despesas.',
-        );
-      if (result.missingFields?.includes('multipleTransactions'))
-        throw new Error('Diga apenas um lançamento de cada vez.');
-      if (result.missingFields?.length)
-        throw new Error('Faltam dados. Regrave ou abra o app para completar.');
-      const ready = entryFields(result);
-      reviewedAnalysis(ready, result);
-      setAnalysis(result);
-      setFields(ready);
-      setPhase('review');
-    } catch (failure) {
-      if (mounted.current && generation.current === id) {
-        setError(
-          failure.name === 'AbortError'
-            ? 'A análise foi interrompida. Confira a conexão e tente novamente.'
-            : failure.message,
-        );
-        setPhase(
-          [401, 403].includes(failure.status) ? 'session' : 'transcript',
-        );
-      }
-    } finally {
-      clearTimeout(timer);
-      if (generation.current === id) locked.current = false;
-    }
-  }
   async function save() {
-    if (locked.current) return;
+    if (
+      locked.current ||
+      !['transcript', 'pending'].includes(phase) ||
+      !text.trim()
+    )
+      return;
     locked.current = true;
     setError('');
     const id = generation.current,
@@ -304,7 +242,28 @@ function VoiceEntry() {
       timer;
     try {
       if (!payload) {
-        const checked = reviewedAnalysis(fields, analysis);
+        // Only this explicit button action may invoke Gemini.
+        setPhase('analyzing');
+        voice.cancel();
+        Keyboard.dismiss();
+        timer = setTimeout(() => controller.abort(), 45000);
+        const result = await previewVoiceEntry(text, token, controller.signal);
+        clearTimeout(timer);
+        if (!mounted.current || generation.current !== id) return;
+        if (controller.signal.aborted)
+          throw Object.assign(new Error(), { name: 'AbortError' });
+        if (result.type && !['EXPENSE', 'INCOME'].includes(result.type)) {
+          throw new Error(
+            'Use o app para transferências ou pagamentos de fatura. Este atalho registra receitas e despesas.',
+          );
+        }
+        if (result.missingFields?.includes('multipleTransactions'))
+          throw new Error('Diga apenas um lançamento de cada vez.');
+        if (result.missingFields?.length)
+          throw new Error(
+            'Faltam dados. Regrave ou abra o app para completar.',
+          );
+        const checked = reviewedAnalysis(entryFields(result), result);
         payload = {
           requestId: await native.newRequestId(),
           transcription: text,
@@ -346,10 +305,11 @@ function VoiceEntry() {
       }
       setError(
         failure.name === 'AbortError'
-          ? 'Não recebemos a confirmação. Toque em Verificar registro para consultar a mesma operação sem duplicar.'
+          ? payload
+            ? 'Não recebemos a confirmação. Toque em Verificar registro para consultar a mesma operação sem duplicar.'
+            : 'A análise foi interrompida. Confira a conexão e tente novamente.'
           : failure.message || 'Não foi possível confirmar o registro.',
       );
-      if (rejected) setFields(null);
       setPhase(
         [401, 403].includes(failure.status)
           ? 'session'
@@ -521,8 +481,7 @@ function VoiceEntry() {
                     icon="check"
                     loading={['analyzing', 'saving'].includes(phase)}
                     disabled={
-                      !['review', 'pending'].includes(phase) ||
-                      (!!mainError && phase !== 'pending')
+                      !['transcript', 'pending'].includes(phase) || !text.trim()
                     }
                     onPress={save}
                   />

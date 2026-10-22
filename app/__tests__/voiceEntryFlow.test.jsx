@@ -88,6 +88,7 @@ const press = async title => {
 beforeEach(() => {
   jest.clearAllMocks();
   mockVoice.phase = 'review';
+  mockVoice.text = 'Gastei 35 reais com almoço hoje no Pix da conta Inter';
   AccessibilityInfo.isReduceMotionEnabled = jest.fn(async () => true);
   loadPendingVoiceEntry.mockResolvedValue(null);
   loadVoiceConsent.mockResolvedValue(false);
@@ -115,9 +116,11 @@ test('never analyzes before consent or saves before explicit confirmation', asyn
   expect(previewVoiceEntry).not.toHaveBeenCalled();
   expect(confirmVoiceEntry).not.toHaveBeenCalled();
   await press('Concordar e começar');
-  expect(previewVoiceEntry).toHaveBeenCalledTimes(1);
+  expect(previewVoiceEntry).not.toHaveBeenCalled();
   expect(confirmVoiceEntry).not.toHaveBeenCalled();
+  expect(button('Confirmar').props.disabled).toBe(false);
   await press('Confirmar');
+  expect(previewVoiceEntry).toHaveBeenCalledTimes(1);
   expect(storePendingVoiceEntry).toHaveBeenCalledTimes(1);
   expect(confirmVoiceEntry.mock.calls[0][0].analysis.amount).toBe('35.00');
   expect(clearPendingVoiceEntry).toHaveBeenCalledWith('user');
@@ -136,6 +139,7 @@ test('double confirmation shares one request and save', async () => {
     action();
     action();
   });
+  expect(previewVoiceEntry).toHaveBeenCalledTimes(1);
   expect(confirmVoiceEntry).toHaveBeenCalledTimes(1);
   await act(async () => release());
 });
@@ -147,6 +151,7 @@ test('lost response retries exactly the same payload', async () => {
   await press('Verificar registro');
   expect(confirmVoiceEntry.mock.calls[1][0]).toEqual(first);
   expect(mockNative.newRequestId).toHaveBeenCalledTimes(1);
+  expect(previewVoiceEntry).toHaveBeenCalledTimes(1);
 });
 test('restores an uncertain previous operation without listening or re-analyzing', async () => {
   loadPendingVoiceEntry.mockResolvedValue({
@@ -162,7 +167,9 @@ test('restores an uncertain previous operation without listening or re-analyzing
 test('analysis failure preserves transcript for retry', async () => {
   previewVoiceEntry.mockRejectedValueOnce(new Error('Sem internet'));
   await review();
+  await press('Confirmar');
   expect(button('Confirmar')).toBeDefined();
+  expect(previewVoiceEntry).toHaveBeenCalledTimes(1);
   expect(confirmVoiceEntry).not.toHaveBeenCalled();
 });
 
@@ -170,6 +177,7 @@ test('previous informed consent starts capture directly, while still requiring c
   loadVoiceConsent.mockResolvedValue(true);
   await mount();
   expect(button('Confirmar')).toBeDefined();
+  expect(previewVoiceEntry).not.toHaveBeenCalled();
   expect(confirmVoiceEntry).not.toHaveBeenCalled();
 });
 
@@ -201,7 +209,9 @@ test('incomplete analysis cannot be confirmed or persisted', async () => {
   });
   loadVoiceConsent.mockResolvedValue(true);
   await mount();
-  expect(button('Confirmar').props.disabled).toBe(true);
+  expect(previewVoiceEntry).not.toHaveBeenCalled();
+  await press('Confirmar');
+  expect(previewVoiceEntry).toHaveBeenCalledTimes(1);
   expect(storePendingVoiceEntry).not.toHaveBeenCalled();
   expect(confirmVoiceEntry).not.toHaveBeenCalled();
 });
@@ -210,6 +220,7 @@ test('opening the app cancels capture without saving', async () => {
   await press('Abrir app');
   expect(mockVoice.cancel).toHaveBeenCalled();
   expect(mockNative.openApp).toHaveBeenCalledTimes(1);
+  expect(previewVoiceEntry).not.toHaveBeenCalled();
   expect(confirmVoiceEntry).not.toHaveBeenCalled();
 });
 test('re-recording discards an unfinished analysis without saving stale data', async () => {
@@ -222,10 +233,59 @@ test('re-recording discards an unfinished analysis without saving stale data', a
   );
   loadVoiceConsent.mockResolvedValue(true);
   await mount();
+  let confirmation;
+  await act(async () => {
+    confirmation = button('Confirmar').props.onPress();
+  });
+  expect(previewVoiceEntry).toHaveBeenCalledTimes(1);
   expect(button('Confirmar').props.disabled).toBe(true);
   mockVoice.phase = 'listening';
   await press('Regravar');
-  await act(async () => resolve(response));
+  await act(async () => {
+    resolve(response);
+    await confirmation;
+  });
   expect(button('Confirmar')).toBeUndefined();
+  expect(confirmVoiceEntry).not.toHaveBeenCalled();
+});
+
+test('arbitrary speech makes no analysis request until Confirmar is pressed', async () => {
+  mockVoice.text = 'Uma frase aleatória sobre o céu';
+  loadVoiceConsent.mockResolvedValue(true);
+  await mount();
+  expect(previewVoiceEntry).not.toHaveBeenCalled();
+  expect(button('Confirmar').props.disabled).toBe(false);
+  expect(button('Confirmar').props.accessibilityState.busy).toBe(false);
+  expect(confirmVoiceEntry).not.toHaveBeenCalled();
+});
+test('re-recording before confirmation never invokes Gemini', async () => {
+  loadVoiceConsent.mockResolvedValue(true);
+  await mount();
+  mockVoice.phase = 'listening';
+  await press('Regravar');
+  expect(previewVoiceEntry).not.toHaveBeenCalled();
+  expect(confirmVoiceEntry).not.toHaveBeenCalled();
+});
+test('opening the app during analysis prevents a late response from being saved', async () => {
+  let resolve;
+  previewVoiceEntry.mockImplementation(
+    () =>
+      new Promise(done => {
+        resolve = done;
+      }),
+  );
+  loadVoiceConsent.mockResolvedValue(true);
+  await mount();
+  let confirmation;
+  await act(async () => {
+    confirmation = button('Confirmar').props.onPress();
+  });
+  await press('Abrir app');
+  await act(async () => {
+    resolve(response);
+    await confirmation;
+  });
+  expect(mockNative.openApp).toHaveBeenCalledTimes(1);
+  expect(storePendingVoiceEntry).not.toHaveBeenCalled();
   expect(confirmVoiceEntry).not.toHaveBeenCalled();
 });
