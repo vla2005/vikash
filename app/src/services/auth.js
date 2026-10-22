@@ -44,7 +44,7 @@ export async function fetchCurrentUser(accessToken, renew = true) {
   } finally { clearTimeout(timeout); }
 }
 
-async function authenticate(path, values) {
+async function sendAuthRequest(path, values) {
   const controller = new AbortController();
   let timeout;
   const url = `${API_BASE_URL}${path}`;
@@ -66,13 +66,25 @@ async function authenticate(path, values) {
     }
     throw cause;
   } finally { clearTimeout(timeout); }
+  return session;
+}
+
+async function authenticate(path, values) {
+  const session = await sendAuthRequest(path, values);
   if (!session?.accessToken || !session?.user) {
     throw new Error('A API não retornou os dados de autenticação esperados.');
   }
   return session;
 }
 
-export const registerUser = ({ name, email, password }) => authenticate('/api/auth/register', { name: name.trim(), email: email.trim(), password });
+export async function registerUser({ name, email, password }) {
+  const pending = await sendAuthRequest('/api/auth/register', { name: name.trim(), email: email.trim(), password });
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pending?.challengeId || '')) {
+    throw new Error('Atualize o app e tente solicitar o cadastro novamente.');
+  }
+  return pending;
+}
+export const confirmRegistration = ({ challengeId, code }) => authenticate('/api/auth/register/confirm', { challengeId, code });
 export const loginUser = ({ email, password }) => authenticate('/api/auth/login', { email: email.trim(), password });
 export async function refreshSession(refreshToken) {
   const controller = new AbortController();

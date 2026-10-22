@@ -7,7 +7,10 @@ import java.util.Properties;
 
 public class EmailTestSupport {
     public static MimeMessage newMessage() {
-        return new MimeMessage(Session.getInstance(new Properties()));
+        // Explicit test sender prevents JavaMail from resolving the host name for Message-ID.
+        Properties properties = new Properties();
+        properties.setProperty("mail.from", "no-reply@example.com");
+        return new MimeMessage(Session.getInstance(properties));
     }
 
     public static String text(MimeMessage message) throws Exception {

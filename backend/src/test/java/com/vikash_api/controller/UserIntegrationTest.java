@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "spring.datasource.url=jdbc:h2:mem:user-profile;DB_CLOSE_DELAY=-1")
-class UserIntegrationTest {
+class UserIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @Autowired UserRepository users;
     @Autowired RefreshTokenRepository refreshTokens;
@@ -155,9 +155,7 @@ class UserIntegrationTest {
     }
 
     private AuthResponse register(String email) {
-        return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequest("Usuário de teste", email, "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        return createTestUser(new RegisterRequest("Usuário de teste", email, "Password123!"));
     }
 
     private AuthResponse login(String email, String password) {

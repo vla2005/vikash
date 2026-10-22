@@ -98,7 +98,6 @@ class AuthServiceTest {
                 .build();
 
         when(userRepository.existsByEmail("vikash@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("secret123")).thenReturn("encoded_pass");
         when(userRepository.save(any(UserEntity.class))).thenReturn(testUser);
         when(jwtService.generateAccessToken(any(UserEntity.class), anyString())).thenReturn("access_token_123");
         when(jwtService.generateRefreshToken(any(UserEntity.class), anyString())).thenReturn("refresh_token_123");
@@ -106,7 +105,7 @@ class AuthServiceTest {
         when(jwtService.getAccessTokenExpirationMs()).thenReturn(900000L);
         when(jwtService.getRefreshTokenExpirationMs()).thenReturn(604800000L);
 
-        AuthResponse response = authService.register(request);
+        AuthResponse response = authService.createVerifiedAccount(request.getName(), request.getEmail(), "encoded_pass");
 
         assertThat(response).isNotNull();
         assertThat(response.getAccessToken()).isEqualTo("access_token_123");
@@ -127,9 +126,9 @@ class AuthServiceTest {
 
         when(userRepository.existsByEmail("vikash@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(request))
+        assertThatThrownBy(() -> authService.createVerifiedAccount(request.getName(), request.getEmail(), "encoded_pass"))
                 .isInstanceOf(EmailAlreadyExistsException.class)
-                .hasMessageContaining("already in use");
+                .hasMessageContaining("não pode ser cadastrado");
 
         verify(userRepository, never()).save(any());
     }

@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.*;
  "assistant.planning.enabled=true","assistant.execution.enabled=true","assistant.answer.enabled=true","assistant.execution.jdbc-url=${ASSISTANT_TEST_DB_URL}",
  "assistant.execution.password=${ASSISTANT_READER_TEST_PASSWORD}","assistant.execution.pool-size=1","security.ai.per-minute=100","security.ai.per-day=100","security.ai.global-per-day=1000",
  "gemini.api.key=${ASSISTANT_LIVE_GEMINI_API_KEY}","gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"})
-class AssistantAnswerLiveTest {
+class AssistantAnswerLiveTest extends com.vikash_api.support.VerifiedUserFixture {
  @LocalServerPort int port;@Autowired JdbcTemplate jdbc;@Autowired UserRepository users;@Autowired ObjectMapper mapper;
  @Autowired AssistantAnswerClient writer;@Autowired FinancialCatalog catalog;
  @MockitoSpyBean AssistantAnswerFormatter formatter;
@@ -50,7 +50,7 @@ class AssistantAnswerLiveTest {
   long other=users.findByEmail(b.getUser().getEmail()).orElseThrow().getId();long foreignAccount=fixture.account(other,"9000.99"),foreignCategory=fixture.category(other,"Outra pessoa");
   fixture.expense(other,foreignAccount,foreignCategory,"Dado alheio fictício","8888.88",0,"EXPENSE");
  }
- AuthResponse register() {return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON).body(Map.of("name","Teste sintético","email",UUID.randomUUID()+"@answer-live.test","password","Password123!")).retrieve().body(AuthResponse.class);}
+ AuthResponse register() {return createTestUser(Map.of("name","Teste sintético","email",UUID.randomUUID()+"@answer-live.test","password","Password123!"));}
  ResponseEntity<JsonNode> send(AuthResponse who,Map<String,Object> input) {return client.post().uri("/api/assistant/messages").contentType(MediaType.APPLICATION_JSON).header("Authorization","Bearer "+who.getAccessToken()).header("Idempotency-Key",input.get("clientMessageId").toString()).body(input).retrieve().onStatus(HttpStatusCode::isError,(q,r)->{}).toEntity(JsonNode.class);}
  @BeforeEach void captureSyntheticValidationOnly() {
   doAnswer(call->{try {return call.callRealMethod();}catch(com.vikash_api.exceptions.AssistantAnswerException failure){report.add(Map.of("case","synthetic_validation_diagnostic","template",call.getArgument(0).toString(),"passed",false));throw failure;}}).when(formatter).parse(anyString(),any());

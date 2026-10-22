@@ -9,6 +9,15 @@ import com.vikash_api.dtos.responses.AuthResponse;
 import com.vikash_api.dtos.responses.UserResponse;
 import com.vikash_api.entities.UserEntity;
 import com.vikash_api.services.AuthService;
+import com.vikash_api.services.RegistrationService;
+import com.vikash_api.services.RegistrationAttemptService;
+import com.vikash_api.dtos.responses.RegistrationResponse;
+import com.vikash_api.dtos.requests.ConfirmRegistrationRequest;
+import com.vikash_api.exceptions.EmailAlreadyExistsException;
+import com.vikash_api.exceptions.RegistrationVerificationException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.core.task.TaskRejectedException;
+import java.util.UUID;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +38,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class AuthController {
 
     private final AuthService authService;
+    private final RegistrationService registrationService;
+    private final RegistrationAttemptService registrationAttempts;
 
     @PostMapping("/forgot-password")
     @ResponseStatus(HttpStatus.OK)
@@ -43,9 +54,26 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<RegistrationResponse> register(
+            @Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
+        registrationAttempts.request(request.getEmail(), httpRequest.getRemoteAddr());
+        var id = UUID.randomUUID();
+        try { registrationService.prepare(id, request); }
+        catch (TaskRejectedException ignored) {
+            // Same public response even if the bounded mail queue is full.
+        }
+        return ResponseEntity.accepted().body(new RegistrationResponse(id));
+    }
+
+    @PostMapping("/register/confirm")
+    public ResponseEntity<AuthResponse> confirmRegistration(
+            @Valid @RequestBody ConfirmRegistrationRequest request,
+            HttpServletRequest httpRequest) {
+        try { return ResponseEntity.ok(registrationService.confirm(request, httpRequest.getRemoteAddr())); }
+        catch (EmailAlreadyExistsException | DataIntegrityViolationException ex) {
+            // A competing confirmation/email change must never overwrite an existing user.
+            throw new RegistrationVerificationException();
+        }
     }
 
     @PostMapping("/login")

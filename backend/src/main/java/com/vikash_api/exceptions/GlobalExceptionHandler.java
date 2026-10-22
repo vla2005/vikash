@@ -96,6 +96,11 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(), Map.of(ex.getField(), ex.getMessage()));
     }
 
+    @ExceptionHandler(RegistrationVerificationException.class)
+    public ResponseEntity<ErrorResponse> handleRegistrationVerification(RegistrationVerificationException ex, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Registration Verification", ex.getMessage(), request.getRequestURI(), null);
+    }
+
     @ExceptionHandler(RequestLimitException.class)
     public ResponseEntity<ErrorResponse> handleRequestLimit(RequestLimitException ex, HttpServletRequest request) {
         var response = buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", ex.getMessage(),

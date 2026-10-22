@@ -29,7 +29,7 @@ import com.vikash_api.services.AiAnalysisService;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.datasource.url=jdbc:h2:mem:transaction-boundary;DB_CLOSE_DELAY=-1",
         "spring.jpa.open-in-view=true", "security.ai.per-minute=2" })
-class TransactionBoundaryIntegrationTest {
+class TransactionBoundaryIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @Autowired UserRepository users;
     @Autowired AccountRepository accounts;
@@ -42,9 +42,7 @@ class TransactionBoundaryIntegrationTest {
     void setup() {
         client = RestClient.create("http://localhost:" + port);
         String email = UUID.randomUUID() + "@boundary.test";
-        auth = client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("name", "Teste", "email", email, "password", "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        auth = createTestUser(Map.of("name", "Teste", "email", email, "password", "Password123!"));
         account = new AccountEntity();
         account.setUser(users.findByUuid(auth.getUser().getUuid()).orElseThrow());
         account.setType(AccountType.CARTEIRA); account.setDescription("Carteira");

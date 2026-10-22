@@ -19,7 +19,9 @@ export default function RegisterScreen({ navigation, route }) {
   const styles = useThemeStyles(createStyles);
   const [values, setValues] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [errors, setErrors] = useState({});
-  const { register, session } = useOnboarding();
+  const { register, confirmRegistration, session } = useOnboarding();
+  const [pending, setPending] = useState(null);
+  const [code, setCode] = useState('');
   const adding = Boolean(route?.params?.addingAccount && session);
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -31,14 +33,21 @@ export default function RegisterScreen({ navigation, route }) {
   function change(key, value) { setValues(previous => ({ ...previous, [key]: value })); setErrors(previous => ({ ...previous, [key]: undefined })); }
   async function submit() {
     if (submitting.current) { return; }
-    const next = validateRegistration(values);
+    const next = pending ? (/^[0-9]{8}$/.test(code) ? {} : { code: 'Informe os 8 números recebidos por e-mail.' }) : validateRegistration(values);
     setErrors(next);
     if (Object.keys(next).length) { showToast({ type: 'warn', message: 'Confira os campos destacados para continuar.' }); return; }
     submitting.current = true;
     setLoading(true);
     setRequestError('');
     try {
-      await register(values);
+      if (!pending) {
+        const result = await register(values);
+        setPending(result);
+        setValues(previous => ({ ...previous, password: '', confirmPassword: '' }));
+        return;
+      }
+      await confirmRegistration({ challengeId: pending.challengeId, code });
+      setCode('');
       showToast({ type: 'success', title: 'Cadastro realizado!', message: 'Seu acesso está pronto. Agora crie sua primeira conta.' });
       setValues(previous => ({ ...previous, password: '', confirmPassword: '' }));
       navigation.reset({ index: 0, routes: [{ name: 'AddFinancialItem' }] });
@@ -49,17 +58,22 @@ export default function RegisterScreen({ navigation, route }) {
     } finally { submitting.current = false; setLoading(false); }
   }
   return <Screen>
-    <View style={styles.header}><GlassBackButton accessibilityLabel="Voltar ao login" style={styles.back} onPress={() => navigation.goBack()} /><BrandLogo centered /><View style={styles.headerBalance} /></View>
-    <View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>Vamos começar.</Text><Text style={typography.body}>Crie seu acesso ao Vikash.</Text></View>
-    <View style={styles.form}>
-      <FormField label="Nome" placeholder="Como você se chama?" value={values.name} onChangeText={value => change('name', value)} error={errors.name} maxLength={100} autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} testID="register-name" />
-      <FormField ref={emailRef} label="E-mail" placeholder="seu@email.com" value={values.email} onChangeText={value => change('email', value)} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} testID="register-email" />
-      <FormField ref={passwordRef} label="Senha" placeholder="Crie uma senha" password value={values.password} onChangeText={value => change('password', value)} error={errors.password} hint={PASSWORD_HINT} maxLength={72} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => confirmRef.current?.focus()} testID="register-password" />
-      <FormField ref={confirmRef} label="Confirmar senha" placeholder="Repita sua senha" password value={values.confirmPassword} onChangeText={value => change('confirmPassword', value)} error={errors.confirmPassword} maxLength={72} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="done" onSubmitEditing={submit} testID="register-confirm" />
-    </View>
+    <View style={styles.header}><GlassBackButton accessibilityLabel="Voltar ao login" style={styles.back} disabled={loading} onPress={() => navigation.goBack()} /><BrandLogo centered /><View style={styles.headerBalance} /></View>
+    <View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>{pending ? 'Confirme seu e-mail.' : 'Vamos começar.'}</Text><Text style={typography.body}>{pending ? pending.message : 'Crie seu acesso ao Vikash.'}</Text></View>
+    {pending ? <View style={styles.form}>
+      <FormField label="Código de confirmação" placeholder="8 números" value={code} onChangeText={value => { setCode(value.replace(/[^0-9]/g, '')); setErrors({}); }} error={errors.code}
+        hint="Válido por 15 minutos. Confira também a pasta de spam." keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode"
+        maxLength={8} editable={!loading} returnKeyType="done" onSubmitEditing={submit} testID="register-code" />
+    </View> : <View style={styles.form}>
+      <FormField label="Nome" placeholder="Como você se chama?" value={values.name} onChangeText={value => change('name', value)} error={errors.name} maxLength={100} autoCapitalize="words" autoComplete="name" textContentType="name" returnKeyType="next" onSubmitEditing={() => emailRef.current?.focus()} editable={!loading} testID="register-name" />
+      <FormField ref={emailRef} label="E-mail" placeholder="seu@email.com" value={values.email} onChangeText={value => change('email', value)} error={errors.email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} maxLength={150} editable={!loading} testID="register-email" />
+      <FormField ref={passwordRef} label="Senha" placeholder="Crie uma senha" password value={values.password} onChangeText={value => change('password', value)} error={errors.password} hint={PASSWORD_HINT} maxLength={72} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => confirmRef.current?.focus()} editable={!loading} testID="register-password" />
+      <FormField ref={confirmRef} label="Confirmar senha" placeholder="Repita sua senha" password value={values.confirmPassword} onChangeText={value => change('confirmPassword', value)} error={errors.confirmPassword} maxLength={72} autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword" returnKeyType="done" onSubmitEditing={submit} editable={!loading} testID="register-confirm" />
+    </View>}
     <View style={styles.nextStep}><View style={styles.nextIcon}><Icon name="user" color={colors.primary} size={23} /></View><Text style={styles.nextText}>Depois, você adiciona suas contas.</Text></View>
     <InlineNotice message={requestError} error />
-    <PrimaryButton title="Criar cadastro" onPress={submit} loading={loading} style={styles.submit} />
+    <PrimaryButton title={pending ? "Confirmar cadastro" : "Criar cadastro"} onPress={submit} loading={loading} style={styles.submit} />
+    {pending && <PrimaryButton title="Voltar ao cadastro" outlined disabled={loading} onPress={() => { setPending(null); setCode(''); setRequestError(''); setErrors({}); }} />}
     <View style={styles.footer}><Text style={styles.footerText}>Já tem cadastro?</Text><Pressable accessibilityRole="button" disabled={loading} onPress={() => navigation.navigate('Login', { addingAccount: adding })} hitSlop={8}><Text style={styles.link}>Entrar</Text></Pressable></View>
   </Screen>;
 }

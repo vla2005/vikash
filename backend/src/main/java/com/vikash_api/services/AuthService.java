@@ -3,7 +3,6 @@ package com.vikash_api.services;
 import com.vikash_api.logging.SafeDiagnostics;
 import com.vikash_api.dtos.requests.LoginRequest;
 import com.vikash_api.dtos.requests.RefreshTokenRequest;
-import com.vikash_api.dtos.requests.RegisterRequest;
 import com.vikash_api.dtos.requests.ForgotPasswordRequest;
 import com.vikash_api.dtos.requests.ResetPasswordRequest;
 import com.vikash_api.dtos.responses.AuthResponse;
@@ -158,16 +157,16 @@ public class AuthService {
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+    public AuthResponse createVerifiedAccount(String name, String email, String passwordHash) {
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new EmailAlreadyExistsException("Email '" + request.getEmail() + "' is already in use");
+            throw new EmailAlreadyExistsException("Este e-mail não pode ser cadastrado.");
         }
 
         UserEntity user = UserEntity.builder()
-                .name(request.getName().trim())
+                .name(name.trim())
                 .email(normalizedEmail)
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(passwordHash)
                 .role(Role.ROLE_USER)
                 .active(true)
                 .build();

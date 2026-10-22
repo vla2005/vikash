@@ -39,6 +39,7 @@ test('esqueci minha senha abre a tela de recuperação com o e-mail informado', 
   expect(global.fetch).not.toHaveBeenCalled();
 });
 function apiFetch(url, options) {
+  if (url.endsWith('/auth/register')) { return Promise.resolve(response({ challengeId: '12345678-1234-4123-8123-123456789abc', message: 'Confira seu e-mail.', expiresIn: 900 })); }
   if (url.endsWith('/auth/me')) { return Promise.resolve(response(session.user)); }
   if (url.includes('/auth/')) { return Promise.resolve(response(session)); }
   const request = JSON.parse(options.body);
@@ -50,7 +51,7 @@ afterEach(async () => { if (renderer) { await act(() => renderer.unmount()); } g
 async function renderScreen(screen) {
   await act(async () => { renderer = TestRenderer.create(<OnboardingProvider><Observer />{screen}</OnboardingProvider>); });
   if (screen?.type === CreateAccountScreen) {
-    await act(() => currentState.register({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }));
+    await act(() => currentState.login({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'senha-segura' }));
     global.fetch.mockClear();
   }
 }
@@ -90,12 +91,17 @@ test('cadastro valido navega para primeira conta sem guardar a senha', async () 
   await renderScreen(<RegisterScreen navigation={navigation} />);
   await act(() => { input('register-name').props.onChangeText('Viktor Lucena'); input('register-email').props.onChangeText('viktor@exemplo.com'); input('register-password').props.onChangeText('Senha123!'); input('register-confirm').props.onChangeText('Senha123!'); });
   await act(() => button('Criar cadastro').props.onPress());
+  expect(navigation.reset).not.toHaveBeenCalled();
+  expect(currentState.session).toBeNull();
+  await act(() => input('register-code').props.onChangeText('12345678'));
+  await act(() => button('Confirmar cadastro').props.onPress());
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'AddFinancialItem' }] });
   expect(currentState.profile).toEqual(session.user);
   expect(currentState.session.accessToken).toBe('access-test');
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/register', expect.objectContaining({ body: JSON.stringify({ name: 'Viktor Lucena', email: 'viktor@exemplo.com', password: 'Senha123!' }) }));
   expect(currentState.session.password).toBeUndefined();
-  expect(input('register-password').props.value).toBe('');
+  expect(input('register-password')).toBeUndefined();
+  expect(input('register-code').props.value).toBe('');
   expect(useToast().showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success', title: 'Cadastro realizado!' }));
 });
 test('conta sem descricao nao avanca; conta valida envia JSON autenticado e usa o ID do banco', async () => {
@@ -233,7 +239,11 @@ test('envios repetidos durante cadastro fazem somente uma requisicao', async () 
   await act(() => { const submit = button('Criar cadastro').props.onPress; pending = submit(); submit(); });
   expect(global.fetch).toHaveBeenCalledTimes(1);
   expect(navigation.reset).not.toHaveBeenCalled();
-  await act(async () => { global.fetch.mockImplementation(apiFetch); finish(response(session)); await pending; });
+  await act(async () => { global.fetch.mockImplementation(apiFetch); finish(response({ challengeId: '12345678-1234-4123-8123-123456789abc', message: 'Confira seu e-mail.', expiresIn: 900 })); await pending; });
+  expect(navigation.reset).not.toHaveBeenCalled();
+  expect(currentState.session).toBeNull();
+  await act(() => input('register-code').props.onChangeText('12345678'));
+  await act(() => button('Confirmar cadastro').props.onPress());
   expect(navigation.reset).toHaveBeenCalledTimes(1);
 });
 
@@ -254,4 +264,36 @@ test('concluir criacao das contas abre HOME', async () => {
   await act(() => button('Começar a usar').props.onPress());
   expect(currentState.completed).toBe(true);
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Home' }] });
+});
+
+test('cadastro pendente preserva o perfil atual e não persiste sessão antes de confirmar', async () => {
+  await renderScreen(<RegisterScreen navigation={navigation} route={{ params: { addingAccount: true } }} />);
+  await act(() => currentState.login({ email: session.user.email, password: 'Senha123!' }));
+  const current = currentState.session;
+  const storage = require('../src/services/sessionStorage');
+  storage.storeSession.mockClear(); global.fetch.mockClear();
+  await act(() => { input('register-name').props.onChangeText('Novo perfil'); input('register-email').props.onChangeText('novo@example.com'); input('register-password').props.onChangeText('Senha123!'); input('register-confirm').props.onChangeText('Senha123!'); });
+  await act(() => button('Criar cadastro').props.onPress());
+  expect(currentState.session).toBe(current);
+  expect(storage.storeSession).not.toHaveBeenCalled();
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  await act(() => button('Confirmar cadastro').props.onPress());
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  expect(renderer.root.findAllByType(FormField).find(field => field.props.testID === 'register-code').props.error).toBeTruthy();
+  await act(() => button('Voltar ao cadastro').props.onPress());
+  expect(input('register-password').props.value).toBe('');
+  expect(currentState.session).toBe(current);
+});
+
+test('falha na confirmação mantém o código editável sem autenticar ou navegar', async () => {
+  await renderScreen(<RegisterScreen navigation={navigation} />);
+  await act(() => { input('register-name').props.onChangeText('Novo perfil'); input('register-email').props.onChangeText('novo@example.com'); input('register-password').props.onChangeText('Senha123!'); input('register-confirm').props.onChangeText('Senha123!'); });
+  await act(() => button('Criar cadastro').props.onPress());
+  await act(() => input('register-code').props.onChangeText('12345678'));
+  global.fetch.mockResolvedValue({ ok: false, status: 400, json: async () => ({ message: 'Código inválido ou expirado.' }) });
+  await act(() => button('Confirmar cadastro').props.onPress());
+  expect(input('register-code').props.value).toBe('12345678');
+  expect(input('register-code').props.editable).toBe(true);
+  expect(currentState.session).toBeNull();
+  expect(navigation.reset).not.toHaveBeenCalled();
 });

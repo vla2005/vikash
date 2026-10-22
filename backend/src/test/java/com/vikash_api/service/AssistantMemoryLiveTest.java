@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.*;
  "assistant.planning.enabled=true","assistant.execution.enabled=true","assistant.answer.enabled=true","assistant.memory.enabled=true","assistant.execution.jdbc-url=${ASSISTANT_TEST_DB_URL}",
  "assistant.execution.password=${ASSISTANT_READER_TEST_PASSWORD}","assistant.execution.pool-size=1","security.ai.per-minute=100","security.ai.per-day=100","security.ai.global-per-day=1000",
  "gemini.api.key=${ASSISTANT_LIVE_GEMINI_API_KEY}","gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"})
-class AssistantMemoryLiveTest {
+class AssistantMemoryLiveTest extends com.vikash_api.support.VerifiedUserFixture {
  @LocalServerPort int port;@Autowired JdbcTemplate jdbc;@Autowired UserRepository users;@Autowired ObjectMapper mapper;@Autowired AssistantMemory memory;
  RestClient client;AuthResponse a,b;long ownerId;String local="memory-live-"+UUID.randomUUID();final List<Map<String,Object>> report=new ArrayList<>();
  @BeforeAll void setup() throws Exception {
@@ -42,7 +42,7 @@ class AssistantMemoryLiveTest {
   long other=users.findByEmail(b.getUser().getEmail()).orElseThrow().getId(),otherAccount=account(other,inter,"9999.99");
   long otherCategory=f.category(other,"Mercado");f.expense(other,otherAccount,otherCategory,"Dado de outro usuário","8888.88",0,"EXPENSE");
  }
- AuthResponse register(){return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON).body(Map.of("name","Fictício","email",UUID.randomUUID()+"@memory-live.test","password","Password123!")).retrieve().body(AuthResponse.class);}
+ AuthResponse register(){return createTestUser(Map.of("name","Fictício","email",UUID.randomUUID()+"@memory-live.test","password","Password123!"));}
  long bank(String name){return jdbc.queryForObject("INSERT INTO financial_institutions(name,logo_url) VALUES (?,'test') RETURNING id",Long.class,name);}
  long account(long owner,long bank,String balance){return jdbc.queryForObject("INSERT INTO accounts(uuid,user_id,financial_institution_id,description,type,balance,active,created_at,updated_at) VALUES (?,?,?,'Conta fictícia','CONTA_CORRENTE',?,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id",Long.class,UUID.randomUUID(),owner,bank,new BigDecimal(balance));}
  void expense(AssistantAnswerPostgresFixture f,long account,long category,String amount,int offset,String method){String description="Fictício "+UUID.randomUUID();f.expense(ownerId,account,category,description,amount,offset,"EXPENSE");jdbc.update("UPDATE transactions SET payment_method=? WHERE user_id=? AND description=?",method,ownerId,description);}

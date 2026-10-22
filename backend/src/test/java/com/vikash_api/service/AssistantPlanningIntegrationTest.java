@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
     "spring.datasource.url=jdbc:h2:mem:assistant-planning;DB_CLOSE_DELAY=-1", "assistant.planning.enabled=true",
     "security.ai.per-minute=100", "security.ai.global-per-day=1000", "security.ai.per-user-concurrent=4"})
-class AssistantPlanningIntegrationTest {
+class AssistantPlanningIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @Autowired AssistantConversationRepository conversations;
     @Autowired AssistantMessageRepository messages;
@@ -51,9 +51,7 @@ class AssistantPlanningIntegrationTest {
         });
     }
     AuthResponse register() {
-        return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-            .body(Map.of("name", "Teste fictício", "email", UUID.randomUUID() + "@planning.test", "password", "Password123!"))
-            .retrieve().body(AuthResponse.class);
+        return createTestUser(Map.of("name", "Teste fictício", "email", UUID.randomUUID() + "@planning.test", "password", "Password123!"));
     }
     Map<String,Object> payload(String id, String text) {
         return new HashMap<>(Map.of("clientConversationId", local, "clientMessageId", id, "content", text));

@@ -28,7 +28,7 @@ import static org.mockito.ArgumentMatchers.*;
  "assistant.planning.enabled=true","assistant.execution.enabled=true","assistant.answer.enabled=true","assistant.execution.jdbc-url=${ASSISTANT_TEST_DB_URL}",
  "assistant.execution.password=${ASSISTANT_READER_TEST_PASSWORD}","assistant.execution.pool-size=1","security.ai.per-minute=100","security.ai.per-day=100","security.ai.global-per-day=1000",
  "gemini.api.key=${ASSISTANT_LIVE_GEMINI_API_KEY}","gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"})
-class AssistantPresentationLiveTest {
+class AssistantPresentationLiveTest extends com.vikash_api.support.VerifiedUserFixture {
  @LocalServerPort int port;@Autowired JdbcTemplate jdbc;@Autowired UserRepository users;@Autowired ObjectMapper mapper;
  @MockitoSpyBean AssistantGeminiClient planner;@MockitoSpyBean AssistantAnswerClient writer;
  RestClient client;AuthResponse user,other;long lastCall;int calls;final List<Map<String,Object>> report=new ArrayList<>();
@@ -44,7 +44,7 @@ class AssistantPresentationLiveTest {
   doAnswer(call->{pace();var plan=call.callRealMethod();report.add(Map.of("case","synthetic_plan","plan",plan));return plan;}).when(planner).plan(anyString(),anyList(),any());
   doAnswer(call->{pace();return call.callRealMethod();}).when(writer).answer(any());
  }
- AuthResponse register(){return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON).body(Map.of("name","Teste visual fictício","email",UUID.randomUUID()+"@presentation-live.test","password","Password123!")).retrieve().body(AuthResponse.class);}
+ AuthResponse register(){return createTestUser(Map.of("name","Teste visual fictício","email",UUID.randomUUID()+"@presentation-live.test","password","Password123!"));}
  ResponseEntity<JsonNode> send(AuthResponse auth,Map<String,Object> payload){return client.post().uri("/api/assistant/messages").contentType(MediaType.APPLICATION_JSON).header("Authorization","Bearer "+auth.getAccessToken()).header("Idempotency-Key",payload.get("clientMessageId").toString()).body(payload).retrieve().onStatus(HttpStatusCode::isError,(q,r)->{}).toEntity(JsonNode.class);}
  JsonNode ask(String name,String text,String expected) throws Exception {
   var payload=Map.<String,Object>of("clientConversationId","visual-"+UUID.randomUUID(),"clientMessageId",name,"content",text);

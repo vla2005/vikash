@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties =
         "spring.datasource.url=${edit.test.datasource.url:jdbc:h2:mem:entry-edit;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000}")
-class EntryEditingIntegrationTest {
+class EntryEditingIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @Autowired TransactionEditService edits;
     @Autowired TransactionService transactionService;
@@ -53,9 +53,7 @@ class EntryEditingIntegrationTest {
     @BeforeEach
     void setup() {
         client = RestClient.create("http://localhost:" + port);
-        auth = client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("name", "Teste", "email", UUID.randomUUID() + "@editing.test", "password", "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        auth = createTestUser(Map.of("name", "Teste", "email", UUID.randomUUID() + "@editing.test", "password", "Password123!"));
         user = users.findByUuid(auth.getUser().getUuid()).orElseThrow();
         when(authenticatedUserService.getCurrentUser()).thenReturn(user);
         when(authenticatedUserService.getCurrentUserId()).thenReturn(user.getId());

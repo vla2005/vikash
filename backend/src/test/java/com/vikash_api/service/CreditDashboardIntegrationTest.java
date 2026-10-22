@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties =
         "spring.datasource.url=${credit.dashboard.test.url:jdbc:h2:mem:credit-dashboard;DB_CLOSE_DELAY=-1}")
-class CreditDashboardIntegrationTest {
+class CreditDashboardIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @Autowired UserRepository users;
     @Autowired CreditCardRepository cards;
@@ -181,9 +181,7 @@ class CreditDashboardIntegrationTest {
     }
 
     private AuthResponse register() {
-        return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("name", "Teste", "email", UUID.randomUUID() + "@credit-dashboard.test", "password", "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        return createTestUser(Map.of("name", "Teste", "email", UUID.randomUUID() + "@credit-dashboard.test", "password", "Password123!"));
     }
 
     private CreditDashboardResponse get(int year, int month, UUID cardUuid) {

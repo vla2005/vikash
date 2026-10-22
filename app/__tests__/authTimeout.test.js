@@ -1,4 +1,4 @@
-import { loginUser, registerUser } from '../src/services/auth';
+import { loginUser, registerUser, confirmRegistration } from '../src/services/auth';
 
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 
@@ -6,7 +6,7 @@ const originalFetch = global.fetch;
 beforeEach(() => { jest.useFakeTimers(); });
 afterEach(() => { global.fetch = originalFetch; jest.useRealTimers(); jest.restoreAllMocks(); });
 
-test.each([loginUser, registerUser])('autenticação termina mesmo se fetch não reagir ao cancelamento', async authenticate => {
+test.each([loginUser, registerUser, confirmRegistration])('autenticação termina mesmo se fetch não reagir ao cancelamento', async authenticate => {
   global.fetch = jest.fn(() => new Promise(() => {}));
   const request = authenticate({ name: 'Viktor', email: 'viktor@example.com', password: 'Senha123!' });
   const result = request.catch(error => error);

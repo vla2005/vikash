@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { getSharedOnboarding, publishOnboarding, subscribeOnboarding } from '../services/onboardingBridge';
 import { Platform } from 'react-native';
-import { registerUser, loginUser, fetchCurrentUser, refreshSession, logoutUser } from '../services/auth';
+import { registerUser, confirmRegistration, loginUser, fetchCurrentUser, refreshSession, logoutUser } from '../services/auth';
 import { ApiError, configureAuth, cancelAuthenticatedRequests } from '../services/apiClient';
 import { createAccount, fetchAccounts, updateAccount } from '../services/accounts';
 import { updatePassword, updateUser } from '../services/users';
@@ -185,7 +185,7 @@ function OwnedOnboardingProvider({ children }) {
       if (renewal.current) { await renewal.current; }
       if (version !== generation.current) { throw new ApiError('A sessão mudou. Tente entrar novamente.', 401); }
       await storeSession(next);
-      activateSession(next, action === registerUser ? 'AddFinancialItem' : 'Home');
+      activateSession(next, action === confirmRegistration ? 'AddFinancialItem' : 'Home');
     } finally { profileAction.current = false; }
   }
 
@@ -327,7 +327,7 @@ function OwnedOnboardingProvider({ children }) {
     reset();
   }
 
-  const sharedValue = { profile, profiles, activeProfileId: sessionProfileId(session), sessionEpoch, sessionStartRoute, switchProfile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: values => authenticate(registerUser, values), login: values => authenticate(loginUser, values), saveAccount, updateProfile, changePassword, completeSetup: () => setCompleted(true), logout, reset };
+  const sharedValue = { profile, profiles, activeProfileId: sessionProfileId(session), sessionEpoch, sessionStartRoute, switchProfile, accounts, completed, session, ready, restoreError, retryRestore: () => setRestoreAttempt(value => value + 1), register: registerUser, confirmRegistration: values => authenticate(confirmRegistration, values), login: values => authenticate(loginUser, values), saveAccount, updateProfile, changePassword, completeSetup: () => setCompleted(true), logout, reset };
   useLayoutEffect(() => { if (Platform.OS === 'android') publishOnboarding(sharedValue); });
   useLayoutEffect(() => () => { if (Platform.OS === 'android') publishOnboarding(null); }, []);
   return <OnboardingContext.Provider value={sharedValue}>{children}</OnboardingContext.Provider>;

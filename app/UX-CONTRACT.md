@@ -181,3 +181,17 @@ Essa é uma apresentação progressiva da resposta já validada, não streaming 
 O catálogo Reacticx foi consultado: o Animated Text com blur e nó por caractere foi
 descartado para este texto longo. Nenhuma dependência foi adicionada. A política
 permanente de movimento do app permanece em vigor.
+
+## Confirmação de cadastro por e-mail
+
+`RegisterScreen` reutiliza `Screen`, `FormField`, `PrimaryButton`, `InlineNotice` e `ToastContext`.
+`registerUser` solicita o código sem autenticar, chamar `/me` ou salvar sessão. A resposta
+pública é equivalente para e-mails novos e existentes. A senha é removida do estado ao
+receber o desafio e não é salva no aparelho. `confirmRegistration` só ativa o perfil
+após o código de oito números ser aceito pela API; a navegação segue para `AddFinancialItem`.
+Ao adicionar outra conta, o perfil atual permanece ativo até a confirmação da nova.
+Erros mantêm o código editável; voltar ao cadastro exige informar novamente a senha.
+O código dura 15 minutos, admite cinco tentativas e nunca é enviado na URL ou aos logs.
+Fonte de regras: `backend/src/main/java/com/vikash_api/services/RegistrationService.java`;
+contrato HTTP: `backend/REGISTRATION.md`. Verificação: `onboarding.test.jsx`,
+`authTimeout.test.js`, `RegistrationIntegrationTest`, `AuthControllerTest`.

@@ -32,7 +32,7 @@ import static org.mockito.Mockito.*;
  "assistant.execution.jdbc-url=${ASSISTANT_TEST_DB_URL}","assistant.execution.password=${ASSISTANT_READER_TEST_PASSWORD}","assistant.execution.pool-size=1",
  "security.ai.per-minute=100","security.ai.per-day=100","security.ai.global-per-day=1000",
  "gemini.api.key=${ASSISTANT_LIVE_GEMINI_API_KEY}","gemini.api.url=https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"})
-class AssistantSpendingSemanticsLiveTest {
+class AssistantSpendingSemanticsLiveTest extends com.vikash_api.support.VerifiedUserFixture {
  @LocalServerPort int port;
  @Autowired JdbcTemplate jdbc; @Autowired UserRepository users; @Autowired ObjectMapper mapper;
  @Autowired AssistantMemory memory; @Autowired AssistantGeminiClient planner;
@@ -44,9 +44,7 @@ class AssistantSpendingSemanticsLiveTest {
   var fixture=new AssistantAnswerPostgresFixture(jdbc);fixture.provision();
   var http=new SimpleClientHttpRequestFactory();http.setConnectTimeout(5000);http.setReadTimeout(100000);
   client=RestClient.builder().baseUrl("http://localhost:"+port).requestFactory(http).build();
-  auth=client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-   .body(Map.of("name","Fictício","email",UUID.randomUUID()+"@spending.test","password","Password123!"))
-   .retrieve().body(AuthResponse.class);
+  auth=createTestUser(Map.of("name","Fictício","email",UUID.randomUUID()+"@spending.test","password","Password123!"));
   owner=users.findByEmail(auth.getUser().getEmail()).orElseThrow().getId();
   long account=fixture.account(owner,"1703.80"),category=fixture.category(owner,"Mercado");
   fixture.expense(owner,account,category,"Despesa atual","200",0,"EXPENSE");

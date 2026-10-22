@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class AuthIntegrationTest {
+class AuthIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
 
     @LocalServerPort
     private int port;
@@ -79,10 +79,7 @@ class AuthIntegrationTest {
 
     @Test
     void logoutRevokesAccessAndRefreshTokensFromTheSession() {
-        AuthResponse auth = restClient.post().uri("/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequest("Logout", "logout@example.com", "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        AuthResponse auth = createTestUser(new RegisterRequest("Logout", "logout@example.com", "Password123!"));
 
         assertThat(meStatus(auth.getAccessToken())).isEqualTo(200);
         var logout = restClient.post().uri("/logout")
@@ -218,9 +215,7 @@ class AuthIntegrationTest {
     }
 
     private AuthResponse register(String email) {
-        return restClient.post().uri("/register").contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequest("Sessão de teste", email, "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        return createTestUser(new RegisterRequest("Sessão de teste", email, "Password123!"));
     }
 
     private AuthResponse refresh(String refreshToken) {
@@ -257,10 +252,7 @@ class AuthIntegrationTest {
 
     @Test
     void registrationTokenCreatesPersistedWalletAccount() {
-        AuthResponse auth = restClient.post().uri("/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequest("Novo usuário", "account-flow@example.com", "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        AuthResponse auth = createTestUser(new RegisterRequest("Novo usuário", "account-flow@example.com", "Password123!"));
         RestClient accountClient = RestClient.builder()
                 .baseUrl("http://localhost:" + port + "/api/account")
                 .defaultHeader("Authorization", "Bearer " + auth.getAccessToken()).build();
@@ -313,12 +305,7 @@ class AuthIntegrationTest {
                 .password("Password123!")
                 .build();
 
-        AuthResponse registeredAuth = restClient.post()
-                .uri("/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(registerReq)
-                .retrieve()
-                .body(AuthResponse.class);
+        AuthResponse registeredAuth = createTestUser(registerReq);
 
         assertThat(registeredAuth).isNotNull();
         assertThat(registeredAuth.getAccessToken()).isNotBlank();
@@ -342,14 +329,11 @@ class AuthIntegrationTest {
         assertThat(storedToken.getTokenHash()).hasSize(64);
         assertThat(storedToken.getUser().getId()).isEqualTo(userInDb.get().getId());
 
-        // 3. ATTEMPT DUPLICATE REGISTER (Must throw 409 Conflict)
-        assertThatThrownBy(() -> restClient.post()
-                .uri("/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(registerReq)
-                .retrieve()
-                .toBodilessEntity())
-                .isInstanceOf(HttpClientErrorException.Conflict.class);
+        // The public route never reveals whether this account exists or creates a session.
+        var pending = restClient.post().uri("/register").contentType(MediaType.APPLICATION_JSON)
+                .body(registerReq).retrieve().toEntity(com.vikash_api.dtos.responses.RegistrationResponse.class);
+        assertThat(pending.getStatusCode().value()).isEqualTo(202);
+        assertThat(pending.getBody().challengeId()).isNotNull();
 
         // 4. LOGIN
         LoginRequest loginReq = LoginRequest.builder()
@@ -360,9 +344,7 @@ class AuthIntegrationTest {
         AuthResponse loginAuth = restClient.post()
                 .uri("/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(loginReq)
-                .retrieve()
-                .body(AuthResponse.class);
+                .body(loginReq).retrieve().body(AuthResponse.class);
 
         assertThat(loginAuth).isNotNull();
         assertThat(loginAuth.getAccessToken()).isNotBlank();

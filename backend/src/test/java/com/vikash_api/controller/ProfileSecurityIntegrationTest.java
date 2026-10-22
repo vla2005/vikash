@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "spring.datasource.url=jdbc:h2:mem:profile-security;DB_CLOSE_DELAY=-1")
-class ProfileSecurityIntegrationTest {
+class ProfileSecurityIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @Autowired UserRepository users;
     @Autowired RefreshTokenRepository refreshTokens;
@@ -105,9 +105,7 @@ class ProfileSecurityIntegrationTest {
     void passwordChangeEndsAllOwnSessionsAndOldLinksButPreservesOtherUsers() {
         AuthResponse auth = register();
         AuthResponse second = login("Password123!");
-        AuthResponse other = client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequest("Outro usuário", "outro@example.com", "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        AuthResponse other = createTestUser(new RegisterRequest("Outro usuário", "outro@example.com", "Password123!"));
         var user = users.findByUuid(auth.getUser().getUuid()).orElseThrow();
         var token = resetTokens.save(PasswordResetTokenEntity.builder().user(user).email(user.getEmail())
                 .tokenHash("b".repeat(64)).expiresAt(Instant.now().plusSeconds(900)).build());
@@ -180,9 +178,7 @@ class ProfileSecurityIntegrationTest {
     }
 
     private AuthResponse register() {
-        return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequest("Lívia", "livia@example.com", "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        return createTestUser(new RegisterRequest("Lívia", "livia@example.com", "Password123!"));
     }
 
     private String bearer(AuthResponse auth) { return "Bearer " + auth.getAccessToken(); }

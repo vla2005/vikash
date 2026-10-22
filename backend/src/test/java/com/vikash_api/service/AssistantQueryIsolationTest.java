@@ -41,7 +41,7 @@ import static org.mockito.Mockito.*;
     "assistant.planning.enabled=true","assistant.execution.enabled=true",
     "assistant.execution.jdbc-url=${ASSISTANT_TEST_DB_URL}","assistant.execution.password=${ASSISTANT_READER_TEST_PASSWORD}",
     "assistant.execution.pool-size=1","security.ai.per-minute=100","security.ai.global-per-day=1000"})
-class AssistantQueryIsolationTest {
+class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @Autowired JdbcTemplate jdbc;
     @Autowired UserRepository users;
@@ -238,7 +238,7 @@ class AssistantQueryIsolationTest {
     }
     RestClient client() { return RestClient.create("http://localhost:"+port); }
     AuthResponse register() {
-        return client().post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON).body(Map.of("name","Fictício","email",UUID.randomUUID()+"@execution.test","password","Password123!")).retrieve().body(AuthResponse.class);
+        return createTestUser(Map.of("name","Fictício","email",UUID.randomUUID()+"@execution.test","password","Password123!"));
     }
     ResponseEntity<JsonNode> send(AuthResponse who,Map<String,Object> body) {
         var request=client().post().uri("/api/assistant/messages").contentType(MediaType.APPLICATION_JSON).header("Idempotency-Key",body.get("clientMessageId").toString());

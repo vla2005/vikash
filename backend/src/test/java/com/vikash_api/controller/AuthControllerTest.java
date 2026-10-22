@@ -53,40 +53,31 @@ class AuthControllerTest {
                 .build();
     }
 
+    @Mock private com.vikash_api.services.RegistrationService registrationService;
+    @Mock private com.vikash_api.services.RegistrationAttemptService registrationAttempts;
+
     @Test
-    @DisplayName("POST /api/auth/register - Should return 201 Created and auth payload")
-    void shouldRegisterSuccessfully() throws Exception {
-        RegisterRequest request = RegisterRequest.builder()
-                .name("Vikash")
-                .email("vikash@example.com")
-                .password("Secret123!")
-                .build();
+    void registrationReturnsPendingProofWithoutTokens() throws Exception {
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Vikash\",\"email\":\"vikash@example.com\",\"password\":\"Secret123!\"}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.challengeId").isString())
+                .andExpect(jsonPath("$.accessToken").doesNotExist())
+                .andExpect(jsonPath("$.user").doesNotExist());
+        org.mockito.Mockito.verifyNoInteractions(authService);
+    }
 
-        AuthResponse authResponse = AuthResponse.builder()
-                .accessToken("mock_access_token")
-                .refreshToken("mock_refresh_token")
-                .tokenType("Bearer")
-                .expiresIn(900)
-                .user(UserResponse.builder()
-                        .uuid(UUID.randomUUID())
-                        .name("Vikash")
-                        .email("vikash@example.com")
-                        .role(Role.ROLE_USER)
-                        .createdAt(LocalDateTime.now())
-                        .build())
-                .build();
-
-        when(authService.register(any(RegisterRequest.class))).thenReturn(authResponse);
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.accessToken").value("mock_access_token"))
-                .andExpect(jsonPath("$.refreshToken").value("mock_refresh_token"))
-                .andExpect(jsonPath("$.tokenType").value("Bearer"))
-                .andExpect(jsonPath("$.user.email").value("vikash@example.com"))
-                .andExpect(jsonPath("$.user.uuid").exists());
+    @Test
+    void saturatedMailQueueKeepsTheSamePublicContract() throws Exception {
+        org.mockito.Mockito.doThrow(new org.springframework.core.task.TaskRejectedException("synthetic queue saturation"))
+                .when(registrationService).prepare(any(), any());
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Vikash\",\"email\":\"vikash@example.com\",\"password\":\"Secret123!\"}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.challengeId").isString())
+                .andExpect(jsonPath("$.accessToken").doesNotExist())
+                .andExpect(jsonPath("$.expiresIn").value(900));
+        org.mockito.Mockito.verifyNoInteractions(authService);
     }
 
     @Test

@@ -30,7 +30,11 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "spring.datasource.url=jdbc:h2:mem:password-reset;DB_CLOSE_DELAY=-1")
-class PasswordResetIntegrationTest {
+class PasswordResetIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
+    @Autowired org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor mailExecutor;
+    @org.junit.jupiter.api.AfterEach void awaitMailCompletion() throws Exception {
+        com.vikash_api.support.AsyncTestSupport.awaitIdle(mailExecutor);
+    }
     @LocalServerPort int port;
     @Autowired UserRepository users;
     @Autowired RefreshTokenRepository refreshTokens;
@@ -184,7 +188,8 @@ class PasswordResetIntegrationTest {
         requestLink(auth.getUser().getEmail());
         String first = receivedToken();
         requestLink(auth.getUser().getEmail());
-        verify(mailSender, after(150).times(1)).send(any(MimeMessage.class));
+        com.vikash_api.support.AsyncTestSupport.awaitIdle(mailExecutor);
+        verify(mailSender, times(1)).send(any(MimeMessage.class));
         assertThat(resetTokens.count()).isEqualTo(1);
 
         jdbc.update("UPDATE password_reset_tokens SET created_at = ?", java.sql.Timestamp.from(Instant.now().minusSeconds(65)));
@@ -196,11 +201,12 @@ class PasswordResetIntegrationTest {
     }
 
     @Test
-    void smtpFailureRollsBackTheTokenAndPreservesThePasswordAndSession() {
+    void smtpFailureRollsBackTheTokenAndPreservesThePasswordAndSession() throws Exception {
         AuthResponse auth = register("livia@example.com");
         doThrow(new MailSendException("SMTP unavailable")).when(mailSender).send(any(MimeMessage.class));
         requestLink(auth.getUser().getEmail());
         verify(mailSender, timeout(3000)).send(any(MimeMessage.class));
+        com.vikash_api.support.AsyncTestSupport.awaitIdle(mailExecutor);
         assertThat(resetTokens.count()).isZero();
         assertThat(meStatus(auth)).isEqualTo(200);
         assertThat(loginStatus("livia@example.com", "Password123!")).isEqualTo(200);
@@ -239,9 +245,7 @@ class PasswordResetIntegrationTest {
     }
 
     private AuthResponse register(String email) {
-        return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(new RegisterRequest("Usuário de teste", email, "Password123!"))
-                .retrieve().body(AuthResponse.class);
+        return createTestUser(new RegisterRequest("Usuário de teste", email, "Password123!"));
     }
 
     private AuthResponse login(String email, String password) {

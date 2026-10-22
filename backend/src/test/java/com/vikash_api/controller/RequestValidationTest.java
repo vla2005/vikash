@@ -37,7 +37,7 @@ class RequestValidationTest {
     void setUp() {
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        mvc = MockMvcBuilders.standaloneSetup(new AuthController(auth), new AccountController(accounts),
+        mvc = MockMvcBuilders.standaloneSetup(new AuthController(auth, mock(RegistrationService.class), mock(RegistrationAttemptService.class)), new AccountController(accounts),
                         new CategoryController(categories), new TransactionController(transactions, transactionEdits),
                         new CreditCardInvoiceController(invoices), new CreditCardController(cards, invoices), new CreditCardPurchaseController(purchases, transactionEdits), new UserController(users))
                 .setValidator(validator).setControllerAdvice(new GlobalExceptionHandler()).build();
@@ -354,7 +354,7 @@ class RequestValidationTest {
     void acceptsExactStorageAndTranscriptionLimits() throws Exception {
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"" + "a".repeat(100) + "\",\"email\":\"a@example.com\",\"password\":\"É" + "é".repeat(33) + "ab1!\"}"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
         mvc.perform(post("/api/account/create").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"type\":\"CARTEIRA\",\"description\":\"" + "a".repeat(100) + "\",\"balance\":-9999999999999.99}"))
                 .andExpect(status().isCreated());

@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
  "spring.datasource.driver-class-name=org.postgresql.Driver","spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect","spring.jpa.hibernate.ddl-auto=create-drop",
  "assistant.planning.enabled=true","assistant.execution.enabled=true","assistant.answer.enabled=true","assistant.execution.jdbc-url=${ASSISTANT_TEST_DB_URL}",
  "assistant.execution.password=${ASSISTANT_READER_TEST_PASSWORD}","assistant.execution.pool-size=1","security.ai.per-minute=100","security.ai.global-per-day=1000","security.ai.per-user-concurrent=4"})
-class AssistantAnswerIntegrationTest {
+class AssistantAnswerIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
  @LocalServerPort int port;
  @Autowired JdbcTemplate jdbc;@Autowired UserRepository users;@Autowired FinancialCatalog catalog;@Autowired ObjectMapper mapper;
  @Autowired AssistantAnswerFormatter formatter;@Autowired AssistantPlanningStore store;
@@ -48,7 +48,7 @@ class AssistantAnswerIntegrationTest {
   });
  }
  FinancialPlan plan() {return new FinancialPlan(catalog.version(),FinancialPlan.Decision.query,"Saldo das contas","SELECT SUM(balance) AS total FROM assistant_finance.accounts",List.of(),List.of("assistant_finance.accounts"),null);}
- AuthResponse register() {return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON).body(Map.of("name","Fictício","email",UUID.randomUUID()+"@answer.test","password","Password123!")).retrieve().body(AuthResponse.class);}
+ AuthResponse register() {return createTestUser(Map.of("name","Fictício","email",UUID.randomUUID()+"@answer.test","password","Password123!"));}
  Map<String,Object> payload(String id,String question) {return new HashMap<>(Map.of("clientConversationId",conversation,"clientMessageId",id,"content",question));}
  ResponseEntity<JsonNode> send(AuthResponse auth,Map<String,Object> input) {
   var request=client.post().uri("/api/assistant/messages").contentType(MediaType.APPLICATION_JSON).header("Idempotency-Key",input.get("clientMessageId").toString());

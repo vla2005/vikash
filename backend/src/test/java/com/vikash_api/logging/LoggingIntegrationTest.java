@@ -23,7 +23,7 @@ import com.vikash_api.services.AiAnalysisService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "spring.datasource.url=jdbc:h2:mem:logging-integration;DB_CLOSE_DELAY=-1")
-class LoggingIntegrationTest {
+class LoggingIntegrationTest extends com.vikash_api.support.VerifiedUserFixture {
     @LocalServerPort int port;
     @MockitoBean AiAnalysisService ai;
     @Autowired org.springframework.context.ApplicationContext context;
@@ -40,9 +40,7 @@ class LoggingIntegrationTest {
     @AfterEach void stop() { root.detachAppender(capture); capture.stop(); }
 
     private AuthResponse register() {
-        return client.post().uri("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("name", "PRIVATE_NAME", "email", UUID.randomUUID()+"@private.example", "password", "PRIVATE_PASSWORD_123!"))
-                .retrieve().body(AuthResponse.class);
+        return createTestUser(Map.of("name", "PRIVATE_NAME", "email", UUID.randomUUID()+"@private.example", "password", "PRIVATE_PASSWORD_123!"));
     }
     @Test void repositoryCoverageExcludesSpringFactoryMetadata() {
         context.getBean("&userRepository", org.springframework.beans.factory.FactoryBean.class).getObjectType();
@@ -51,8 +49,12 @@ class LoggingIntegrationTest {
                 .doesNotContain("RepositoryFactoryBeanSupport", "getObjectType");
     }
     @Test void servicesAndRepositoriesShareHttpRequestIdAndDoNotSerializeAuthenticationData() {
-        AuthResponse auth = register();
-        var ids = capture.list.stream().filter(e -> e.getFormattedMessage().contains("AuthController.register"))
+        AuthResponse verified = register();
+        capture.list.clear();
+        AuthResponse auth = client.post().uri("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("email", verified.getUser().getEmail(), "password", "PRIVATE_PASSWORD_123!"))
+                .retrieve().body(AuthResponse.class);
+        var ids = capture.list.stream().filter(e -> e.getFormattedMessage().contains("AuthController.login"))
                 .map(e -> e.getMDCPropertyMap().get("requestId")).distinct().toList();
         assertThat(ids).hasSize(1); UUID.fromString(ids.getFirst());
         assertThat(capture.rendered()).contains("event=operation.start", "event=operation.complete", "layer=repository")
