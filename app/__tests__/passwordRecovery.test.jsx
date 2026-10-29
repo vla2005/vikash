@@ -1,8 +1,9 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { TextInput, Text } from 'react-native';
+import { TextInput, Text, StyleSheet } from 'react-native';
 import ForgotPasswordScreen from '../src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../src/screens/ResetPasswordScreen';
+import { silverThemes } from '../src/theme/silver';
 import FormField from '../src/components/FormField';
 import useToast from '../src/hooks/useToast';
 import { requestPasswordReset, resetPassword } from '../src/services/auth';
@@ -191,3 +192,15 @@ test.each([
   [`/reset-password?token=${token}&token=other`, { kind: 'reset', token: '' }],
   ['https://vikash.example/other?token=abc', null],
 ])('interpreta a URL %s', (url, expected) => { expect(parseRecoveryLink(url)).toEqual(expected); });
+
+test.each([
+  ['solicitação', () => <ForgotPasswordScreen onBack={jest.fn()} />, 'Enviar link de recuperação'],
+  ['redefinição', () => <ResetPasswordScreen token={token} onBack={jest.fn()} />, 'Redefinir senha'],
+  ['link inválido', () => <ResetPasswordScreen token="invalid" onBack={jest.fn()} onRequestLink={jest.fn()} />, 'Solicitar novo link'],
+])('a etapa de %s usa a identidade âmbar sem enviar requisições ao abrir', async (_, screen, label) => {
+  await render(screen());
+  const action = button(label);
+  expect(StyleSheet.flatten(action.props.style({ pressed: false })).backgroundColor).toBe(silverThemes.dark.colors.brandPrimary);
+  expect(renderer.root.findAllByProps({ testID: 'recovery-symbol' })[0].props.accentColor).toBe(silverThemes.dark.colors.primary);
+  expect(global.fetch).not.toHaveBeenCalled();
+});

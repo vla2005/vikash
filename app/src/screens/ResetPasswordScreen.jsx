@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Linking, Platform, Text, View } from 'react-native';
 import PasswordRecoveryLayout, { useRecoveryStyles } from '../components/PasswordRecoveryLayout';
 import FormField from '../components/FormField';
+import GlassPanel from '../components/silver/GlassPanel';
 import PrimaryButton from '../components/PrimaryButton';
 import InlineNotice from '../components/InlineNotice';
 import useProfileForm from '../hooks/useProfileForm';
@@ -49,7 +50,7 @@ export default function ResetPasswordScreen({ token, onBack, onRequestLink }) {
     </PasswordRecoveryLayout>;
   }
   return <PasswordRecoveryLayout title="Crie sua nova senha." description="Escolha uma senha para voltar a acessar sua conta." symbol="password" onBack={onBack} saving={form.saving}>
-    <View style={s.form}>
+    <GlassPanel style={s.form}>
       <FormField label="Nova senha" password placeholder="Crie sua nova senha" value={form.values.newPassword} onChangeText={value => form.change('newPassword', value)}
         error={form.errors.newPassword} hint={PASSWORD_HINT} maxLength={72} editable={!form.saving} autoCapitalize="none" autoCorrect={false}
         autoComplete="new-password" textContentType="newPassword" returnKeyType="next" onSubmitEditing={() => confirmRef.current?.focus()} testID="reset-new-password" />
@@ -58,7 +59,7 @@ export default function ResetPasswordScreen({ token, onBack, onRequestLink }) {
         autoComplete="new-password" textContentType="newPassword" returnKeyType="done" onSubmitEditing={form.submit} testID="reset-confirm-password" />
       <InlineNotice message={form.requestError} error />
       <PrimaryButton title="Redefinir senha" onPress={form.submit} loading={form.saving} icon={null} />
-    </View>
+    </GlassPanel>
     <View style={s.notice}><Text style={s.text}>Após salvar, você precisará entrar novamente nos seus dispositivos.</Text></View>
   </PasswordRecoveryLayout>;
 }

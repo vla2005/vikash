@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import PasswordRecoveryLayout, { useRecoveryStyles } from '../components/PasswordRecoveryLayout';
 import FormField from '../components/FormField';
+import GlassPanel from '../components/silver/GlassPanel';
 import PrimaryButton from '../components/PrimaryButton';
 import InlineNotice from '../components/InlineNotice';
 import useProfileForm from '../hooks/useProfileForm';
@@ -36,10 +37,10 @@ export default function ForgotPasswordScreen({ navigation, route, initialEmail =
     </PasswordRecoveryLayout>;
   }
   return <PasswordRecoveryLayout title="Recupere seu acesso." description="Informe o e-mail da sua conta. Enviaremos um link para você criar uma nova senha." onBack={back} backLabel={backLabel} saving={form.saving}>
-    <View style={s.form}><FormField label="E-mail" placeholder="seu@email.com" value={form.values.email} onChangeText={value => form.change('email', value)}
+    <GlassPanel style={s.form}><FormField label="E-mail" placeholder="seu@email.com" value={form.values.email} onChangeText={value => form.change('email', value)}
       error={form.errors.email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress"
       maxLength={150} editable={!form.saving} returnKeyType="send" onSubmitEditing={form.submit} testID="recovery-email" />
       <InlineNotice message={form.requestError} error />
-      <PrimaryButton title="Enviar link de recuperação" onPress={form.submit} loading={form.saving} icon={null} /></View>
+      <PrimaryButton title="Enviar link de recuperação" onPress={form.submit} loading={form.saving} icon={null} /></GlassPanel>
   </PasswordRecoveryLayout>;
 }

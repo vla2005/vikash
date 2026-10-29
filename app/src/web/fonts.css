@@ -17,12 +17,12 @@
   font-display: swap;
 }
 [role='button']:focus-visible, [role='tab']:focus-visible, input:focus-visible, textarea:focus-visible {
-  outline: 2px solid var(--vikash-primary, #2348EF);
+  outline: 2px solid var(--vikash-primary, #E6A64C);
   outline-offset: 3px;
 }
-::selection { background: var(--vikash-selection, #D5DFFF); color: var(--vikash-text, #15244A); }
-:root { scrollbar-color: var(--vikash-scrollbar, #A5AEC0) var(--vikash-background, #F4F7FC); scrollbar-width: thin; }
+::selection { background: var(--vikash-selection, #26221C); color: var(--vikash-text, #F8FAFC); }
+:root { scrollbar-color: var(--vikash-scrollbar, #727682) var(--vikash-background, #05060A); scrollbar-width: thin; }
 * { scrollbar-color: inherit; scrollbar-width: inherit; }
-input, textarea { caret-color: var(--vikash-primary, #2348EF); }
+input, textarea { caret-color: var(--vikash-primary, #E6A64C); }
 /* FormField já destaca seu contêiner ao receber foco. */
 input[data-focus-container='true']:focus-visible { outline: none; }

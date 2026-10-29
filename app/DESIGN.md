@@ -486,3 +486,15 @@ sem alterar a política global. A primeira escolha informada precede o uso de
 voz/Gemini; persistência exige revisão e confirmação explícita. Estados de
 resultado incerto mantêm pedido imutável no SecureStore até confirmação,
 sem alegar sucesso antecipado. `REGISTRO_VOZ_ANDROID.md` documenta os contratos.
+
+
+## Recuperação de acesso
+
+A solicitação de link, confirmação de envio, redefinição de senha e estados de link
+inválido/sucesso compartilham PasswordRecoveryLayout. O layout mantém logo branca,
+fundo escuro com AmbientLight, símbolo âmbar em GlassPanel e formulário no mesmo
+painel das telas financeiras. O verde continua reservado ao sucesso. Os controles
+reutilizam FormField, PrimaryButton e GlassBackButton; a transição entre etapas
+reutiliza ScreenTransition. Todos os valores de cor vêm de silverThemes, sem uma
+paleta independente para autenticação. O shell HTML e os fallbacks CSS começam no
+tema escuro atual para evitar um clarão branco/azul antes da montagem do React.
