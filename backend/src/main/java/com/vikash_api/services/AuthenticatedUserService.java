@@ -32,6 +32,10 @@ public class AuthenticatedUserService {
         }
 
         Object principal = authentication.getPrincipal();
+        if (principal instanceof org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal delegated) {
+            return userRepository.findByUuid(java.util.UUID.fromString(delegated.getAttribute("sub")))
+                    .filter(UserEntity::isEnabled).orElseThrow(() -> new AccessDeniedException("Conta indisponível."));
+        }
 
         if (principal instanceof UserEntity user) {
             return userRepository.findById(user.getId())

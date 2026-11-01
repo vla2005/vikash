@@ -200,7 +200,19 @@ public class TransactionService {
         return context;
     }
 
-    private void saveAnalysis(TransactionRequest request, AiAnalysisResponse analysis) {
+    /** Persists an already validated structured expense without invoking AI or using a transcription as input. */
+    @Transactional
+    public UUID createStructured(AiAnalysisResponse analysis, Long defaultCategoryId) {
+        if (analysis == null || analysis.type() != TransactionType.EXPENSE) {
+            throw new InvalidTransactionException("O lançamento estruturado deve ser uma despesa.");
+        }
+        return saveAnalysis(new TransactionRequest("Abastecimento registrado pelo FuelLog."), analysis, defaultCategoryId);
+    }
+    private UUID saveAnalysis(TransactionRequest request, AiAnalysisResponse analysis) {
+        return saveAnalysis(request, analysis, null);
+    }
+
+    private UUID saveAnalysis(TransactionRequest request, AiAnalysisResponse analysis, Long defaultCategoryId) {
         // Reconsulta o usuário e os dados escolhidos após a análise; nenhuma entidade vem do contexto.
         UserEntity currentUser = authenticatedUserService.getCurrentUser();
         log.info("event=voice.analysis.validate-start");
@@ -211,7 +223,7 @@ public class TransactionService {
                     analysis.accountUuid(), analysis.paymentMethod(), analysis.occurredAt());
             creditCardInvoiceService.payFromVoice(analysis.creditCardInvoiceUuid(),
                     analysis.creditCardUuid(), paymentRequest, analysis.amount(), request.transcription());
-            return;
+            return null;
         }
         boolean creditPurchase = analysis.paymentMethod() == PaymentMethod.CREDIT_CARD;
         AccountEntity account = null;
@@ -233,7 +245,11 @@ public class TransactionService {
             }
         }
 
-        if (analysis.defaultCategoryName() != null) {
+        if (defaultCategoryId != null) {
+            if (analysis.customCategoryUuid() != null) { throw new InvalidTransactionException("Escolha apenas uma categoria."); }
+            defaultCategory = defaultCategoryRepository.findById(defaultCategoryId)
+                    .orElseThrow(() -> new InvalidTransactionException("Categoria padrão não encontrada."));
+        } else if (analysis.defaultCategoryName() != null) {
             defaultCategory = defaultCategoryRepository.findByName(analysis.defaultCategoryName())
                     .orElseThrow(() -> new InvalidTransactionException("Categoria padrão não encontrada."));
         }
@@ -244,8 +260,7 @@ public class TransactionService {
         }
 
         if (creditPurchase) {
-            creditCardPurchaseService.create(analysis, defaultCategory, customCategory, request.transcription());
-            return;
+            return creditCardPurchaseService.create(analysis, defaultCategory, customCategory, request.transcription());
         }
 
         TransactionEntity transaction = new TransactionEntity();
@@ -265,6 +280,7 @@ public class TransactionService {
         log.info("event=voice.transaction.entity-saved");
         updateBalances(account, destinationAccount, analysis.type(), analysis.amount());
         log.info("event=voice.transaction.balances-updated");
+        return transaction.getUuid();
     }
 
     private AccountEntity getAccountForUpdate(UUID uuid, Long userId) {

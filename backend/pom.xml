@@ -30,6 +30,8 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security-oauth2-authorization-server</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId></dependency>
         <!-- Parser SQL puro Java; a política aceita explicitamente cada nó da AST. -->
         <dependency>
             <groupId>com.github.jsqlparser</groupId>
@@ -187,6 +189,17 @@
                         <excludedEnvironmentVariable>SPRING_APPLICATION_JSON</excludedEnvironmentVariable>
                         <excludedEnvironmentVariable>SPRING_JPA_HIBERNATE_DDL_AUTO</excludedEnvironmentVariable>
                         <excludedEnvironmentVariable>GEMINI_API_URL</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FUELLOG_ENABLED</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FUELLOG_ISSUER</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FUELLOG_CLIENT_ID</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FUELLOG_CLIENT_SECRET_HASH</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FUELLOG_REDIRECT_URI</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>OAUTH_COOKIE_SECURE</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FORWARD_HEADERS_STRATEGY</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SERVER_SERVLET_SESSION_COOKIE_SECURE</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>SERVER_FORWARD_HEADERS_STRATEGY</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FUELLOG_WEB_RETURN_URI</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>FUELLOG_NATIVE_RETURN_URI</excludedEnvironmentVariable>
                     </excludedEnvironmentVariables>
                 </configuration>
             </plugin>

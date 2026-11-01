@@ -76,7 +76,7 @@ public class CreditCardPurchaseService {
     }
 
     @Transactional
-    public void create(AiAnalysisResponse analysis, DefaultCategoriesEntity defaultCategory,
+    public UUID create(AiAnalysisResponse analysis, DefaultCategoriesEntity defaultCategory,
             CustomCategoryEntity customCategory, String transcription) {
         CreditCardInvoiceEntity firstInvoice = creditCardInvoiceService.getOrCreateForPurchase(
                 analysis.creditCardUuid(), analysis.occurredAt().toLocalDate());
@@ -91,6 +91,7 @@ public class CreditCardPurchaseService {
         purchase.setTranscription(transcription);
         CreditCardPurchaseEntity saved = creditCardPurchaseRepository.save(purchase);
         createInstallments(saved, firstInvoice);
+        return saved.getUuid();
     }
 
     void createInstallments(CreditCardPurchaseEntity purchase, CreditCardInvoiceEntity firstInvoice) {

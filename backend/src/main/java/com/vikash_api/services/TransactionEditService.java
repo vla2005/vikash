@@ -49,11 +49,22 @@ public class TransactionEditService {
 
     @Transactional
     public void updateTransaction(UUID uuid, TransactionUpdateRequest request) {
+        updateTransaction(uuid, request, null);
+    }
+
+    /** Uses the catalog's persisted default ID for structured integrations. */
+    @Transactional
+    public void updateStructured(UUID uuid, boolean creditPurchase, TransactionUpdateRequest request, Long defaultCategoryId) {
+        if (creditPurchase) { updatePurchase(uuid, request, defaultCategoryId); }
+        else { updateTransaction(uuid, request, defaultCategoryId); }
+    }
+
+    private void updateTransaction(UUID uuid, TransactionUpdateRequest request, Long defaultCategoryId) {
         var user = authenticatedUserService.getCurrentUser();
         var entry = transactionRepository.findOwnedForUpdate(uuid, user.getId())
                 .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada."));
         validatePayment(request, entry.getType());
-        var category = getCategory(request, user.getId());
+        var category = getCategory(request, user.getId(), defaultCategoryId);
         if (entry.getType() == TransactionType.INVOICE_PAYMENT) {
             validateInvoicePayment(entry, request, user.getId());
         }
@@ -95,11 +106,15 @@ public class TransactionEditService {
 
     @Transactional
     public void updatePurchase(UUID uuid, TransactionUpdateRequest request) {
+        updatePurchase(uuid, request, null);
+    }
+
+    private void updatePurchase(UUID uuid, TransactionUpdateRequest request, Long defaultCategoryId) {
         var user = authenticatedUserService.getCurrentUser();
         var purchase = purchaseRepository.findOwnedForUpdate(uuid, user.getId())
                 .orElseThrow(() -> new TransactionNotFoundException("Compra no crédito não encontrada."));
         validatePayment(request, TransactionType.EXPENSE);
-        var category = getCategory(request, user.getId());
+        var category = getCategory(request, user.getId(), defaultCategoryId);
         UUID oldCardUuid = purchase.getCreditCard().getUuid();
         var cards = lockCards(user.getId(), oldCardUuid, request.creditCardUuid());
         boolean financialChange = request.amount().compareTo(purchase.getAmount()) != 0
@@ -226,11 +241,13 @@ public class TransactionEditService {
         if (type == TransactionType.TRANSFER) { destination.setBalance(destination.getBalance().add(amount)); }
     }
 
-    private Category getCategory(TransactionUpdateRequest request, Long userId) {
-        if (request.defaultCategoryName() != null && request.customCategoryUuid() != null) {
+    private Category getCategory(TransactionUpdateRequest request, Long userId, Long defaultCategoryId) {
+        if ((defaultCategoryId != null || request.defaultCategoryName() != null) && request.customCategoryUuid() != null) {
             throw invalid("defaultCategoryName", "Escolha apenas uma categoria.");
         }
-        var defaults = request.defaultCategoryName() == null ? null : defaultCategoryRepository.findByName(request.defaultCategoryName())
+        var defaults = defaultCategoryId != null ? defaultCategoryRepository.findById(defaultCategoryId)
+                .orElseThrow(() -> invalid("defaultCategoryName", "Categoria padrão não encontrada."))
+                : request.defaultCategoryName() == null ? null : defaultCategoryRepository.findByName(request.defaultCategoryName())
                 .orElseThrow(() -> invalid("defaultCategoryName", "Categoria padrão não encontrada."));
         var custom = request.customCategoryUuid() == null ? null : customCategoryRepository.findByUuidAndUserId(request.customCategoryUuid(), userId)
                 .orElseThrow(() -> invalid("customCategoryUuid", "Categoria personalizada não encontrada."));

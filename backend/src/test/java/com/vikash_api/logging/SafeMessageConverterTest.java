@@ -14,6 +14,12 @@ class SafeMessageConverterTest {
         String technical = "event=gemini.request.failed requestId=1234 reason=HIGH_DEMAND providerStatus=503 durationMs=30201 missingFields=[accountUuid,paymentMethod]";
         assertThat(SafeMessageConverter.redact(technical)).isEqualTo(technical);
     }
+    @Test void masksDelegatedOAuthCredentialsAndBindingValues() {
+        for(String key:java.util.List.of("client_secret","code_verifier","authorization_code","code","access_token","refresh_token","FUELLOG_CLIENT_SECRET_HASH")) {
+            assertThat(SafeMessageConverter.redact(key+"=PRIVATE_OAUTH_VALUE; event=oauth"))
+                    .as(key).contains("[REDACTED]").doesNotContain("PRIVATE_OAUTH_VALUE");
+        }
+    }
     @Test void masksQuotedJsonValuesWithoutLeakingTheirRemainder() {
         assertThat(SafeMessageConverter.redact("{\"password\":\"PRIVATE_PASSWORD\",\"transcription\":\"PRIVATE_TRANSCRIPTION\"}"))
                 .doesNotContain("PRIVATE_PASSWORD", "PRIVATE_TRANSCRIPTION");

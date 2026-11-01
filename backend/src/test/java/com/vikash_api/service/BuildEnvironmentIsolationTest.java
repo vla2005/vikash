@@ -37,6 +37,7 @@ class BuildEnvironmentIsolationTest {
     @Test void preservesExplicitDisposableDatabaseAndLiveTestOptIns() throws Exception {
         assertThat(excludedVariables()).doesNotContain("ASSISTANT_TEST_DB_URL", "ASSISTANT_TEST_DB_PASSWORD",
             "ASSISTANT_READER_TEST_PASSWORD", "ASSISTANT_LIVE_GEMINI_API_KEY", "VIKASH_ASSISTANT_EXECUTION_TEST",
-            "VIKASH_ASSISTANT_ANSWER_POSTGRES_TEST", "VIKASH_ASSISTANT_LIVE_TEST");
+            "VIKASH_ASSISTANT_ANSWER_POSTGRES_TEST", "VIKASH_ASSISTANT_LIVE_TEST",
+            "FUELLOG_TEST_DB_URL", "VIKASH_FUELLOG_POSTGRES_TEST");
     }
 }

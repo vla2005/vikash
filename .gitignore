@@ -35,3 +35,10 @@ backups/
 *.dump
 *.sqlite
 *.sqlite3
+
+# Versioned integration contracts; other local docs remain ignored.
+!/docs/
+/docs/*
+!/docs/integrations/
+/docs/integrations/*
+!/docs/integrations/FUELLOG-*.md
