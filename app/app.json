@@ -15,6 +15,7 @@
       "versionCode": 16
     },
     "plugins": [
+      "expo-font",
       "expo-secure-store",
       [
         "expo-image-picker",

@@ -102,7 +102,7 @@ Persistir conversas e anexos por usuário, validar autorização em cada consult
 
 ## Builds e validação
 
-Os novos módulos Expo são instalados pela versão compatível com o SDK 57. Para APK/IPA existentes, gerar novas builds nativas antes de depender de câmera/seletores; OTA não acrescenta módulos nativos ou permissões.
+Os novos módulos Expo são instalados pela versão compatível com o SDK 58. Para APK/IPA existentes, gerar novas builds nativas antes de depender de câmera/seletores; OTA não acrescenta módulos nativos ou permissões.
 
 Testes cobrem contexto, isolamento por perfil, anexos, retry sem duplicação, interrupções, armazenamento, contrato HTTP e uso do input compartilhado. Compilar JS/bundles e validar web não substitui conferir câmera, teclado e efeito Skia em aparelhos físicos.
 
@@ -139,7 +139,7 @@ Validação desta otimização: 685 testes/90 suítes passaram; lint sem erros, 
 
 ## Captura e montagem Android — medição no aparelho
 
-O adaptador src/services/assistantCapture.android.js usa react-native-view-shot 5.1.0, recomendado pelo Expo SDK 57 e incluído no Expo Go. O módulo desenha a árvore nativa e devolve PNG sem perda em memória. A redução acontece antes da transferência para JavaScript, usando a mesma densidade do buffer desfocado (até 1,5× a largura lógica, teto de 720 px, sem ampliar telas de baixa densidade). Não há arquivos de captura em disco, cache de telas antigas nem pixels/base64 nos logs. Falha ou módulo ausente mantém makeImageFromView como retorno compatível.
+O adaptador src/services/assistantCapture.android.js usa react-native-view-shot 6.1.1, recomendado pelo Expo SDK 58 e incluído no Expo Go. O módulo desenha a árvore nativa e devolve PNG sem perda em memória. A redução acontece antes da transferência para JavaScript, usando a mesma densidade do buffer desfocado (até 1,5× a largura lógica, teto de 720 px, sem ampliar telas de baixa densidade). Não há arquivos de captura em disco, cache de telas antigas nem pixels/base64 nos logs. Falha ou módulo ausente mantém makeImageFromView como retorno compatível.
 
 O Android aplica o mesmo blur e shader sobre uma superfície raster Skia, evitando criar textura offscreen e copiá-la de volta à CPU para atravessar a janela do Modal. A imagem raster permanece viva até a saída e é descartada na troca/desmontagem; imagens que chegam depois de fechar são descartadas. O BlurView de reserva só monta quando a transição pode mostrá-lo. Criá-lo durante o layout oculto adicionava trabalho antes da expansão. As durações, bordas coloridas, distorção, geometria, teclado e retorno ao dock continuam iguais.
 

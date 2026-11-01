@@ -614,9 +614,11 @@ test('clique na parcela usa UUID da compra e abre a fatura escolhida nos detalhe
 
 
 test('deleting a transaction detail closes it and refreshes statement, accounts and dashboard', async () => {
-  const row = { id: 'delete-row', uuid: 'delete-row', description: 'Farmácia', amount: 50, type: 'EXPENSE', date: '2026-10-09', payment: 'Pix', account: 'Inter', color: 'mint', icon: 'plus' };
+  const today = new Date();
+  const date = new Date(today.getFullYear(), today.getMonth(), 9).toISOString().slice(0, 10);
+  const row = { id: 'delete-row', uuid: 'delete-row', description: 'Farmácia', amount: 50, type: 'EXPENSE', date, payment: 'Pix', account: 'Inter', color: 'mint', icon: 'plus' };
   fetchTransactions.mockResolvedValue({ rows: [row], page: 0, hasNext: false });
-  fetchTransactionDetails.mockResolvedValue({ ...row, occurredAt: '2026-10-09T12:00:00', paymentMethod: 'PIX', account: { uuid: 'account', description: 'Inter' } });
+  fetchTransactionDetails.mockResolvedValue({ ...row, occurredAt: `${date}T12:00:00`, paymentMethod: 'PIX', account: { uuid: 'account', description: 'Inter' } });
   deleteTransaction.mockResolvedValueOnce();
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Extrato').props.onPress());
@@ -639,9 +641,11 @@ test('deleting a transaction detail closes it and refreshes statement, accounts 
 });
 
 test('editar lançamento abre formulário preenchido, salva e atualiza extrato e dashboard', async () => {
-  const row = { id: 'entry', description: 'Mercado', amount: 50, type: 'EXPENSE', date: '2026-10-09', payment: 'Pix' };
+  const today = new Date();
+  const date = new Date(today.getFullYear(), today.getMonth(), 12).toISOString().slice(0, 10);
+  const row = { id: 'entry', description: 'Mercado', amount: 50, type: 'EXPENSE', date, payment: 'Pix' };
   fetchTransactions.mockResolvedValue({ rows: [row], page: 0, hasNext: false });
-  fetchTransactionDetails.mockResolvedValue({ ...row, uuid: 'entry', occurredAt: '2026-10-09T12:00:00', paymentMethod: 'PIX', account: { uuid: 'account', description: 'Inter' } });
+  fetchTransactionDetails.mockResolvedValue({ ...row, uuid: 'entry', occurredAt: `${date}T12:00:00`, paymentMethod: 'PIX', account: { uuid: 'account', description: 'Inter' } });
   fetchAccounts.mockResolvedValue([{ uuid: 'account', description: 'Inter', balance: 1950, type: 'CARTEIRA' }]);
   await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
   await act(async () => button('Extrato').props.onPress());

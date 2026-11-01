@@ -723,7 +723,6 @@ export default function MainTabs({ navigation }) {
         >
           <StatusBar
             barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
-            backgroundColor={colors.background}
           />
           <View style={[styles.canvas, { paddingTop: insets.top }]}>
             {Platform.OS === 'android' && <AmbientLight enabled={!voiceVisible && !assistantVisible} />}
