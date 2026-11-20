@@ -1,21 +1,39 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import InvoicePaymentDrawer from '../src/components/InvoicePaymentDrawer';
-import { payCreditCardInvoice } from '../src/services/creditCards';
+import { payCreditCardInvoice, registerExternalInvoicePayment } from '../src/services/creditCards';
 
 const mockToast = jest.fn();
 jest.mock('../src/hooks/useToast', () => () => ({ showToast: mockToast }));
-jest.mock('../src/hooks/useAccounts', () => () => ({ accounts: [{ uuid: 'account', description: 'Inter', balance: 2000 }], loading: false, error: '', retry: jest.fn() }));
-jest.mock('../src/services/creditCards', () => ({ payCreditCardInvoice: jest.fn() }));
+const mockAccounts = jest.fn();
+jest.mock('../src/hooks/useAccounts', () => (...args) => mockAccounts(...args));
+jest.mock('../src/services/creditCards', () => ({ payCreditCardInvoice: jest.fn(), registerExternalInvoicePayment: jest.fn() }));
 jest.mock('../src/components/InstitutionLogo', () => () => null);
 let renderer;
 let paid;
 function button(label) { return renderer.root.findAll(node => node.props.accessibilityLabel === label && typeof node.props.onPress === 'function')[0]; }
-beforeEach(() => { jest.clearAllMocks(); paid = jest.fn(); });
+beforeEach(() => {
+  jest.clearAllMocks();
+  paid = jest.fn();
+  mockAccounts.mockReturnValue({ accounts: [{ uuid: 'account', description: 'Inter', balance: 2000 }], loading: false, error: '', retry: jest.fn() });
+});
 afterEach(async () => { await act(async () => renderer?.unmount()); });
 async function open() {
   await act(async () => { renderer = TestRenderer.create(<InvoicePaymentDrawer invoice={{ uuid: 'invoice', total: 500 }} accessToken="token" onClose={() => {}} onPaid={paid} />); });
 }
+test('registra pagamento por outra pessoa mesmo quando a consulta de contas falha', async () => {
+  mockAccounts.mockReturnValue({ accounts: [], loading: false, error: 'Contas indisponíveis' });
+  registerExternalInvoicePayment.mockResolvedValue(null);
+  await open();
+  await act(async () => button('Paga por outra pessoa').props.onPress());
+  expect(button('Paga por outra pessoa').props.accessibilityState.checked).toBe(true);
+  expect(button('Paga por outra pessoa').props['aria-checked']).toBe(true);
+  expect(button('Confirmar pagamento da fatura').props.disabled).toBe(false);
+  await act(async () => button('Confirmar pagamento da fatura').props.onPress());
+  expect(registerExternalInvoicePayment).toHaveBeenCalledWith('invoice', expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), 'token');
+  expect(payCreditCardInvoice).not.toHaveBeenCalled();
+  expect(paid).toHaveBeenCalledTimes(1);
+});
 test('exige uma conta, envia pagamento uma vez e atualiza somente depois do sucesso', async () => {
   let resolve;
   payCreditCardInvoice.mockImplementation(() => new Promise(done => { resolve = done; }));

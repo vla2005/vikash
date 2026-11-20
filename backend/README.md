@@ -190,6 +190,10 @@ O pagamento integral, pelo endpoint existente ou por comando de voz, usa o total
 
 Os valores iniciais não entram no gráfico de gastos por categoria, pois não representam compras categorizadas registradas no app. O pagamento gera uma única movimentação do tipo `INVOICE_PAYMENT` na conta. Compras novas continuam criando suas parcelas normalmente e consumindo limite adicional.
 
+### Fatura paga por outra pessoa
+
+`POST /api/credit-card-invoice/{uuid}/external-payment` recebe apenas `occurredAt` e retorna `204`. A data deve estar entre o fechamento da fatura e o momento atual. A API marca a fatura como paga e grava `externalPaidAt`, sem gerar transação no extrato. `DELETE` na mesma rota desfaz esse tipo de quitação e volta a comprometer o limite. O Hibernate adiciona a coluna nullable `external_paid_at` com a configuração atual `ddl-auto=update`.
+
 ### Identificação dos cartões pelo final
 
 O cadastro e a edição de cartões usam `lastFourDigits` no lugar de `description`.

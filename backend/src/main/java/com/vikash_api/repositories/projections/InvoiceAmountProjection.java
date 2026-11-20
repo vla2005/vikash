@@ -2,6 +2,7 @@ package com.vikash_api.repositories.projections;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.vikash_api.enums.CreditCardInvoiceStatus;
@@ -15,6 +16,7 @@ public record InvoiceAmountProjection(
     LocalDate dueDate,
     CreditCardInvoiceStatus status,
     BigDecimal initialAmount,
-    BigDecimal total
+    BigDecimal total,
+    LocalDateTime externalPaidAt
 ) {
 }

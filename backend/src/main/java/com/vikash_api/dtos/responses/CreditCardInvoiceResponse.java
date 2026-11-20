@@ -18,6 +18,7 @@ public record CreditCardInvoiceResponse(
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
     BigDecimal initialAmount,
-    BigDecimal total
+    BigDecimal total,
+    LocalDateTime externalPaidAt
 ) {
 }

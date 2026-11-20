@@ -4,10 +4,10 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { FlatList, Text } from 'react-native';
 import CreditCardDetailsScreen from '../src/screens/CreditCardDetailsScreen';
 import ConfirmationDialog from '../src/components/ConfirmationDialog';
-import { fetchCreditCardDetails, deleteCreditCardInvoice } from '../src/services/creditCards';
+import { fetchCreditCardDetails, deleteCreditCardInvoice, undoExternalInvoicePayment } from '../src/services/creditCards';
 import { fetchTransactions } from '../src/services/transactions';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
-jest.mock('../src/services/creditCards', () => ({ fetchCreditCardDetails: jest.fn(), deleteCreditCardInvoice: jest.fn() }));
+jest.mock('../src/services/creditCards', () => ({ fetchCreditCardDetails: jest.fn(), deleteCreditCardInvoice: jest.fn(), undoExternalInvoicePayment: jest.fn() }));
 jest.mock('../src/services/transactions', () => ({ fetchTransactions: jest.fn() }));
 jest.mock('react-native-svg', () => {
   const ReactModule = require('react'); const { View } = require('react-native');
@@ -22,11 +22,27 @@ function button(label) { return renderer.root.findAll(node => node.props.accessi
 function statement() { return renderer.root.findAllByType(FlatList).find(node => typeof node.props.onEndReached === 'function'); }
 beforeEach(() => {
   deleteCreditCardInvoice.mockReset().mockResolvedValue(null);
+  undoExternalInvoicePayment.mockReset().mockResolvedValue(null);
   fetchCreditCardDetails.mockReset().mockResolvedValue(card);
   fetchTransactions.mockReset().mockResolvedValue({ rows: [row('a')], page: 0, hasNext: true });
 });
 afterEach(async () => { await act(async () => renderer?.unmount()); });
 async function open() { await act(async () => { renderer = TestRenderer.create(<CreditCardDetailsScreen uuid="card" accessToken="token" onBack={() => {}} />); }); }
+
+test('permite desfazer somente o pagamento por outra pessoa e atualiza a fatura', async () => {
+  const paidInvoice = { ...invoices[1], externalPaidAt: '2026-09-08T12:00:00' };
+  fetchCreditCardDetails.mockResolvedValueOnce({ ...card, invoices: [invoices[0], paidInvoice] });
+  await open();
+  expect(button('Desfazer pagamento')).toBeUndefined();
+  await act(async () => button('Fatura Set 2026').props.onPress());
+  await act(async () => button('Desfazer pagamento').props.onPress());
+  const dialog = () => renderer.root.findAllByType(ConfirmationDialog).find(node => node.props.title === 'Desfazer pagamento?');
+  expect(dialog().props.visible).toBe(true);
+  fetchCreditCardDetails.mockResolvedValueOnce({ ...card, invoices: [invoices[0], { ...invoices[1], status: 'CLOSED' }] });
+  await act(async () => dialog().props.onConfirm());
+  expect(undoExternalInvoicePayment).toHaveBeenCalledWith('invoice-1', 'token');
+  expect(button('Desfazer pagamento')).toBeUndefined();
+});
 
 test('busca somente fatura selecionada, pagina ao rolar e reinicia ao trocar a fatura', async () => {
   await open();

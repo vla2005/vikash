@@ -84,6 +84,41 @@ class EntryDeletionIntegrationTest extends com.vikash_api.support.VerifiedUserFi
         assertThat(after.invoices()).isEqualTo(before.invoices());
     }
 
+    @Test
+    void externalInvoicePaymentReleasesLimitWithoutCreatingAnAccountMovementAndCanBeUndone() {
+        var invoiceUuid = invoice().getUuid();
+        var route = "/api/credit-card-invoice/" + invoiceUuid + "/external-payment";
+        var bearer = "Bearer " + auth.getAccessToken();
+        var before = cardService.getByUuid(card.getUuid());
+        var body = Map.of("occurredAt", past.atDay(4).atTime(12, 0).toString());
+
+        var response = client.post().uri(route).header("Authorization", bearer).body(body)
+                .retrieve().toBodilessEntity();
+
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(invoice().getStatus()).isEqualTo(CreditCardInvoiceStatus.PAID);
+        assertBalance("2000");
+        assertThat(transactions.existsByCreditCardInvoiceId(invoice().getId())).isFalse();
+        assertThat(cardService.getByUuid(card.getUuid()).availableLimit())
+                .isEqualByComparingTo(before.availableLimit().add(new BigDecimal("200")));
+        var details = client.get().uri("/api/credit-card/" + card.getUuid()).header("Authorization", bearer)
+                .retrieve().body(String.class);
+        assertThat(details).contains("\"externalPaidAt\":\"" + body.get("occurredAt"));
+        assertThatThrownBy(() -> invoiceService.pay(invoiceUuid, payment()))
+                .isInstanceOf(InvalidCreditCardInvoiceException.class);
+
+        var undone = client.delete().uri(route).header("Authorization", bearer).retrieve().toBodilessEntity();
+
+        assertThat(undone.getStatusCode().value()).isEqualTo(204);
+        assertThat(invoice().getStatus()).isEqualTo(CreditCardInvoiceStatus.CLOSED);
+        assertBalance("2000");
+        assertThat(cardService.getByUuid(card.getUuid()).availableLimit()).isEqualByComparingTo(before.availableLimit());
+        invoiceService.pay(invoiceUuid, payment());
+        assertThatThrownBy(() -> client.delete().uri(route).header("Authorization", bearer).retrieve().toBodilessEntity())
+                .isInstanceOf(org.springframework.web.client.HttpClientErrorException.BadRequest.class);
+        assertBalance("1800");
+    }
+
     @BeforeEach
     void setup() {
         client = RestClient.create("http://localhost:" + port);

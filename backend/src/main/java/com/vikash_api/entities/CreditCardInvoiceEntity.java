@@ -62,6 +62,8 @@ public class CreditCardInvoiceEntity {
     @Column(nullable = false, length = 20)
     private CreditCardInvoiceStatus status = CreditCardInvoiceStatus.OPEN;
 
+    private LocalDateTime externalPaidAt;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

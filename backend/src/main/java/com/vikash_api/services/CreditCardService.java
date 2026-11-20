@@ -68,7 +68,7 @@ public class CreditCardService {
                 current.map(InvoiceAmountProjection::uuid).orElse(null), invoices.stream().map(invoice ->
                     new CreditCardInvoiceSummaryResponse(invoice.uuid(), invoice.referenceMonth(), invoice.total(),
                             invoice.closingDate(), invoice.dueDate(), invoice.status(), invoice.initialAmount(),
-                            emptyInvoiceUuids.contains(invoice.uuid()))).toList(),
+                            emptyInvoiceUuids.contains(invoice.uuid()), invoice.externalPaidAt())).toList(),
                 used, card.getUnallocatedUsedLimit(), allocatedInitial.add(card.getUnallocatedUsedLimit()), allocatedInitial);
     }
 
@@ -102,7 +102,7 @@ public class CreditCardService {
             var current = currentInvoices.get(card.getId());
             var invoiceResponse = current == null ? null : new CreditCardInvoiceSummaryResponse(current.uuid(),
                     current.referenceMonth(), current.total(), current.closingDate(), current.dueDate(), current.status(),
-                    current.initialAmount(), emptyInvoiceUuids.contains(current.uuid()));
+                    current.initialAmount(), emptyInvoiceUuids.contains(current.uuid()), current.externalPaidAt());
             var used = usedLimits.getOrDefault(card.getId(), BigDecimal.ZERO).add(card.getUnallocatedUsedLimit());
             return new CreditCardSummaryResponse(card.getUuid(), card.getLastFourDigits(), card.getCreditLimit(),
                     card.getCreditLimit().subtract(used),
