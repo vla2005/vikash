@@ -1,4 +1,5 @@
 import React from 'react';
+jest.mock('../src/components/BiometricSettings', () => () => null);
 import TestRenderer, { act } from 'react-test-renderer';
 import { Text, Switch } from 'react-native';
 import ProfileScreen from '../src/screens/ProfileScreen';

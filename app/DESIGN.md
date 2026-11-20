@@ -498,3 +498,28 @@ reutilizam FormField, PrimaryButton e GlassBackButton; a transição entre etapa
 reutiliza ScreenTransition. Todos os valores de cor vêm de silverThemes, sem uma
 paleta independente para autenticação. O shell HTML e os fallbacks CSS começam no
 tema escuro atual para evitar um clarão branco/azul antes da montagem do React.
+
+
+## Autenticação biométrica
+
+O acesso biométrico reutiliza a identidade escura/âmbar do app e os tokens de
+ThemeContext. LoginScreen apresenta um botão secundário centralizado, símbolo
+Fingerprint e texto exato “Entrar com biometria”, somente quando existe uma conta
+habilitada compatível com o e-mail selecionado. O formulário por senha permanece
+disponível. A preferência por conta/aparelho fica na seção Segurança do perfil,
+com o Switch nativo e os mesmos IconTile/InlineNotice das configurações.
+
+O convite após login reutiliza ConfirmationDialog, com “Ativar biometria” e
+“Agora não”. A ação só se torna ativa após confirmação do sistema e persistência
+segura. Cancelamento, falha e carregamento não indicam sucesso antecipado. Não há
+prompt automático ao abrir o app, animação contínua ou nova paleta para esse fluxo.
+
+
+## Confirmação de e-mail Android
+
+VerifyEmailScreen reutiliza PasswordRecoveryLayout, ScreenTransition,
+PrimaryButton, InlineNotice e o ActivityIndicator nativo. Mantém tema escuro e
+âmbar; verde indica somente confirmação concluída pela API. Não há página web
+de confirmação. Estados de carregamento, sucesso, link inválido/expirado/usado
+e rede indisponível pertencem ao mesmo fluxo nativo. A conta ativa permanece
+preservada durante a verificação e não é substituída pelo dono do token.

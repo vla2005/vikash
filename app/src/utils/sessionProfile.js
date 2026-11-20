@@ -4,5 +4,6 @@ export function sessionProfileId(session) {
 
 export function profileSummary(session) {
   return { id: sessionProfileId(session), name: session.user.name, email: session.user.email,
-    requiresLogin: !session.accessToken };
+    requiresLogin: !session.accessToken && !session.biometricLocked,
+    ...(session.biometricEnabled ? { biometricEnabled: true } : {}) };
 }

@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OnboardingProvider } from './src/contexts/OnboardingContext';
 import { ToastProvider } from './src/contexts/ToastContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import BiometricEnrollmentPrompt from './src/components/BiometricEnrollmentPrompt';
 import {
   ThemeProvider,
   ThemeVariant,
@@ -18,6 +19,7 @@ import useAppFonts from './src/hooks/useAppFonts';
 import useRecoveryLink from './src/hooks/useRecoveryLink';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
+import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
 
 export default function App() {
   return (
@@ -70,12 +72,15 @@ function AppContent() {
                   <ForgotPasswordScreen onBack={recovery.exit} />
                 ) : (
                   <OnboardingProvider>
-                    <AppNavigator
+                    {recovery.route?.kind === 'verify-email' ? (
+                      <VerifyEmailScreen key={recovery.route.token || 'invalid-verification'} token={recovery.route.token} onBack={recovery.exit} />
+                    ) : <AppNavigator
                       key={recovery.route?.kind || 'default'}
                       initialRouteName={
                         recovery.route?.kind === 'login' ? 'Login' : 'Home'
                       }
-                    />
+                    />}
+                    {recovery.route?.kind !== 'verify-email' && <BiometricEnrollmentPrompt />}
                   </OnboardingProvider>
                 )}
               </ToastProvider>

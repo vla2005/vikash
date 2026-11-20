@@ -45,6 +45,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Permita que o ViKash use o Face ID para entrar com biometria.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Permita que o Vikash use o microfone para transcrever seus lançamentos.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

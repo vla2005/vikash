@@ -212,3 +212,50 @@ npm run build:web
 ```
 
 Os testes verificam validação, moeda, passagem do cadastro para contas, criação e edição. A execução em aparelho precisa ser conferida no Expo Go. As pastas nativas vieram do projeto inicial criado com Community CLI; para uma futura compilação própria, será necessário sincronizá-las com a configuração Expo antes de construir.
+
+
+## Login com biometria
+
+No Android e iOS, após o primeiro login validado, o ViKash oferece ativar a
+biometria para aquela conta neste aparelho. Também é possível configurar em
+**Meu perfil → Segurança → Entrar com biometria**. O botão com esse mesmo nome
+aparece abaixo do formulário para as contas habilitadas. A web mantém login
+por senha.
+
+Ao reabrir o app, uma conta protegida não é restaurada silenciosamente: somente
+a identificação fica disponível até a autenticação do sistema. Os tokens são
+cifrados com AES-GCM e a chave fica no SecureStore com `requireAuthentication` e
+`WHEN_UNLOCKED_THIS_DEVICE_ONLY`. A chave desbloqueada permanece apenas em memória
+para renovar tokens sem repetir o prompt. O servidor continua validando a sessão;
+nenhuma senha ou dado biométrico é armazenado pelo ViKash.
+
+Cancelar o prompt mantém a opção de tentar novamente. Falhas de rede não liberam
+o dashboard nem apagam uma credencial válida. Uma sessão revogada exige login por
+senha. Sair explicitamente revoga/remove a sessão; o login biométrico não contorna
+esse logout. Um novo login por senha substitui a proteção anterior; para voltar
+a usá-la, habilite-a nas configurações. Desativar a opção mantém o login normal.
+
+As dependências `expo-local-authentication` e `expo-crypto` exigem novas builds
+nativas para o app instalado, com runtime compatível. A configuração Expo e o
+Info.plist incluem a descrição de uso do Face ID. Face ID não pode ser validado
+no Expo Go: use uma build própria no iPhone. Testes com fronteiras nativas
+simuladas não substituem a validação em aparelhos físicos.
+
+
+## Verificação de e-mail dentro do Android
+
+O botão do e-mail abre o App Link HTTPS da API. O intent-filter Android associa
+somente `/verify-email` ao ViKash. `useRecoveryLink` recebe a URL com app aberto
+ou fechado; `VerifyEmailScreen` envia o token por POST à API e mostra progresso,
+sucesso, link inválido/expirado/usado ou opção de repetir após falha de rede.
+O código manual do cadastro permanece disponível como alternativa.
+
+A verificação não cria uma sessão de login nem troca de perfil. O
+OnboardingProvider permanece montado durante um link recebido com o app aberto,
+preservando inclusive uma renovação de token em voo. O token fica apenas em
+memória, não entra em logs/armazenamento e não é confirmado por uma página web.
+Requisições simultâneas para o mesmo token compartilham o POST em voo.
+
+Requer redeploy da API e novo APK assinado com certificado presente no
+`assetlinks.json` público. O foco é Android; não foram adicionados Universal
+Links iOS. Veja o README do backend para configuração e validação no aparelho.

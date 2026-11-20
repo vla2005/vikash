@@ -12,11 +12,39 @@
     },
     "android": {
       "package": "com.vikash",
-      "versionCode": 16
+      "versionCode": 16,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "api-vikash.viktorware.com",
+              "pathPrefix": "/verify-email"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "plugins": [
       "expo-font",
-      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permita que o ViKash use o Face ID para entrar com biometria."
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Permita que o ViKash use o Face ID para entrar com biometria."
+        }
+      ],
       [
         "expo-image-picker",
         {

@@ -260,6 +260,6 @@ test('senha incorreta conserva a sessão e uma resposta antiga não encerra um n
   const clearedBeforeResponse = clearSession.mock.calls.length;
   await act(async () => { finish(response(null, 204)); expect(await pending).toMatchObject({ status: 401 }); });
   expect(state.session.accessToken).toBe('other-access');
-  expect(storeSession).toHaveBeenLastCalledWith(expect.objectContaining(nextLogin));
+  expect(storeSession).toHaveBeenLastCalledWith(expect.objectContaining(nextLogin), { passwordLogin: true });
   expect(clearSession).toHaveBeenCalledTimes(clearedBeforeResponse);
 });

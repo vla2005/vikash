@@ -1,6 +1,8 @@
 /* eslint-env jest */
 // O armazenamento nativo precisa de um aparelho. Cada teste pode substituir este mock.
 jest.mock('expo-secure-store', () => ({
+  canUseBiometricAuthentication: jest.fn(() => false),
+  WHEN_UNLOCKED_THIS_DEVICE_ONLY: 6,
   getItemAsync: jest.fn(async () => null),
   setItemAsync: jest.fn(async () => {}),
   deleteItemAsync: jest.fn(async () => {}),
@@ -102,3 +104,12 @@ jest.mock('./src/components/assistant/AssistantIntelligence', () => {
   return function AssistantIntelligenceMock({ children, renderOverlay }) { return React.createElement(View, null, children, renderOverlay?.(null)); };
 });
 jest.mock('./src/config/assistantEndpoint', () => ({ assistantEndpoint:'' }));
+
+// Biometria exige o SO; a suíte específica substitui estas fronteiras nativas.
+jest.mock('expo-local-authentication', () => ({
+  hasHardwareAsync: jest.fn(async () => false),
+  isEnrolledAsync: jest.fn(async () => false),
+}));
+jest.mock('expo-crypto', () => ({
+  AESEncryptionKey: {}, AESSealedData: {}, aesEncryptAsync: jest.fn(), aesDecryptAsync: jest.fn(),
+}));

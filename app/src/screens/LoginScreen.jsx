@@ -1,6 +1,7 @@
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import React, { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Fingerprint } from 'phosphor-react-native/src/icons/Fingerprint';
 import Screen from '../components/Screen';
 import BrandLogo from '../components/BrandLogo';
 import FormField from '../components/FormField';
@@ -13,19 +14,32 @@ import { validateLogin } from '../utils/validation';
 import { fontFamilyMedium, fontFamily } from '../theme';
 
 export default function LoginScreen({ navigation, route }) {
-  const { typography } = useTheme();
+  const { typography, colors } = useTheme();
   const styles = useThemeStyles(createStyles);
   const [email, setEmail] = useState(route?.params?.email || '');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const passwordRef = useRef(null);
-  const { login, session, profiles = [], activeProfileId, switchProfile, logout } = useOnboarding();
+  const { login, loginWithBiometrics, preferredBiometricProfileId, session, profiles = [], activeProfileId, switchProfile, logout } = useOnboarding();
   const [profilesVisible, setProfilesVisible] = useState(false);
   const adding = route?.params?.addingAccount && !!session;
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [requestError, setRequestError] = useState('');
   const submitting = useRef(false);
+  const biometricProfiles = profiles.filter(item => item.biometricEnabled);
+  const biometricProfile = (email.trim()
+    ? biometricProfiles.find(item => item.email?.toLowerCase() === email.trim().toLowerCase())
+    : biometricProfiles.find(item => item.id === preferredBiometricProfileId) || biometricProfiles[0]);
+  async function enterWithBiometrics() {
+    if (submitting.current || !biometricProfile) return;
+    submitting.current = true; setLoading(true); setRequestError('');
+    try {
+      await loginWithBiometrics(biometricProfile.id);
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    } catch (cause) { if (!cause.canceled) setRequestError(cause.message); }
+    finally { submitting.current = false; setLoading(false); }
+  }
 
   async function submit() {
     if (submitting.current) { return; }
@@ -62,6 +76,13 @@ export default function LoginScreen({ navigation, route }) {
       <Pressable accessibilityRole="button" disabled={loading} onPress={() => navigation.navigate('ForgotPassword', { email })} style={styles.forgot} hitSlop={8}><Text style={styles.link}>Esqueci minha senha</Text></Pressable>
       <InlineNotice message={requestError} error />
       <PrimaryButton title="Entrar" onPress={submit} loading={loading} style={styles.submit} />
+      {!!biometricProfile && !adding && <Pressable accessibilityRole="button" accessibilityLabel="Entrar com biometria"
+        accessibilityHint={`Entrar na conta de ${biometricProfile.name || biometricProfile.email}`}
+        accessibilityState={{ disabled: loading, busy: loading }} disabled={loading} onPress={enterWithBiometrics}
+        style={({ pressed }) => [styles.biometric, loading && { opacity: 0.55 }, pressed && { opacity: 0.75 }]}>
+        <View style={styles.biometricIcon}><Fingerprint size={30} color={colors.primary} /></View>
+        <Text style={styles.link}>Entrar com biometria</Text>
+      </Pressable>}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Ainda não tem cadastro?</Text>
         <Pressable accessibilityRole="button" disabled={loading} onPress={() => navigation.navigate('Register', { addingAccount: adding })} hitSlop={8}><Text style={styles.link}>Criar cadastro</Text></Pressable>
@@ -83,6 +104,8 @@ const createStyles = (colors) => StyleSheet.create({
   forgot: { alignSelf: 'flex-end', marginTop: 10, paddingVertical: 12 },
   link: { color: colors.primary, fontFamily: fontFamilyMedium, fontSize: 15, fontWeight: '500' },
   submit: { marginTop: 28 },
+  biometric: { alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 92, marginTop: 22 },
+  biometricIcon: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
   footer: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 7, marginTop: 28 },
   footerText: { color: colors.secondary, fontFamily, fontSize: 14, lineHeight: 20 },
   cancel: { marginTop: 16, paddingVertical: 12, alignSelf: 'flex-start' },

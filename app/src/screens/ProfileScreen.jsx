@@ -11,6 +11,7 @@ import { SignOut } from 'phosphor-react-native/src/icons/SignOut';
 import { User } from 'phosphor-react-native/src/icons/User';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import AppearanceSettings from '../components/AppearanceSettings';
+import BiometricSettings from '../components/BiometricSettings';
 import VoiceEntryTileSettings from '../components/VoiceEntryTileSettings';
 import IconTile from '../components/IconTile';
 import useToast from '../hooks/useToast';
@@ -65,6 +66,7 @@ export default function ProfileScreen({ profile, onBack, onLogout, onEdit, onPas
       <View style={s.securitySection}>
         <Text accessibilityRole="header" style={s.heading}>Segurança</Text>
         <View style={s.group}>
+          <BiometricSettings />
           <Pressable accessibilityRole="button" accessibilityLabel="Alterar senha" onPress={onPassword} style={({ pressed }) => [s.row, pressed && s.pressed]}>
             <IconTile tone="warning"><Key size={24} color={colors.warning} /></IconTile><View style={s.copy}><Text style={s.value}>Alterar senha</Text><Text style={s.description}>Atualize sua senha de acesso</Text></View><CaretRight size={23} color={colors.secondary} />
           </Pressable>

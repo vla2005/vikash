@@ -53,6 +53,12 @@
         <data android:scheme="vikash"/>
       </intent-filter>
       <meta-data android:name="android.app.shortcuts" android:resource="@xml/voice_entry_shortcuts"/>
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" android:host="api-vikash.viktorware.com" android:pathPrefix="/verify-email" />
+      </intent-filter>
     </activity>
   </application>
 </manifest>
