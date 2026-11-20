@@ -9,13 +9,15 @@ import GlassBackButton from '../components/GlassBackButton';
 import InstitutionLogo from '../components/InstitutionLogo';
 import HorizontalScroll from '../components/HorizontalScroll';
 import InvoicePaymentDrawer from '../components/InvoicePaymentDrawer';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 import DrawerPanel from '../components/DrawerPanel';
 import DrawerModal from '../components/DrawerModal';
 import InvoiceTransition from '../components/InvoiceTransition';
 import DeleteInvoiceButton from '../components/DeleteInvoiceButton';
 import PagedTransactionList from '../components/PagedTransactionList';
 import useCreditCardDetails from '../hooks/useCreditCardDetails';
-
+import useToast from '../hooks/useToast';
+import { undoExternalInvoicePayment } from '../services/creditCards';
 
 import { formatCurrency } from '../utils/money';
 import { fontFamilyMedium, fontFamilyBold, fontFamily } from '../theme';
@@ -38,8 +40,13 @@ export default function CreditCardDetailsScreen({ uuid, accessToken, onBack, onE
   const { colors } = useTheme();
   const s = useThemeStyles(createStyles);
   const { card, loading, error, retry } = useCreditCardDetails(uuid, accessToken, revision);
+  const { showToast } = useToast();
   const [paymentVisible, setPaymentVisible] = useState(false);
   const [paymentRevision, setPaymentRevision] = useState(0);
+  const [undoInvoiceUuid, setUndoInvoiceUuid] = useState(null);
+  const [undoSaving, setUndoSaving] = useState(false);
+  const [undoError, setUndoError] = useState('');
+  const undoBusy = useRef(false);
   const [selectedUuid, setSelectedUuid] = useState(null);
   const [allVisible, setAllVisible] = useState(false);
   useEffect(() => { if (initialInvoiceUuid) { setSelectedUuid(initialInvoiceUuid); } }, [initialInvoiceUuid]);
@@ -62,6 +69,28 @@ export default function CreditCardDetailsScreen({ uuid, accessToken, onBack, onE
     retry();
     onDeleted?.();
   };
+  const refreshPayment = () => {
+    setPaymentRevision(value => value + 1);
+    retry();
+    onPayment?.();
+  };
+  async function undoPayment() {
+    if (undoBusy.current || !undoInvoiceUuid) { return; }
+    undoBusy.current = true;
+    setUndoSaving(true);
+    setUndoError('');
+    try {
+      await undoExternalInvoicePayment(undoInvoiceUuid, accessToken);
+      setUndoInvoiceUuid(null);
+      showToast({ type: 'success', message: 'Pagamento desfeito. A fatura voltou a ficar pendente.' });
+      refreshPayment();
+    } catch (cause) {
+      setUndoError(cause.message);
+    } finally {
+      undoBusy.current = false;
+      setUndoSaving(false);
+    }
+  }
   const top = <>
     <View style={s.nav}><GlassBackButton accessibilityLabel="Voltar para contas e cartões" onPress={onBack} /><Text accessibilityRole="header" style={s.navTitle}>Detalhes do cartão</Text><View style={s.back} /></View>
     {card && <>
@@ -70,12 +99,37 @@ export default function CreditCardDetailsScreen({ uuid, accessToken, onBack, onE
       {(card.unallocatedUsedLimit > 0 || card.invoices.some(item => item.initialAmount > 0 && item.status !== 'PAID')) && <View style={s.initialBalance}><View style={s.initialHeader}><Icon name="statement" size={22} color={colors.primary} /><Text style={s.initialTitle}>{card.unallocatedUsedLimit > 0 ? 'Valor anterior ao cadastro' : 'Valores iniciais das faturas'}</Text></View><Text style={s.initialAmount}>{formatCurrency(card.unallocatedUsedLimit || 0)}<Text style={s.initialSuffix}> a distribuir</Text></Text><Text style={s.muted}>{card.unallocatedUsedLimit > 0 ? 'Esse valor já está reservado no limite. Distribua nas faturas quando quiser.' : 'Você pode corrigir a distribuição sem alterar as compras registradas.'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Distribuir valores iniciais nas faturas" onPress={onDistribute} style={s.distributeButton}><Text style={s.link}>{card.unallocatedUsedLimit > 0 ? 'Distribuir em faturas' : 'Revisar distribuição'}</Text><Icon name="chevron" size={18} color={colors.primary} /></Pressable></View>}
       <View style={s.section}><Text accessibilityRole="header" style={s.sectionTitle}>Faturas</Text>{card.invoices.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Ver todas as faturas" onPress={() => setAllVisible(true)} style={s.action}><Text style={s.link}>Ver todas</Text></Pressable>}</View>
       <HorizontalScroll ref={selector} accessibilityLabel="Faturas do cartão" contentContainerStyle={s.months}>{invoices.map(item => <Pressable key={item.uuid} accessibilityRole="button" accessibilityLabel={`Fatura ${monthLabel(item.referenceMonth)}`} accessibilityState={{ selected: invoice?.uuid === item.uuid }} onPress={() => select(item.uuid)} style={({ pressed }) => [s.month, invoice?.uuid === item.uuid && s.selected, pressed && s.pressed]}><Text style={[s.monthText, invoice?.uuid === item.uuid && s.white]}>{monthLabel(item.referenceMonth)}</Text><Text style={[s.status, item.status === 'PAID' && s.green, invoice?.uuid === item.uuid && s.white]}>{statuses[item.status]}</Text></Pressable>)}</HorizontalScroll>
-      {invoice ? <InvoiceTransition invoiceUuid={invoice.uuid}><View style={s.panel}><View style={s.invoiceTitle}><Text style={s.sectionTitle}>Fatura de {monthLabel(invoice.referenceMonth)}</Text><Text style={[s.pill, invoice.status === 'PAID' ? s.paid : invoice.status === 'CLOSED' ? s.closed : s.open]}>{statuses[invoice.status]}</Text></View><Text style={s.invoiceTotal}>{formatCurrency(invoice.total)}</Text>{invoice.initialAmount > 0 && <View style={s.invoiceBreakdown}><View style={s.breakdownRow}><Text style={s.muted}>Valor anterior ao cadastro</Text><Text style={s.breakdownValue}>{formatCurrency(invoice.initialAmount)}</Text></View><View style={s.breakdownRow}><Text style={s.muted}>Compras registradas</Text><Text style={s.breakdownValue}>{formatCurrency(Math.max(0, invoice.total - invoice.initialAmount))}</Text></View></View>}<View style={s.invoiceDates}><View style={s.metric}><Text style={s.muted}>Fechamento</Text><Text style={s.date}>{formatInvoiceDate(invoice.closingDate)}</Text></View><View style={s.metric}><Text style={s.muted}>Vencimento</Text><Text style={s.date}>{formatInvoiceDate(invoice.dueDate)}</Text></View></View>{invoice.deletable === true && invoice.total === 0 && <DeleteInvoiceButton key={invoice.uuid} invoice={invoice} monthLabel={monthLabel(invoice.referenceMonth)} accessToken={accessToken} onDeleted={invoiceDeleted} />}</View>{invoice.status !== 'PAID' && invoice.total > 0 && new Date(`${invoice.closingDate}T00:00:00`) <= new Date() && <Pressable accessibilityRole="button" accessibilityLabel="Pagar fatura" onPress={() => setPaymentVisible(true)} style={s.payButton}><Text style={s.payText}>Marcar como paga</Text></Pressable>}<Text accessibilityRole="header" style={[s.sectionTitle, s.transactionsTitle]}>Compras da fatura</Text></InvoiceTransition> : <Feedback empty="Este cartão ainda não tem faturas. Elas aparecerão ao registrar compras no crédito." />}
+      {invoice ? <InvoiceTransition invoiceUuid={invoice.uuid}>
+        <View style={s.panel}>
+          <View style={s.invoiceTitle}><Text style={s.sectionTitle}>Fatura de {monthLabel(invoice.referenceMonth)}</Text><Text style={[s.pill, invoice.status === 'PAID' ? s.paid : invoice.status === 'CLOSED' ? s.closed : s.open]}>{statuses[invoice.status]}</Text></View>
+          <Text style={s.invoiceTotal}>{formatCurrency(invoice.total)}</Text>
+          {invoice.initialAmount > 0 && <View style={s.invoiceBreakdown}><View style={s.breakdownRow}><Text style={s.muted}>Valor anterior ao cadastro</Text><Text style={s.breakdownValue}>{formatCurrency(invoice.initialAmount)}</Text></View><View style={s.breakdownRow}><Text style={s.muted}>Compras registradas</Text><Text style={s.breakdownValue}>{formatCurrency(Math.max(0, invoice.total - invoice.initialAmount))}</Text></View></View>}
+          <View style={s.invoiceDates}><View style={s.metric}><Text style={s.muted}>Fechamento</Text><Text style={s.date}>{formatInvoiceDate(invoice.closingDate)}</Text></View><View style={s.metric}><Text style={s.muted}>Vencimento</Text><Text style={s.date}>{formatInvoiceDate(invoice.dueDate)}</Text></View></View>
+          {invoice.status === 'PAID' && invoice.externalPaidAt && <>
+            <Text style={s.muted}>Paga por outra pessoa em {formatInvoiceDate(invoice.externalPaidAt.slice(0, 10))}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Desfazer pagamento" onPress={() => { setUndoError(''); setUndoInvoiceUuid(invoice.uuid); }} style={s.distributeButton}>
+              <Text style={s.link}>Desfazer pagamento</Text>
+            </Pressable>
+          </>}
+          {invoice.deletable === true && invoice.total === 0 && <DeleteInvoiceButton key={invoice.uuid} invoice={invoice} monthLabel={monthLabel(invoice.referenceMonth)} accessToken={accessToken} onDeleted={invoiceDeleted} />}
+        </View>
+        {invoice.status !== 'PAID' && invoice.total > 0 && new Date(`${invoice.closingDate}T00:00:00`) <= new Date() && <Pressable accessibilityRole="button" accessibilityLabel="Pagar fatura" onPress={() => setPaymentVisible(true)} style={s.payButton}><Text style={s.payText}>Marcar como paga</Text></Pressable>}
+        <Text accessibilityRole="header" style={[s.sectionTitle, s.transactionsTitle]}>Compras da fatura</Text>
+      </InvoiceTransition> : <Feedback empty="Este cartão ainda não tem faturas. Elas aparecerão ao registrar compras no crédito." />}
     </>}
   </>;
   return <View style={s.root}>
     {card && invoice ? <InvoiceStatement revision={revision + paymentRevision} cardUuid={card.uuid} invoiceUuid={invoice.uuid} accessToken={accessToken} header={top} onOpenTransaction={row => onOpenTransaction?.(row, invoice.uuid)} onDeleted={() => { if (onDeleted) { onDeleted(); } else { setPaymentRevision(value => value + 1); retry(); } }} /> : <ScrollView contentContainerStyle={s.content}>{top}{!card && <Feedback loading={loading} error={error} onRetry={retry} />}</ScrollView>}
-    {invoice && <InvoicePaymentDrawer visible={paymentVisible} invoice={invoice} accessToken={accessToken} onClose={() => setPaymentVisible(false)} onPaid={() => { setPaymentVisible(false); setPaymentRevision(value => value + 1); retry(); onPayment?.(); }} />}
+    {invoice && <InvoicePaymentDrawer visible={paymentVisible} invoice={invoice} accessToken={accessToken} onClose={() => setPaymentVisible(false)}
+      onPaid={paidBySomeoneElse => {
+        setPaymentVisible(false);
+        if (paidBySomeoneElse) { setSelectedUuid(invoice.uuid); }
+        refreshPayment();
+      }} />}
+    {!!undoInvoiceUuid && <ConfirmationDialog visible title="Desfazer pagamento?"
+      message="A fatura voltará a ficar pendente e o valor voltará a ocupar o limite do cartão."
+      confirmText="Desfazer" loading={undoSaving} error={undoError} onConfirm={undoPayment}
+      onCancel={() => { if (!undoBusy.current) { setUndoInvoiceUuid(null); } }} />}
     <DrawerModal visible={allVisible} onRequestClose={() => setAllVisible(false)}>
       <View style={s.overlay}><Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel="Fechar lista de faturas" onPress={() => setAllVisible(false)} /><DrawerPanel style={s.drawer}><View style={s.section}><Text style={s.sectionTitle}>Todas as faturas</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar faturas" onPress={() => setAllVisible(false)} style={s.action}><Icon name="close" size={24} /></Pressable></View><FlatList data={invoices} keyExtractor={item => item.uuid} renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Selecionar fatura ${monthLabel(item.referenceMonth)}`} accessibilityState={{ selected: invoice?.uuid === item.uuid }} onPress={() => select(item.uuid)} style={s.invoiceRow}><View><Text style={s.rowTitle}>{monthLabel(item.referenceMonth)}</Text><Text style={s.muted}>{statuses[item.status]}</Text></View><Text style={s.rowAmount}>{formatCurrency(item.total)}</Text><Icon name={invoice?.uuid === item.uuid ? 'check' : 'chevron'} size={20} color={colors.primary} /></Pressable>} /></DrawerPanel></View>
     </DrawerModal>

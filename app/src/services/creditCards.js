@@ -22,6 +22,16 @@ export function payCreditCardInvoice(uuid, values, accessToken) {
   }, accessToken, { headers: { access_token: accessToken } });
 }
 
+export function registerExternalInvoicePayment(uuid, occurredAt, accessToken) {
+  if (!accessToken) { throw new Error('Entre na sua conta antes de registrar o pagamento.'); }
+  return postJson(`/api/credit-card-invoice/${encodeURIComponent(uuid)}/external-payment`, { occurredAt }, accessToken);
+}
+
+export function undoExternalInvoicePayment(uuid, accessToken) {
+  if (!accessToken) { throw new Error('Entre na sua conta antes de desfazer o pagamento.'); }
+  return deleteJson(`/api/credit-card-invoice/${encodeURIComponent(uuid)}/external-payment`, accessToken);
+}
+
 export function deleteCreditCardInvoice(uuid, accessToken) {
   if (!accessToken) { throw new Error('Entre na sua conta antes de excluir uma fatura.'); }
   return deleteJson(`/api/credit-card-invoice/${encodeURIComponent(uuid)}`, accessToken, {
@@ -41,7 +51,10 @@ export async function fetchCreditCardDetails(uuid, accessToken, signal) {
       || card.availableLimit == null || !Number.isFinite(Number(card.availableLimit))
       || card.invoices.some(invoice => typeof invoice.uuid !== 'string' || invoice.total == null || !Number.isFinite(Number(invoice.total))
         || !/^\d{4}-\d{2}$/.test(invoice.referenceMonth) || !/^\d{4}-\d{2}-\d{2}$/.test(invoice.closingDate)
-        || !/^\d{4}-\d{2}-\d{2}$/.test(invoice.dueDate) || !['OPEN', 'CLOSED', 'PAID'].includes(invoice.status))) {
+        || !/^\d{4}-\d{2}-\d{2}$/.test(invoice.dueDate)
+        || (invoice.externalPaidAt != null && (typeof invoice.externalPaidAt !== 'string'
+          || !/^\d{4}-\d{2}-\d{2}T/.test(invoice.externalPaidAt)))
+        || !['OPEN', 'CLOSED', 'PAID'].includes(invoice.status))) {
     throw new Error('A API retornou os detalhes do cartão em formato inesperado.');
   }
   const invoices = card.invoices.map(invoice => ({ ...invoice, total: Number(invoice.total), initialAmount: initialAmount(invoice.initialAmount) }));

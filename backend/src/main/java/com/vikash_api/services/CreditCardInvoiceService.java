@@ -127,13 +127,36 @@ public class CreditCardInvoiceService {
     }
 
     @Transactional
+    public void registerExternalPayment(UUID uuid, LocalDateTime occurredAt) {
+        Long userId = authenticatedUserService.getCurrentUserId();
+        var invoice = getInvoice(uuid, userId);
+        lockInvoice(invoice, userId);
+        ensureUnpaid(invoice);
+        validatePaymentDate(invoice, occurredAt);
+        payableTotal(invoice);
+        invoice.setExternalPaidAt(occurredAt);
+        invoice.setStatus(CreditCardInvoiceStatus.PAID);
+    }
+
+    @Transactional
+    public void undoExternalPayment(UUID uuid) {
+        Long userId = authenticatedUserService.getCurrentUserId();
+        var invoice = getInvoice(uuid, userId);
+        lockInvoice(invoice, userId);
+        if (invoice.getStatus() != CreditCardInvoiceStatus.PAID || invoice.getExternalPaidAt() == null) {
+            throw new InvalidCreditCardInvoiceException("Esta fatura não tem pagamento por outra pessoa para desfazer.");
+        }
+        invoice.setExternalPaidAt(null);
+        invoice.setStatus(CreditCardInvoiceStatus.CLOSED);
+    }
+
+    @Transactional
     public void reversePayment(TransactionEntity payment, Long userId) {
         var invoice = payment.getCreditCardInvoice();
         if (invoice == null || !invoice.getCreditCard().getUser().getId().equals(userId)) {
             throw new InvalidCreditCardInvoiceException("Fatura do pagamento não encontrada.");
         }
-        lockCard(invoice.getCreditCard().getUuid(), userId);
-        entityManager.refresh(invoice, LockModeType.PESSIMISTIC_WRITE);
+        lockInvoice(invoice, userId);
         if (invoice.getStatus() != CreditCardInvoiceStatus.PAID) {
             throw new InvalidCreditCardInvoiceException("Esta fatura não está marcada como paga.");
         }
@@ -158,29 +181,19 @@ public class CreditCardInvoiceService {
         if (expectedCardUuid != null && !invoice.getCreditCard().getUuid().equals(expectedCardUuid)) {
             throw new InvalidCreditCardInvoiceException("A fatura não pertence ao cartão informado.");
         }
-        // Compras e pagamentos travam primeiro o cartão. O refresh lê o status atual sob bloqueio.
-        lockCard(invoice.getCreditCard().getUuid(), user.getId());
-        entityManager.refresh(invoice, LockModeType.PESSIMISTIC_WRITE);
-        if (invoice.getStatus() == CreditCardInvoiceStatus.PAID) {
-            throw new InvalidCreditCardInvoiceException("Esta fatura já foi paga.");
-        }
+        lockInvoice(invoice, user.getId());
+        ensureUnpaid(invoice);
         if (request.paymentMethod() == null || request.paymentMethod() == PaymentMethod.CREDIT_CARD) {
             throw new InvalidCreditCardInvoiceException("Escolha uma forma de pagamento que utilize o saldo da conta.");
         }
-        if (request.occurredAt() == null || request.occurredAt().isAfter(LocalDateTime.now())) {
-            throw new InvalidCreditCardInvoiceException("Informe uma data de pagamento válida, sem usar uma data futura.");
-        }
-        if (request.occurredAt().toLocalDate().isBefore(invoice.getClosingDate())) {
-            throw new InvalidCreditCardInvoiceException("O pagamento integral só pode ser registrado após o fechamento da fatura.");
-        }
+        validatePaymentDate(invoice, request.occurredAt());
         var account = accountRepository.findOwnedForUpdate(request.accountUuid(), user.getId())
                 .orElseThrow(() -> new InvalidCreditCardInvoiceException("Conta não encontrada."));
         entityManager.refresh(account, LockModeType.PESSIMISTIC_WRITE);
         if (!Boolean.TRUE.equals(account.getActive())) {
             throw new InvalidCreditCardInvoiceException("Escolha uma conta ativa para pagar a fatura.");
         }
-        var total = invoice.getInitialAmount().add(creditCardInstallmentRepository.sumByInvoiceId(invoice.getId()));
-        if (total.signum() <= 0) { throw new InvalidCreditCardInvoiceException("Esta fatura não tem valor a pagar."); }
+        var total = payableTotal(invoice);
         if (expectedAmount != null && expectedAmount.compareTo(total) != 0) {
             throw new InvalidCreditCardInvoiceException("O valor informado deve corresponder ao total da fatura. Pagamentos parciais ainda não são suportados.");
         }
@@ -205,6 +218,33 @@ public class CreditCardInvoiceService {
         invoice.setStatus(CreditCardInvoiceStatus.PAID);
         creditCardInvoiceRepository.save(invoice);
         return payment;
+    }
+
+    private void lockInvoice(CreditCardInvoiceEntity invoice, Long userId) {
+        // Compras e pagamentos travam primeiro o cartão. O refresh lê o status atual sob bloqueio.
+        lockCard(invoice.getCreditCard().getUuid(), userId);
+        entityManager.refresh(invoice, LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    private void ensureUnpaid(CreditCardInvoiceEntity invoice) {
+        if (invoice.getStatus() == CreditCardInvoiceStatus.PAID) {
+            throw new InvalidCreditCardInvoiceException("Esta fatura já foi paga.");
+        }
+    }
+
+    private void validatePaymentDate(CreditCardInvoiceEntity invoice, LocalDateTime occurredAt) {
+        if (occurredAt == null || occurredAt.isAfter(LocalDateTime.now())) {
+            throw new InvalidCreditCardInvoiceException("Informe uma data de pagamento válida, sem usar uma data futura.");
+        }
+        if (occurredAt.toLocalDate().isBefore(invoice.getClosingDate())) {
+            throw new InvalidCreditCardInvoiceException("O pagamento integral só pode ser registrado após o fechamento da fatura.");
+        }
+    }
+
+    private BigDecimal payableTotal(CreditCardInvoiceEntity invoice) {
+        var total = invoice.getInitialAmount().add(creditCardInstallmentRepository.sumByInvoiceId(invoice.getId()));
+        if (total.signum() <= 0) { throw new InvalidCreditCardInvoiceException("Esta fatura não tem valor a pagar."); }
+        return total;
     }
 
     @Transactional
@@ -390,6 +430,6 @@ public class CreditCardInvoiceService {
         CreditCardEntity card = invoice.getCreditCard();
         return new CreditCardInvoiceResponse(invoice.getUuid(), card.getUuid(), card.getLastFourDigits(),
                 invoice.getReferenceMonth(), invoice.getClosingDate(), invoice.getDueDate(), invoice.getStatus(),
-                invoice.getCreatedAt(), invoice.getUpdatedAt(), invoice.getInitialAmount(), total);
+                invoice.getCreatedAt(), invoice.getUpdatedAt(), invoice.getInitialAmount(), total, invoice.getExternalPaidAt());
     }
 }

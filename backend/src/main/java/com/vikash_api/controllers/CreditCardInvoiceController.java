@@ -1,6 +1,7 @@
 package com.vikash_api.controllers;
 
 import com.vikash_api.dtos.requests.CreditCardInvoicePaymentRequest;
+import com.vikash_api.dtos.requests.ExternalInvoicePaymentRequest;
 
 import java.util.UUID;
 
@@ -34,6 +35,19 @@ public class CreditCardInvoiceController {
     public ResponseEntity<Void> payInvoice(@PathVariable UUID uuid,
             @Valid @RequestBody CreditCardInvoicePaymentRequest request) {
         creditCardInvoiceService.pay(uuid, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{uuid}/external-payment")
+    public ResponseEntity<Void> registerExternalPayment(@PathVariable UUID uuid,
+            @Valid @RequestBody ExternalInvoicePaymentRequest request) {
+        creditCardInvoiceService.registerExternalPayment(uuid, request.occurredAt());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{uuid}/external-payment")
+    public ResponseEntity<Void> undoExternalPayment(@PathVariable UUID uuid) {
+        creditCardInvoiceService.undoExternalPayment(uuid);
         return ResponseEntity.noContent().build();
     }
 

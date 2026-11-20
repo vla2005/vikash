@@ -40,6 +40,10 @@ A edição e o fim de textos longos ficam acessíveis por rolagem, com os contro
 
 “Pergunte ao ViKash” abre AssistantExperience com o mesmo Animated Input Bar usado no registro de transação, fundo desfocado e bordas do Apple Intelligence do Reacticx. Enviar abre o chat preto, com perguntas em balões à direita e respostas à esquerda sem balão. Histórico e anexos são locais e separados por perfil; ausência de endpoint não simula resposta. O microfone separado continua abrindo somente o registro de transação. Contrato e limites estão em ASSISTANT.md.
 
+## Pagamento de fatura por outra pessoa
+
+Em “Marcar como paga”, o checkbox começa desmarcado. Marcá-lo oculta conta e forma de pagamento e mantém data e horário editáveis. A confirmação funciona mesmo se a consulta de contas falhar. A API quita a fatura e libera o limite, sem movimentar contas. Os detalhes mostram a origem da quitação e oferecem “Desfazer pagamento”, com confirmação. Desfazer volta a comprometer o limite. Em caso de erro, a tela preserva os dados para nova tentativa.
+
 ## Exclusão de faturas
 
 Contrato do fluxo alterado de faturas; não representa uma auditoria de todas as telas.

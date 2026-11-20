@@ -1,4 +1,7 @@
-import { createCreditCard, fetchCreditCards, fetchCreditCardDetails, updateCreditCard, payCreditCardInvoice, distributeCreditCardInitialInvoices, deleteCreditCardInvoice } from '../src/services/creditCards';
+import {
+  createCreditCard, fetchCreditCards, fetchCreditCardDetails, updateCreditCard, payCreditCardInvoice,
+  distributeCreditCardInitialInvoices, deleteCreditCardInvoice, registerExternalInvoicePayment, undoExternalInvoicePayment,
+} from '../src/services/creditCards';
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 const originalFetch = global.fetch;
 beforeEach(() => { global.fetch = jest.fn(); });
@@ -59,6 +62,17 @@ test('pagamento envia UUID da conta e token; valor da fatura é calculado no ser
   const payment = { accountUuid: 'account', paymentMethod: 'PIX', occurredAt: '2026-10-05T12:00:00', amount: 1 };
   await expect(payCreditCardInvoice('invoice', payment, 'token')).resolves.toBeNull();
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/credit-card-invoice/invoice/pay', expect.objectContaining({ method: 'POST', headers: expect.objectContaining({ access_token: 'token', Authorization: 'Bearer token' }), body: JSON.stringify({ accountUuid: 'account', paymentMethod: 'PIX', occurredAt: '2026-10-05T12:00:00' }) }));
+});
+
+test('pagamento por outra pessoa envia somente a data e permite desfazer pela mesma rota', async () => {
+  global.fetch.mockResolvedValue({ ok: true, status: 204, json: async () => { throw new SyntaxError('sem corpo'); } });
+  const occurredAt = '2026-10-05T12:00:00';
+  const url = 'http://api.test/api/credit-card-invoice/invoice%2Fid/external-payment';
+  const headers = expect.objectContaining({ Authorization: 'Bearer token' });
+  await expect(registerExternalInvoicePayment('invoice/id', occurredAt, 'token')).resolves.toBeNull();
+  expect(global.fetch).toHaveBeenLastCalledWith(url, expect.objectContaining({ method: 'POST', headers, body: JSON.stringify({ occurredAt }) }));
+  await expect(undoExternalInvoicePayment('invoice/id', 'token')).resolves.toBeNull();
+  expect(global.fetch).toHaveBeenLastCalledWith(url, expect.objectContaining({ method: 'DELETE', headers, body: undefined }));
 });
 
 test('edicao usa PUT com UUID e token, enviando apenas os campos editaveis', async () => {
