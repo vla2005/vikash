@@ -24,4 +24,9 @@ class SafeMessageConverterTest {
         assertThat(SafeMessageConverter.redact("{\"password\":\"PRIVATE_PASSWORD\",\"transcription\":\"PRIVATE_TRANSCRIPTION\"}"))
                 .doesNotContain("PRIVATE_PASSWORD", "PRIVATE_TRANSCRIPTION");
     }
+    @org.junit.jupiter.api.Test void redactsVerificationTokensInAppLinks() {
+        String token = "11111111-1111-4111-8111-111111111111." + "A".repeat(43);
+        org.assertj.core.api.Assertions.assertThat(SafeMessageConverter.redact("vikash://verify-email?token=" + token))
+                .doesNotContain(token).contains("[REDACTED]");
+    }
 }

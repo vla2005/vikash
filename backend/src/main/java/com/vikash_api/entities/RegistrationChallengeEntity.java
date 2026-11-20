@@ -18,4 +18,5 @@ public class RegistrationChallengeEntity {
     @Column(nullable = false) private Instant expiresAt;
     @Column(nullable = false) private int attempts;
     private Instant usedAt;
+    @Column(length = 64) private String linkTokenHash;
 }

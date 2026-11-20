@@ -200,6 +200,8 @@
                         <excludedEnvironmentVariable>SERVER_FORWARD_HEADERS_STRATEGY</excludedEnvironmentVariable>
                         <excludedEnvironmentVariable>FUELLOG_WEB_RETURN_URI</excludedEnvironmentVariable>
                         <excludedEnvironmentVariable>FUELLOG_NATIVE_RETURN_URI</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>REGISTRATION_VERIFY_URL</excludedEnvironmentVariable>
+                        <excludedEnvironmentVariable>ANDROID_APP_LINKS_SHA256</excludedEnvironmentVariable>
                     </excludedEnvironmentVariables>
                 </configuration>
             </plugin>

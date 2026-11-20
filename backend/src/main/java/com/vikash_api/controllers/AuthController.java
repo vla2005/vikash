@@ -13,6 +13,7 @@ import com.vikash_api.services.RegistrationService;
 import com.vikash_api.services.RegistrationAttemptService;
 import com.vikash_api.dtos.responses.RegistrationResponse;
 import com.vikash_api.dtos.requests.ConfirmRegistrationRequest;
+import com.vikash_api.dtos.requests.VerifyRegistrationLinkRequest;
 import com.vikash_api.exceptions.EmailAlreadyExistsException;
 import com.vikash_api.exceptions.RegistrationVerificationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -74,6 +75,14 @@ public class AuthController {
             // A competing confirmation/email change must never overwrite an existing user.
             throw new RegistrationVerificationException();
         }
+    }
+
+    @PostMapping("/register/verify-link")
+    public ResponseEntity<Void> verifyRegistrationLink(@Valid @RequestBody VerifyRegistrationLinkRequest request,
+            HttpServletRequest httpRequest) {
+        try { registrationService.verifyLink(request.token(), httpRequest.getRemoteAddr()); }
+        catch (EmailAlreadyExistsException | DataIntegrityViolationException ex) { throw new RegistrationVerificationException(); }
+        return ResponseEntity.noContent().cacheControl(org.springframework.http.CacheControl.noStore()).build();
     }
 
     @PostMapping("/login")

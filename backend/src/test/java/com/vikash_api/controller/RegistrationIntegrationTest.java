@@ -10,7 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.Session;
+import jakarta.mail.Part;
+import jakarta.mail.Multipart;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,14 +41,20 @@ class RegistrationIntegrationTest extends com.vikash_api.support.VerifiedUserFix
     @Autowired RegistrationService registration;
     @MockitoBean JavaMailSender mail;
     RestClient client;
-    BlockingQueue<SimpleMailMessage> sent;
+    BlockingQueue<MimeMessage> sent;
 
     @BeforeEach void setup() {
         client = RestClient.create("http://localhost:" + port);
         sent = new LinkedBlockingQueue<>();
         reset(mail);
-        doAnswer(invocation -> { sent.add(new SimpleMailMessage(invocation.getArgument(0, SimpleMailMessage.class))); return null; })
-                .when(mail).send(any(SimpleMailMessage.class));
+        when(mail.createMimeMessage()).thenAnswer(invocation -> {
+            Properties properties = new Properties();
+            properties.setProperty("mail.from", "no-reply@example.test");
+            properties.setProperty("mail.host", "localhost");
+            return new MimeMessage(Session.getInstance(properties));
+        });
+        doAnswer(invocation -> { MimeMessage message = invocation.getArgument(0, MimeMessage.class); message.saveChanges(); sent.add(message); return null; })
+                .when(mail).send(any(MimeMessage.class));
     }
     RegisterRequest input(String email) { return new RegisterRequest("Novo usuário", email, "Password123!"); }
     RegistrationResponse request(RegisterRequest input) {
@@ -58,7 +67,7 @@ class RegistrationIntegrationTest extends com.vikash_api.support.VerifiedUserFix
     String code() throws Exception {
         var message = sent.poll(5, TimeUnit.SECONDS);
         assertThat(message).isNotNull();
-        var matcher = Pattern.compile("[0-9]{8}").matcher(message.getText());
+        var matcher = Pattern.compile("[0-9]{8}").matcher(content(message, "text/plain"));
         assertThat(matcher.find()).isTrue();
         return matcher.group();
     }
@@ -73,6 +82,88 @@ class RegistrationIntegrationTest extends com.vikash_api.support.VerifiedUserFix
             Thread.sleep(20);
         }
         throw new AssertionError("Pending challenge was not committed");
+    }
+
+    String content(Part part, String type) throws Exception {
+        if (part.isMimeType(type)) return part.getContent().toString();
+        if (part.getContent() instanceof Multipart multipart) {
+            for (int i = 0; i < multipart.getCount(); i++) {
+                String value = content(multipart.getBodyPart(i), type);
+                if (!value.isEmpty()) return value;
+            }
+        }
+        return "";
+    }
+    String linkToken() throws Exception {
+        var message = sent.poll(5, TimeUnit.SECONDS);
+        assertThat(message).isNotNull();
+        String html = content(message, "text/html");
+        assertThat(html).contains("Abrir ViKash e verificar", "https://api-vikash.viktorware.com/verify-email?token=");
+        var matcher = Pattern.compile("token=([0-9a-f-]{36}\\.[A-Za-z0-9_-]{43})").matcher(html);
+        assertThat(matcher.find()).isTrue();
+        return matcher.group(1);
+    }
+    int verifyLink(String token) {
+        return client.post().uri("/api/auth/register/verify-link").contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("token", token)).exchange((req, res) -> res.getStatusCode().value());
+    }
+
+    @Test void emailLinkConfirmsOnlyOnceWithoutCreatingSessionAndAllowsPasswordLogin() throws Exception {
+        String email = UUID.randomUUID()+"@example.com";
+        var pending = request(input(email)); String token = linkToken(); var before = ready(pending.challengeId());
+        assertThat(token).startsWith(pending.challengeId()+".");
+        assertThat(before.getLinkTokenHash()).hasSize(64).doesNotContain(token.substring(37));
+        assertThat(users.findByEmail(email)).isEmpty();
+        long previousSessions = sessions.count();
+        assertThat(verifyLink(token)).isEqualTo(204);
+        var user = users.findByEmail(email).orElseThrow();
+        assertThat(sessions.count()).isEqualTo(previousSessions);
+        assertThat(verifyLink(token)).isEqualTo(400);
+        var consumed = challenges.findById(pending.challengeId()).orElseThrow();
+        assertThat(consumed.getUsedAt()).isNotNull(); assertThat(consumed.getLinkTokenHash()).isNull();
+        assertThat(consumed.getPasswordHash()).isEmpty(); assertThat(consumed.getCodeHash()).isEmpty();
+        var auth = client.post().uri("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .body(new LoginRequest(email,"Password123!")).retrieve().body(AuthResponse.class);
+        assertThat(auth.getUser().getUuid()).isEqualTo(user.getUuid());
+    }
+
+    @Test void linkPreviewOnlyOpensTheAppAndNeverConsumesTheToken() throws Exception {
+        var pending = request(input(UUID.randomUUID()+"@example.com")); String token = linkToken(); ready(pending.challengeId());
+        var http = java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NEVER).build();
+        var response = http.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://localhost:"+port+"/verify-email?token="+token)).GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(302);
+        assertThat(response.headers().firstValue("Location")).contains("vikash://verify-email?token="+token);
+        assertThat(response.body()).isEmpty();
+        assertThat(challenges.findById(pending.challengeId()).orElseThrow().getUsedAt()).isNull();
+        assertThat(verifyLink(token)).isEqualTo(204);
+    }
+
+    @Test void expiredAlteredAndCrossChallengeLinksCannotCreateAccounts() throws Exception {
+        var a = request(input(UUID.randomUUID()+"@example.com")); String aToken = linkToken(); ready(a.challengeId());
+        var b = request(input(UUID.randomUUID()+"@example.com")); String bToken = linkToken(); var bRecord = ready(b.challengeId());
+        assertThat(verifyLink(b.challengeId()+aToken.substring(36))).isEqualTo(400);
+        assertThat(verifyLink(aToken.substring(0,37)+"z".repeat(43))).isEqualTo(400);
+        bRecord.setExpiresAt(Instant.now().minusSeconds(1)); challenges.saveAndFlush(bRecord);
+        assertThat(verifyLink(bToken)).isEqualTo(400);
+        assertThat(users.findByEmail(bRecord.getEmail())).isEmpty();
+        assertThat(verifyLink(aToken)).isEqualTo(204);
+    }
+
+    @Test void onlyOneConcurrentLinkVerificationCanConsumeAChallenge() throws Exception {
+        var pending = request(input(UUID.randomUUID()+"@example.com")); String token = linkToken(); ready(pending.challengeId());
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var results = executor.invokeAll(List.of(() -> verifyLink(token), () -> verifyLink(token)));
+            assertThat(List.of(results.get(0).get(), results.get(1).get())).containsExactlyInAnyOrder(204, 400);
+        } finally { executor.shutdownNow(); }
+    }
+
+    @Test void malformedLinkHasNoRedirectAndAndroidAssociationIsPublic() {
+        assertThat(verifyLink("invalid")).isEqualTo(400);
+        var response = client.get().uri("/.well-known/assetlinks.json").retrieve().toEntity(String.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).contains("delegate_permission/common.handle_all_urls", "com.vikash", "AA:AA:AA:AA");
+        assertThat(response.getBody()).doesNotContain("accessToken", "refreshToken", "private");
     }
 
     @Test void newExistingAndNormalizedRequestsHaveEquivalentPublicResponse() throws Exception {
@@ -181,9 +272,9 @@ class RegistrationIntegrationTest extends com.vikash_api.support.VerifiedUserFix
 
     @Test void smtpFailureDoesNotDiscloseEligibilityOrCreateAnAccount() throws Exception {
         String email=UUID.randomUUID()+"@example.com";
-        doThrow(new MailSendException("synthetic failure")).when(mail).send(any(SimpleMailMessage.class));
+        doThrow(new MailSendException("synthetic failure")).when(mail).send(any(MimeMessage.class));
         var pending=request(input(email));
-        verify(mail,timeout(5000)).send(any(SimpleMailMessage.class));
+        verify(mail,timeout(5000)).send(any(MimeMessage.class));
         assertThat(users.findByEmail(email)).isEmpty();
         assertThat(confirm(pending.challengeId(),"00000000")).isEqualTo(400);
     }

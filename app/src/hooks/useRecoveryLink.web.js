@@ -10,9 +10,9 @@ export default function useRecoveryLink() {
     return () => window.removeEventListener('popstate', changed);
   }, []);
   useEffect(() => {
-    if (route?.kind === 'reset') {
+    if (route?.kind === 'reset' || route?.kind === 'verify-email') {
       // Mantém o token somente em memória, sem deixá-lo no histórico do navegador.
-      window.history.replaceState(null, '', '/reset-password');
+      window.history.replaceState(null, '', route.kind === 'verify-email' ? '/verify-email' : '/reset-password');
     }
   }, [route]);
   function navigate(kind, path) {

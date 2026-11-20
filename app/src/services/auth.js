@@ -1,6 +1,6 @@
 import { ApiError, authenticatedFetch, postJson } from './apiClient';
 import { API_BASE_URL } from '../config/api';
-import { RESET_TOKEN_PATTERN, validateRecoveryEmail } from '../utils/passwordRecovery';
+import { RESET_TOKEN_PATTERN, REGISTRATION_LINK_TOKEN_PATTERN, validateRecoveryEmail } from '../utils/passwordRecovery';
 import { validateNewPassword } from '../utils/passwordValidation';
 
 async function sendRecoveryRequest(path, body) {
@@ -8,6 +8,20 @@ async function sendRecoveryRequest(path, body) {
   const timeout = setTimeout(() => controller.abort(), 10000);
   try { await postJson(path, body, undefined, { signal: controller.signal }); }
   finally { clearTimeout(timeout); }
+}
+
+let pendingEmailVerification = null;
+export function verifyRegistrationEmail(token) {
+  if (!REGISTRATION_LINK_TOKEN_PATTERN.test(token || '')) {
+    return Promise.reject(new ApiError('Link de confirmação inválido. Solicite um novo cadastro.', 400));
+  }
+  if (pendingEmailVerification?.token === token) { return pendingEmailVerification.promise; }
+  const pending = { token, promise: null };
+  pending.promise = sendRecoveryRequest('/api/auth/register/verify-link', { token }).finally(() => {
+    if (pendingEmailVerification === pending) { pendingEmailVerification = null; }
+  });
+  pendingEmailVerification = pending;
+  return pending.promise;
 }
 
 export async function requestPasswordReset({ email }) {

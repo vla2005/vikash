@@ -33,7 +33,7 @@ export default function RegisterScreen({ navigation, route }) {
   function change(key, value) { setValues(previous => ({ ...previous, [key]: value })); setErrors(previous => ({ ...previous, [key]: undefined })); }
   async function submit() {
     if (submitting.current) { return; }
-    const next = pending ? (/^[0-9]{8}$/.test(code) ? {} : { code: 'Informe os 8 números recebidos por e-mail.' }) : validateRegistration(values);
+    const next = pending ? (/^[0-9]{8}$/.test(code) ? {} : { code: 'Abra o botão do e-mail ou informe os 8 números recebidos.' }) : validateRegistration(values);
     setErrors(next);
     if (Object.keys(next).length) { showToast({ type: 'warn', message: 'Confira os campos destacados para continuar.' }); return; }
     submitting.current = true;

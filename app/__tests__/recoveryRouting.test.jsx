@@ -1,5 +1,6 @@
 /* eslint-env browser */
 import React from 'react';
+jest.mock('../src/components/BiometricEnrollmentPrompt', () => () => null);
 import TestRenderer, { act } from 'react-test-renderer';
 import { Linking } from 'react-native';
 import App from '../App';
@@ -7,6 +8,7 @@ import AppNavigator from '../src/navigation/AppNavigator';
 import { OnboardingProvider } from '../src/contexts/OnboardingContext';
 import ForgotPasswordScreen from '../src/screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../src/screens/ResetPasswordScreen';
+import VerifyEmailScreen from '../src/screens/VerifyEmailScreen';
 import useRecoveryLinkWeb from '../src/hooks/useRecoveryLink.web';
 
 jest.mock('../src/hooks/useAppFonts', () => () => true);
@@ -15,6 +17,7 @@ jest.mock('../src/components/Skeleton', () => ({ AppSkeleton: () => null }));
 jest.mock('../src/navigation/AppNavigator', () => jest.fn(() => null));
 jest.mock('../src/screens/ForgotPasswordScreen', () => jest.fn(() => null));
 jest.mock('../src/screens/ResetPasswordScreen', () => jest.fn(() => null));
+jest.mock('../src/screens/VerifyEmailScreen', () => jest.fn(() => null));
 jest.mock('../src/contexts/OnboardingContext', () => ({ OnboardingProvider: jest.fn(({ children }) => children) }));
 jest.mock('../src/contexts/ToastContext', () => ({ ToastProvider: ({ children }) => children }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaProvider: ({ children }) => children }));
@@ -90,4 +93,23 @@ test('web lê token uma vez, remove URL sensível e navega entre recuperação e
     await act(async () => renderer.unmount()); renderer = undefined;
     expect(window.removeEventListener).toHaveBeenCalledWith('popstate', expect.any(Function));
   } finally { global.window = originalWindow; }
+});
+
+test('App Link abre verificação mantendo o gerenciador de sessão sem montar a navegação', async () => {
+  const verificationToken = '11111111-1111-4111-8111-111111111111.' + 'A'.repeat(43);
+  Linking.getInitialURL.mockResolvedValue(`https://api-vikash.viktorware.com/verify-email?token=${verificationToken}`);
+  await act(async () => { renderer = TestRenderer.create(<App />); });
+  expect(renderer.root.findByType(VerifyEmailScreen).props.token).toBe(verificationToken);
+  expect(OnboardingProvider).toHaveBeenCalled();
+  expect(AppNavigator).not.toHaveBeenCalled();
+});
+test('com o app aberto o token recebido passa para a verificação e só depois retorna ao fluxo de conta', async () => {
+  const verificationToken = '11111111-1111-4111-8111-111111111111.' + 'B'.repeat(43);
+  await act(async () => { renderer = TestRenderer.create(<App />); });
+  const before = OnboardingProvider.mock.calls.length;
+  await act(async () => listener({ url: `vikash://verify-email?token=${verificationToken}` }));
+  expect(renderer.root.findByType(VerifyEmailScreen).props.token).toBe(verificationToken);
+  expect(OnboardingProvider.mock.calls.length).toBeGreaterThanOrEqual(before);
+  await act(async () => renderer.root.findByType(VerifyEmailScreen).props.onBack());
+  expect(renderer.root.findByType(AppNavigator).props.initialRouteName).toBe('Login');
 });

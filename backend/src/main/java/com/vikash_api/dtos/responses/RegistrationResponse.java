@@ -4,6 +4,6 @@ import java.util.UUID;
 
 public record RegistrationResponse(UUID challengeId, String message, int expiresIn) {
     public RegistrationResponse(UUID challengeId) {
-        this(challengeId, "Se este e-mail puder ser cadastrado, enviaremos um código de confirmação. Se já tiver conta, entre ou recupere sua senha.", 900);
+        this(challengeId, "Se este e-mail puder ser cadastrado, enviaremos um link para abrir o ViKash e confirmar. Você também poderá usar o código recebido. Se já tiver conta, entre ou recupere sua senha.", 900);
     }
 }

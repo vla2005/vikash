@@ -158,6 +158,11 @@ public class AuthService {
 
     @Transactional
     public AuthResponse createVerifiedAccount(String name, String email, String passwordHash) {
+        return createAuthResponse(createVerifiedUser(name, email, passwordHash), UUID.randomUUID().toString());
+    }
+
+    @Transactional
+    public UserEntity createVerifiedUser(String name, String email, String passwordHash) {
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new EmailAlreadyExistsException("Este e-mail não pode ser cadastrado.");
@@ -174,9 +179,7 @@ public class AuthService {
         UserEntity savedUser = userRepository.save(user);
         log.info("event=auth.register.user-saved");
 
-        String familyId = UUID.randomUUID().toString();
-
-        return createAuthResponse(savedUser, familyId);
+        return savedUser;
     }
 
     @Transactional

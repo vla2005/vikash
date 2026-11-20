@@ -41,6 +41,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/register/confirm",
+                                "/api/auth/register/verify-link",
+                                "/.well-known/assetlinks.json",
+                                "/verify-email",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/auth/forgot-password",

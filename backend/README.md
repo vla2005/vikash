@@ -312,3 +312,54 @@ Os testes PostgreSQL/Gemini optativos continuam usando suas variaveis dedicadas
 Isso afeta somente o processo de testes: flags, conexoes e segredos configurados
 no Coolify continuam sendo usados normalmente pela API em execucao. Nao e preciso
 desabilitar o assistente em producao nem pular testes para publicar a imagem.
+
+
+## Confirmação de e-mail no aplicativo Android
+
+O cadastro continua assíncrono e com resposta pública equivalente para e-mails
+novos ou já cadastrados. O e-mail agora é multipart (texto/HTML), com botão
+**Abrir ViKash e verificar** e o código manual de 8 números como alternativa.
+O link usa `https://api-vikash.viktorware.com/verify-email?token=...`.
+
+O token contém o UUID do desafio e 32 bytes aleatórios em Base64URL. Somente seu
+HMAC fica na coluna nullable `registration_challenges.link_token_hash`; o token
+não é persistido em claro. Token e código compartilham validade de 15 minutos,
+limite de 5 tentativas, bloqueio de linha e consumo único. O POST público
+`/api/auth/register/verify-link` confirma o cadastro sem emitir access/refresh
+tokens ou trocar uma conta aberta. Depois, o usuário entra com e-mail e senha.
+O caminho antigo `/api/auth/register/confirm` continua aceitando o código manual.
+
+`GET /verify-email` apenas redireciona para `vikash://verify-email`; não renderiza
+página de confirmação e não consome o token. Isso impede que prévias e scanners
+de e-mail confirmem o cadastro. A API também serve a associação pública Android
+em `/.well-known/assetlinks.json`, sem exigir autenticação.
+
+Configuração de execução no Coolify:
+
+- `REGISTRATION_VERIFY_URL`: padrão `https://api-vikash.viktorware.com/verify-email`.
+  O fallback de desenvolvimento `vikash://verify-email` também é aceito. Não
+  configure URLs de terceiros, parâmetros ou redirecionamentos arbitrários.
+- `ANDROID_APP_LINKS_SHA256`: fingerprints públicos separados por vírgula. O
+  padrão já corresponde ao certificado de release extraído de `ViKash-16.apk`.
+  Se trocar a assinatura ou usar Play App Signing, atualize o fingerprint do
+  certificado que assina o APK instalado. Nunca informe chave privada ou senha.
+- O envio usa as variáveis SMTP existentes.
+
+Para ativar, publique a API para disponibilizar o schema e os metadados e gere
+um APK com o novo intent-filter `autoVerify`. O `ddl-auto=update` atual adiciona
+a coluna nullable ao iniciar; ambientes com `validate` precisam provisioná-la
+antes. Nenhuma página de verificação ou arquivo extra no cPanel é necessário.
+Não bloqueie nem redirecione a rota `/.well-known/assetlinks.json` no proxy.
+
+Validação em aparelho (sem colocar tokens reais nos comandos):
+
+```sh
+adb shell pm verify-app-links --re-verify com.vikash
+adb shell pm get-app-links com.vikash
+adb shell am start -a android.intent.action.VIEW -d https://api-vikash.viktorware.com/verify-email
+```
+
+O último comando deve abrir o app mostrando link incompleto. Depois, teste um
+cadastro novo pelo botão real do e-mail. Testes automatizados de MIME, token,
+concorrência e navegação não comprovam a associação HTTPS ou a abertura física
+em todos os clientes de e-mail. O foco desta entrega é Android.

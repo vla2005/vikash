@@ -11,7 +11,7 @@ public class SafeMessageConverter extends ClassicConverter {
     private static final Pattern JWT = Pattern.compile("(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+");
     private static final Pattern API_KEY = Pattern.compile("AIza[A-Za-z0-9_-]{20,}");
     private static final Pattern EMAIL = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
-    private static final Pattern ASSIGNMENTS = Pattern.compile("(?i)(\\b(?:client_secret|code_verifier|authorization_code|code|access_token|refresh_token|FUELLOG_CLIENT_SECRET_HASH|password|newPassword|currentPassword|accessToken|refreshToken|authorization|x-goog-api-key|GEMINI_API_KEY|JWT_ACCESS_SECRET|JWT_REFRESH_SECRET|DB_PASSWORD|SMTP_PASSWORD|JSESSIONID|transcription|amount|balance|creditLimit|availableLimit|description)\\b[\"']?\\s*[:=]\\s*)(?:\"(?:\\\\.|[^\"])*\"|'[^']*'|[^,;\\r\\n)}]+)");
+    private static final Pattern ASSIGNMENTS = Pattern.compile("(?i)(\\b(?:token|verificationToken|linkToken|client_secret|code_verifier|authorization_code|code|access_token|refresh_token|FUELLOG_CLIENT_SECRET_HASH|password|newPassword|currentPassword|accessToken|refreshToken|authorization|x-goog-api-key|GEMINI_API_KEY|JWT_ACCESS_SECRET|JWT_REFRESH_SECRET|DB_PASSWORD|SMTP_PASSWORD|JSESSIONID|transcription|amount|balance|creditLimit|availableLimit|description)\\b[\"']?\\s*[:=]\\s*)(?:\"(?:\\\\.|[^\"])*\"|'[^']*'|[^,;\\r\\n)}]+)");
 
     @Override public String convert(ILoggingEvent event) { return redact(event.getFormattedMessage()); }
     public static String redact(String message) {
