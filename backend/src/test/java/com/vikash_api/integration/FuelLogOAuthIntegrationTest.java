@@ -78,7 +78,9 @@ class FuelLogOAuthIntegrationTest extends com.vikash_api.support.VerifiedUserFix
  Pending pending(String scopes) throws Exception {
   String verifier=UUID.randomUUID().toString()+UUID.randomUUID();
   String challenge=Base64.getUrlEncoder().withoutPadding().encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.getBytes(StandardCharsets.US_ASCII)));
-  String state=UUID.randomUUID().toString();
+  byte[] stateBytes=new byte[32];
+  new java.security.SecureRandom().nextBytes(stateBytes);
+  String state=Base64.getUrlEncoder().withoutPadding().encodeToString(stateBytes);
   var browser=HttpClient.newBuilder().cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL)).followRedirects(HttpClient.Redirect.NEVER).build();
   String url=authorization(scopes,state,challenge,"S256","http://127.0.0.1:9191/callback");
   var first=get(browser,url);
@@ -98,7 +100,7 @@ class FuelLogOAuthIntegrationTest extends com.vikash_api.support.VerifiedUserFix
   assertThat(consent).contains("/connect/consent");
   var page=get(p.browser(),consent);
   assertThat(page.statusCode()).isEqualTo(200);
-  assertThat(page.body()).contains("Conta FuelLog",email,"Autorizar vínculo");
+  assertThat(page.body()).contains("Conta FuelLog","Autorizar vínculo").doesNotContain(email);
   String body="client_id=fuellog&state="+enc(field(page.body(),"state"))+"&_csrf="+enc(field(page.body(),"_csrf"));
   for(String scope:scopes.split(" "))body+="&scope="+enc(scope);
   var approved=post(p.browser(),"/oauth2/authorize",body,false);

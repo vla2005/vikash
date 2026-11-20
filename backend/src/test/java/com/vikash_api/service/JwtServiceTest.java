@@ -20,8 +20,8 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        String accessSecret = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
-        String refreshSecret = "72357538782F413F4428472B4B6250645367566B5970404E635266556A586E32";
+        String accessSecret = "5e6e3caca637af531b4e65baca1f6e810e955f91cc2243592b5630df912e7798";
+        String refreshSecret = "8d03ddc2ec72a54e802e185b9d01c790f5dde148b3484aa19cbeb5876b0ffdb5";
         jwtService = new JwtService(accessSecret, refreshSecret, 900000, 604800000);
 
         testUser = UserEntity.builder()

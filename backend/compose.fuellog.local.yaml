@@ -3,7 +3,8 @@
 services:
   api:
     ports: !override
-      - "127.0.0.1:${LOCAL_API_PORT:-8082}:8080"
+      # Optional LAN binding is for the ViKash app; OAuth HTTP URLs remain loopback-only.
+      - "${LOCAL_API_BIND:-127.0.0.1}:${LOCAL_API_PORT:-8082}:8080"
     networks:
       default: {}
       fuellog_local:

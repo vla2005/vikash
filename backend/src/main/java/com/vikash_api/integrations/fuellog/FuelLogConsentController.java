@@ -61,7 +61,7 @@ public class FuelLogConsentController {
             if(!Set.of("fuellog.catalog","fuellog.entries").contains(permission)) return ResponseEntity.badRequest().build();
             fields+="<input type='hidden' name='scope' value='"+esc(permission)+"'>";
         }
-        String identity="<h1>Autorizar FuelLog?</h1><p>Conta financeira: <strong>"+esc(user.getName())+"</strong><br>"+esc(user.getEmail())+"</p>"
+        String identity="<h1>Autorizar FuelLog?</h1><p>Conta financeira: <strong>"+esc(user.getName())+"</strong></p>"
             +"<ul><li>Consultar categorias, contas e cartões disponíveis, sem saldos ou histórico.</li><li>Criar, consultar, alterar e cancelar somente os lançamentos deste vínculo.</li></ul>"
             +"<p>Abastecimentos antigos não serão importados automaticamente.</p>";
         return page(identity+"<form method='post' action='/oauth2/authorize'>"+csrf(request)+fields+"<button>Autorizar vínculo</button></form>"

@@ -35,7 +35,7 @@ Somente HTTP em `localhost`, `127.0.0.1` ou `::1` é permitido para desenvolvime
 ## Implementar no FuelLog
 
 1. **Conectar:** backend FuelLog cria `state` aleatório de uso único (20–200 caracteres), PKCE verifier aleatório (43–128 caracteres), challenge S256 e uma tentativa com validade curta. Vincule a tentativa à sessão autenticada e ao usuário FuelLog. Não aceite um `state` arbitrário enviado pelo aplicativo.
-2. Abra a URL `/oauth2/authorize` do contrato em navegador seguro. Login e consentimento acontecem no domínio ViKash. A página mostra nome/e-mail da conta que receberá os lançamentos e permite trocar de conta antes de autorizar.
+2. Abra a URL `/oauth2/authorize` do contrato em navegador seguro. Login e consentimento acontecem no domínio ViKash. A página mostra o nome da conta que receberá os lançamentos e permite trocar de conta antes de autorizar.
 3. **Callback:** valide `state`, validade e associação à sessão FuelLog antes de trocar `code`. Use `client_secret_basic`, callback cadastrado e verifier originais em `/oauth2/token`, somente pelo backend. Depois de sucesso, descarte os dados da tentativa.
 4. Guarde access/refresh token criptografados no servidor, associados ao usuário FuelLog. Não entregue client secret ou refresh token ao app, URLs, analytics ou logs. Peça somente `fuellog.catalog fuellog.entries`.
 5. **Padrões:** consulte `/catalog` e deixe o usuário escolher categoria, pagamento, conta ou cartão e parcelas. Use os IDs retornados; não deduza IDs pelo nome. Permita substituições em cada abastecimento.
