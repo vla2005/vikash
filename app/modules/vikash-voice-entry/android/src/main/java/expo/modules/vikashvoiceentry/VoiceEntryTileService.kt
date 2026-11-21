@@ -16,8 +16,9 @@ class VoiceEntryTileService : TileService() {
   }
   @Suppress("DEPRECATION")
   private fun openEntry() {
-    val intent = Intent().setClassName(this, "$packageName.VoiceEntryActivity")
+    val intent = Intent("com.vikash.action.REGISTER_VOICE").setPackage(packageName)
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    intent.component = intent.resolveActivity(packageManager) ?: return
     if (Build.VERSION.SDK_INT >= 34) {
       startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))

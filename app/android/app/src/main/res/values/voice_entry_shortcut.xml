@@ -1,1 +1,1 @@
-<resources><string name="voice_entry_shortcut_label">Registrar por voz</string></resources>
+<resources><string name="voice_entry_shortcut_label">Registrar por voz</string><string name="voice_entry_target_package">com.vikash</string></resources>

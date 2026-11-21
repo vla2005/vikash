@@ -60,5 +60,14 @@
         <data android:scheme="https" android:host="api-vikash.viktorware.com" android:pathPrefix="/verify-email" />
       </intent-filter>
     </activity>
+    <activity android:name=".VoiceEntryActivity" android:theme="@style/VikashVoiceEntryTheme"
+      android:exported="true" android:launchMode="singleTask" android:taskAffinity="${applicationId}.voiceentry"
+      android:excludeFromRecents="true" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode"
+      android:windowSoftInputMode="adjustResize">
+      <intent-filter>
+        <action android:name="com.vikash.action.REGISTER_VOICE" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+    </activity>
   </application>
 </manifest>

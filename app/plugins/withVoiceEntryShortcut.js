@@ -7,6 +7,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 module.exports = function withVoiceEntryShortcut(config) {
   config = withAndroidManifest(config, result => {
+    const application = AndroidConfig.Manifest.getMainApplicationOrThrow(
+      result.modResults,
+    );
     const activity = AndroidConfig.Manifest.getMainActivityOrThrow(
       result.modResults,
     );
@@ -20,6 +23,27 @@ module.exports = function withVoiceEntryShortcut(config) {
           'android:name': 'android.app.shortcuts',
           'android:resource': '@xml/voice_entry_shortcuts',
         },
+      },
+    ];
+    application.activity = [
+      ...application.activity.filter(
+        item => item.$['android:name'] !== '.VoiceEntryActivity',
+      ),
+      {
+        $: {
+          'android:name': '.VoiceEntryActivity',
+          'android:theme': '@style/VikashVoiceEntryTheme',
+          'android:exported': 'true',
+          'android:launchMode': 'singleTask',
+          'android:taskAffinity': '${applicationId}.voiceentry',
+          'android:excludeFromRecents': 'true',
+          'android:configChanges': 'keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode',
+          'android:windowSoftInputMode': 'adjustResize',
+        },
+        'intent-filter': [{
+          action: [{ $: { 'android:name': 'com.vikash.action.REGISTER_VOICE' } }],
+          category: [{ $: { 'android:name': 'android.intent.category.DEFAULT' } }],
+        }],
       },
     ];
     return result;
@@ -41,7 +65,7 @@ module.exports = function withVoiceEntryShortcut(config) {
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
   <shortcut android:shortcutId="voice-entry" android:enabled="true" android:icon="@drawable/ic_voice_entry"
     android:shortcutShortLabel="@string/voice_entry_shortcut_label">
-    <intent android:action="android.intent.action.VIEW" android:targetPackage="${pkg}" android:targetClass="${pkg}.VoiceEntryActivity" />
+    <intent android:action="android.intent.action.VIEW" android:targetPackage="@string/voice_entry_target_package" android:targetClass="${pkg}.VoiceEntryActivity" />
   </shortcut>
 </shortcuts>`,
       );
@@ -65,7 +89,7 @@ module.exports = function withVoiceEntryShortcut(config) {
       );
       fs.writeFileSync(
         values,
-        '<resources><string name="voice_entry_shortcut_label">Registrar por voz</string></resources>',
+        `<resources><string name="voice_entry_shortcut_label">Registrar por voz</string><string name="voice_entry_target_package">${pkg}</string></resources>`,
       );
       return result;
     },
