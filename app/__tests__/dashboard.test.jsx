@@ -90,6 +90,83 @@ test('eye masks every monetary value and percentages, including accessible chart
   expect(request).toHaveBeenCalledTimes(calls);
 });
 
+test('debt summary groups open installments by due month and respects dashboard privacy', async () => {
+  const debtList = {
+    loading: false,
+    debts: [{
+      totalAmount: 1748.99,
+      installments: [
+        { amount: 300, dueDate: '2026-09-10' },
+        { amount: 50, dueDate: '2026-10-05' },
+        { amount: 100, dueDate: '2026-10-15' },
+        { amount: 200, dueDate: '2026-12-15' },
+        { amount: 99.99, dueDate: '2027-03-15' },
+        { amount: 999, dueDate: '2027-04-15' },
+      ],
+    }],
+  };
+  const summary = () => renderer.root.findAllByProps({ testID: 'dashboard-debts' })[0];
+  const summaryText = () => summary().findAllByType(Text).map(node => node.props.children).join(' ');
+  await home({ debtList });
+  expect(summaryText()).toContain('Dívidas');
+  expect(summaryText()).toContain('1.748,99');
+  expect(summaryText()).toContain('Em atraso');
+  expect(summaryText()).toContain('350,00');
+  expect(summaryText()).toContain('450,00');
+  expect(summaryText()).toContain('Outubro 2026');
+  expect(summaryText()).toContain('Março 2027');
+  expect(summaryText()).toContain('Setembro 2026');
+  expect(summaryText()).toContain('Abril 2027');
+  await act(async () => button('Mês anterior').props.onPress());
+  expect(summaryText()).toContain('Março 2027');
+  expect(summary().findAllByProps({ testID: 'debt-monthly-chart' }).length).toBeGreaterThan(0);
+  const chart = summary().findAll(node => node.props.data?.[0]?.label === 'Set/26')[0];
+  expect(chart.props.data).toEqual([
+    { label: 'Set/26', value: 300 },
+    { label: 'Out/26', value: 150 },
+    { label: 'Dez/26', value: 200 },
+    { label: 'Mar/27', value: 99.99 },
+    { label: 'Abr/27', value: 999 },
+  ]);
+  await act(async () => button('Ocultar valores').props.onPress());
+  expect(summaryText()).not.toContain('R$');
+  expect(summaryText()).not.toContain('Em atraso');
+  expect(summary().findAllByProps({ testID: 'debt-monthly-chart' })).toHaveLength(0);
+});
+
+test('overdue installments keep their original months in the chart', async () => {
+  jest.setSystemTime(new Date(2026, 10, 23, 9));
+  await home({ debtList: { loading: false, debts: [{
+    totalAmount: 3900,
+    installments: Array.from({ length: 7 }, (_, index) => ({
+      amount: 390, dueDate: `2026-0${index + 2}-21`,
+    })),
+  }] } });
+  const section = renderer.root.findAllByProps({ testID: 'dashboard-debts' })[0];
+  const dueThisMonth = section.findAllByType(Text).find(node => node.props.children === 'A pagar até o fim do mês');
+  expect(dueThisMonth.parent.findAllByType(Text).map(node => node.props.children)).toContain('R$\u00a02.730,00');
+  const chart = section.findAll(node => node.props.data?.[0]?.label === 'Fev/26')[0];
+  expect(chart.props.data).toEqual(['Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago'].map(month => ({
+    label: `${month}/26`, value: 390,
+  })));
+});
+
+test('debt chart shows every month in a long installment plan', async () => {
+  await home({ debtList: { loading: false, debts: [{
+    totalAmount: 800,
+    installments: Array.from({ length: 8 }, (_, index) => ({
+      amount: 100, dueDate: `2027-0${index + 1}-21`,
+    })),
+  }] } });
+  const section = renderer.root.findAllByProps({ testID: 'dashboard-debts' })[0];
+  const points = () => section.findAll(node => node.props.data?.[0]?.label?.endsWith('/27'))[0].props.data;
+  expect(points()).toHaveLength(7);
+  await act(async () => button('Próximos meses de dívidas').props.onPress());
+  expect(points()).toEqual([{ label: 'Ago/27', value: 100 }]);
+  await act(async () => button('Meses anteriores de dívidas').props.onPress());
+  expect(points()[0]).toEqual({ label: 'Jan/27', value: 100 });
+});
+
 test('month arrows cross years and picker applies selected month and year to both requests', async () => {
   await home();
   await act(async () => button('Selecionar mês e ano').props.onPress());

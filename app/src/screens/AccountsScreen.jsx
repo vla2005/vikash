@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import GlassPanel from '../components/silver/GlassPanel';
+import { useDock } from '../contexts/DockContext';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import ScrollView from '../components/silver/DockScrollView';
 import Skeleton, { CreditCardSkeleton, ListSkeleton } from '../components/Skeleton';
@@ -32,6 +33,8 @@ function AccountsScreen({
   onCreateCard,
   onOpenCard,
   debtList,
+  revealDebts,
+  onDebtsRevealed,
   onCreateDebt,
   onEditDebt,
   expandedDebt,
@@ -43,8 +46,30 @@ function AccountsScreen({
   const [section, setSection] = useState('accounts');
   const [stackInteracting, setStackInteracting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const scrollRef = useRef(null);
+  const debtsRef = useRef(null);
   const refreshStarted = useRef(false);
   const isLoading = loading || cardsLoading || debtList?.loading;
+  const sectionLoading = section === 'accounts' ? loading : cardsLoading;
+  const headerHeight = useDock()?.headerHeight ?? 0;
+
+  useEffect(() => {
+    if (!revealDebts || sectionLoading) return;
+    let active = true;
+    const frame = requestAnimationFrame(() => {
+      const content = scrollRef.current?.getInnerViewRef();
+      if (!content) return;
+      debtsRef.current?.measureLayout(content, (_, y) => {
+        if (!active) return;
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - headerHeight - 8), animated: true });
+        onDebtsRevealed();
+      });
+    });
+    return () => {
+      active = false;
+      cancelAnimationFrame(frame);
+    };
+  }, [revealDebts, sectionLoading, headerHeight, onDebtsRevealed]);
 
   useEffect(() => {
     if (!refreshing) return;
@@ -163,6 +188,7 @@ function AccountsScreen({
 
   return (
     <ScrollView
+      ref={scrollRef}
       testID="accounts-screen-scroll"
       scrollEnabled={!stackInteracting}
       showsVerticalScrollIndicator={false}
@@ -303,9 +329,13 @@ function AccountsScreen({
           )}
         </GlassPanel>
       </StaggeredSection>
-      {debtList && <DebtsSection list={debtList} accounts={accounts} accountsLoading={loading}
-        accountsError={error} onRetryAccounts={onRetry} onCreate={onCreateDebt} onEdit={onEditDebt}
-        expandedDebt={expandedDebt} onToggleDebt={onToggleDebt} />}
+      {debtList && (
+        <View ref={debtsRef} collapsable={false} testID="accounts-debts">
+          <DebtsSection list={debtList} accounts={accounts} accountsLoading={loading}
+            accountsError={error} onRetryAccounts={onRetry} onCreate={onCreateDebt} onEdit={onEditDebt}
+            expandedDebt={expandedDebt} onToggleDebt={onToggleDebt} />
+        </View>
+      )}
     </ScrollView>
   );
 }

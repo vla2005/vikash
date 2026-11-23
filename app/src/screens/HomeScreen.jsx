@@ -19,6 +19,7 @@ import DashboardExpensesChart from '../components/DashboardExpensesChart';
 import BalanceEvolutionChart from '../components/BalanceEvolutionChart';
 import RecentTransactions from '../components/RecentTransactions';
 import DashboardInsights from '../components/DashboardInsights';
+import DashboardDebts from '../components/DashboardDebts';
 import PendingInvoices from '../components/PendingInvoices';
 import BalanceCard from '../components/BalanceCard';
 import FinancialMetric from '../components/FinancialMetric';
@@ -56,6 +57,8 @@ function HomeScreen({
   profile,
   accessToken,
   revision,
+  debtList,
+  onOpenDebts,
   onOpenAccount,
   onOpenCard,
   onViewCards,
@@ -377,6 +380,7 @@ function HomeScreen({
             </Pressable>
           </View>
         )}
+        {debtList && <DashboardDebts list={debtList} hidden={hidden} onOpenDebts={onOpenDebts} />}
       </ScrollView>
 
       <Modal

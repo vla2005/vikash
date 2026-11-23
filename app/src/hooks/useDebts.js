@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchDebts, payDebtInstallment } from '../services/debts';
 import { notifyFinancialChange } from '../services/financialChanges';
 
@@ -41,5 +41,5 @@ export default function useDebts(accessToken, visible) {
     notifyFinancialChange();
   }, [accessToken, retry]);
 
-  return { debts, loading, error, retry, pay };
+  return useMemo(() => ({ debts, loading, error, retry, pay }), [debts, loading, error, retry, pay]);
 }

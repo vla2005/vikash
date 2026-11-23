@@ -52,6 +52,7 @@ export default function MainTabs({ navigation }) {
   const styles = useThemeStyles(createStyles);
   const { colors, scheme } = useTheme();
   const [selected, setSelected] = useState('Home');
+  const [revealDebts, setRevealDebts] = useState(false);
   const [voiceVisible, setVoiceVisible] = useState(false);
   const [startupTrace,setStartupTrace]=useState(null);
   const [assistantVisible, setAssistantVisible] = useState(false);
@@ -131,7 +132,7 @@ export default function MainTabs({ navigation }) {
     onboarding?.session?.accessToken,
     accountsActive,
   );
-  const debtList = useDebts(onboarding?.session?.accessToken, accountsActive);
+  const debtList = useDebts(onboarding?.session?.accessToken, selected === 'Home' || accountsActive);
   const retryAccounts = accountList.retry;
   const retryCards = cardList.retry;
   const retryDebts = debtList.retry;
@@ -211,6 +212,7 @@ export default function MainTabs({ navigation }) {
         if (current.selected === 'Home') {
           return false;
         }
+        setRevealDebts(false);
         setSelected('Home');
         return true;
       },
@@ -313,15 +315,18 @@ export default function MainTabs({ navigation }) {
   const editAccount = useCallback(account => runSceneUpdate(() => setAccountUuid(account.uuid)), []);
   const createCategory = useCallback(() => runSceneUpdate(() => setCategoryForm({ category: null })), []);
   const editCategory = useCallback(category => runSceneUpdate(() => setCategoryForm({ category })), []);
-  const changeTab = useCallback(key => runSceneUpdate(() => {
+  const changeTab = useCallback((key, showDebts = false) => runSceneUpdate(() => {
     setItemDetails(null);
     setInvoiceToOpen(null);
     setCategoryForm(null);
     setAccountForm(null);
     setCardUuid(null);
     setAccountUuid(null);
+    setRevealDebts(showDebts);
     setSelected(key);
   }), []);
+  const viewDebts = useCallback(() => changeTab('AccountManagement', true), [changeTab]);
+  const debtsRevealed = useCallback(() => setRevealDebts(false), []);
   function renderAccountManagementSubscreen() {
     if (initialBalanceUuid) {
       return (
@@ -452,6 +457,8 @@ export default function MainTabs({ navigation }) {
                 profile={onboarding?.profile}
                 accessToken={onboarding?.session?.accessToken}
                 revision={dashboardRevision}
+                debtList={debtList}
+                onOpenDebts={viewDebts}
                 onOpenAccount={openAccount}
                 onOpenCard={openInvoice}
                 onViewCards={viewCards}
@@ -509,6 +516,8 @@ export default function MainTabs({ navigation }) {
                   onCreate={createAccount}
                   onCreateCard={createCard}
                   debtList={debtList}
+                  revealDebts={revealDebts && selected === 'AccountManagement' && !accountSubscreen}
+                  onDebtsRevealed={debtsRevealed}
                   onCreateDebt={createDebt}
                   onEditDebt={editDebt}
                   expandedDebt={expandedDebt}
@@ -569,6 +578,8 @@ export default function MainTabs({ navigation }) {
           profile={onboarding?.profile}
           accessToken={onboarding?.session?.accessToken}
           revision={dashboardRevision}
+          debtList={debtList}
+          onOpenDebts={viewDebts}
           onOpenAccount={openAccount}
           onOpenCard={openInvoice}
           onViewCards={viewCards}
@@ -608,6 +619,8 @@ export default function MainTabs({ navigation }) {
               onCreate={createAccount}
               onCreateCard={createCard}
               debtList={debtList}
+              revealDebts={revealDebts && !debtFormOpen}
+              onDebtsRevealed={debtsRevealed}
               onCreateDebt={createDebt}
               onEditDebt={editDebt}
               expandedDebt={expandedDebt}

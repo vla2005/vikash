@@ -216,6 +216,19 @@ test('expande a dívida, edita o formulário preenchido e atualiza o gráfico e 
   expect(labels()).toContain('R$\u00a0800,00');
 });
 
+test('compartilha a consulta de dívidas entre o dashboard e Contas', async () => {
+  fetchDebts.mockResolvedValue([{
+    uuid: 'debt-dashboard', creditor: 'Loja', totalAmount: 100, installmentCount: 1,
+    paidInstallments: 0, installments: [{ number: 1, amount: 100, dueDate: '2099-03-10' }],
+  }]);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  expect(renderer.root.findAllByProps({ testID: 'dashboard-debts' }).length).toBeGreaterThan(0);
+  expect(fetchDebts).toHaveBeenCalledTimes(1);
+  await act(async () => button('Abrir dívidas em Contas').props.onPress());
+  expect(labels()).toContain('Loja');
+  expect(fetchDebts).toHaveBeenCalledTimes(1);
+});
+
 function debtField(testID) {
   return renderer.root.findAll(node => node.props.testID === testID && node.props.onChangeText)[0];
 }

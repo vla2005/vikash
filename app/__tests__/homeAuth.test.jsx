@@ -10,9 +10,11 @@ import ProtectedScreen from '../src/navigation/ProtectedScreen';
 import ConfirmationDialog from '../src/components/ConfirmationDialog';
 jest.mock('../src/hooks/useToast', () => ({ __esModule: true, default: () => ({ showToast: jest.fn() }) }));
 import { loadSession, clearSession } from '../src/services/sessionStorage';
+import { fetchDebts } from '../src/services/debts';
 
 jest.mock('../src/config/api', () => ({ API_BASE_URL: 'http://api.test' }));
 jest.mock('../src/services/dashboard', () => ({ fetchDashboard: jest.fn(async () => ({ totalBalance: 0, incomes: 0, expenses: 0 })) }));
+jest.mock('../src/services/debts', () => ({ fetchDebts: jest.fn(async () => []), payDebtInstallment: jest.fn() }));
 jest.mock('../src/services/sessionStorage', () => ({ loadSession: jest.fn(), storeSession: jest.fn(async () => {}), clearSession: jest.fn(async () => {}), loadProfileSessions: jest.fn(async () => []), expireProfileSession: jest.fn(async () => {}), removeProfileSession: jest.fn(async () => {}) }));
 jest.mock('../src/screens/LoginScreen', () => { const ReactModule = require('react'); const { Text: Label } = require('react-native'); return () => ReactModule.createElement(Label, null, 'LOGIN'); });
 jest.mock('../src/screens/RegisterScreen', () => () => null);
@@ -82,8 +84,10 @@ test('sessao salva so abre HOME depois da validacao na API', async () => {
   global.fetch.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await render();
   expect(labels()).toEqual([]);
+  expect(fetchDebts).not.toHaveBeenCalled();
   await act(async () => { finish({ ok: true, json: async () => user }); });
   expect(labels()).toContain('Saldo total');
+  expect(fetchDebts).toHaveBeenCalledWith('saved-token', expect.anything());
   expect(global.fetch).toHaveBeenCalledTimes(1);
   expect(global.fetch).toHaveBeenCalledWith('http://api.test/api/auth/me', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer saved-token' }) }));
 });

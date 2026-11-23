@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import GlassPanel from './silver/GlassPanel';
 import { AnimatedPressable } from './motion/AnimatedPrimitives';
-import BarChart from '../shared/components/reacticx/charts/bar-chart';
+import DebtMonthlyChart from './DebtMonthlyChart';
 import ConfirmationDialog from './ConfirmationDialog';
 import Icon from './Icon';
 import InstitutionLogo from './InstitutionLogo';
@@ -12,13 +12,12 @@ import { ListSkeleton } from './Skeleton';
 import { useTheme, useThemeStyles } from '../contexts/ThemeContext';
 import useToast from '../hooks/useToast';
 import { formatCurrency } from '../utils/money';
-import { displayInvoiceDate, invoiceMonthLabel, toCents } from '../utils/initialInvoices';
-import { initialPaymentDate } from '../utils/paymentDate';
+import { displayInvoiceDate, invoiceMonthLabel } from '../utils/initialInvoices';
+import { debtToday, formatDebtCents as formatCents, summarizeDebts } from '../utils/debts';
 import { fontFamily, fontFamilyBold } from '../theme';
 
 const visibleMonths = 6;
 const visibleInstallments = 4;
-const formatCents = amount => formatCurrency(amount / 100);
 
 export default function DebtsSection({ list, accounts, accountsLoading, accountsError, onRetryAccounts, onCreate, expandedDebt, onToggleDebt, onEdit }) {
   const { colors } = useTheme();
@@ -31,41 +30,13 @@ export default function DebtsSection({ list, accounts, accountsLoading, accounts
   const [saving, setSaving] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const submitting = useRef(false);
-  const today = initialPaymentDate().date.split('/').reverse().join('-');
-  const { openTotal, overdueTotal, paidTotal, months, monthKeys, chartMonths, rows } = useMemo(() => {
-    let total = 0;
-    let overdue = 0;
-    let originalTotal = 0;
-    const byMonth = {};
-    const listRows = debts.map(debt => {
-      let open = 0;
-      for (const item of debt.installments) {
-        const cents = toCents(item.amount);
-        const month = item.dueDate.slice(0, 7);
-        byMonth[month] = (byMonth[month] || 0) + cents;
-        if (item.dueDate < today) { overdue += cents; }
-        open += cents;
-      }
-      total += open;
-      originalTotal += toCents(debt.totalAmount);
-      return { ...debt, open, next: debt.installments[0] };
-    });
-    const keys = Object.keys(byMonth).sort();
-    return {
-      openTotal: total,
-      overdueTotal: overdue,
-      paidTotal: originalTotal - total,
-      months: byMonth,
-      monthKeys: keys,
-      chartMonths: keys.slice(0, visibleMonths).map(month => ({
-        label: `${invoiceMonthLabel(month).slice(0, 3)}/${month.slice(2, 4)}`,
-        value: byMonth[month] / 100,
-      })),
-      rows: listRows,
-    };
-  }, [debts, today]);
+  const today = debtToday();
+  const { openTotal, overdueTotal, paidTotal, months, monthKeys, rows } = useMemo(
+    () => summarizeDebts(debts, today), [debts, today],
+  );
+  const chartMonths = useMemo(() => monthKeys.slice(0, visibleMonths), [monthKeys]);
   const progress = paidTotal / (paidTotal + openTotal || 1);
-  const shownMonths = showAllMonths ? monthKeys : monthKeys.slice(0, visibleMonths);
+  const shownMonths = showAllMonths ? monthKeys : chartMonths;
   const selectedAccount = !accountsLoading && !accountsError && accounts.find(account => account.uuid === accountUuid);
 
   async function confirmPayment() {
@@ -134,14 +105,7 @@ export default function DebtsSection({ list, accounts, accountsLoading, accounts
         {shownMonths.length > 0 && (
           <View style={s.chartPanel}>
             <Text accessibilityRole="header" style={s.subtitle}>A pagar por mês</Text>
-            <View aria-hidden importantForAccessibility="no-hide-descendants">
-              <BarChart.Root data={chartMonths} animate={false} enablePan={false}
-                style={s.chart} leftInset={0} bottomInset={26} topInset={8} tickCount={3}>
-                <BarChart.Grid color={colors.border} />
-                <BarChart.Bars color={colors.primary} radius={5} />
-                <BarChart.XAxis style={s.axis} />
-              </BarChart.Root>
-            </View>
+            <DebtMonthlyChart months={months} monthKeys={chartMonths} />
             {shownMonths.map(month => (
               <View key={month} style={s.line}>
                 <Text style={s.caption}>{invoiceMonthLabel(month)}</Text>
@@ -281,8 +245,6 @@ const createStyles = colors => StyleSheet.create({
   progressTrack: { height: 7, borderRadius: 4, backgroundColor: colors.surfaceMuted, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4, backgroundColor: colors.positive },
   chartPanel: { borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 14, gap: 8 },
-  chart: { height: 124, width: '100%' },
-  axis: { color: colors.secondary, fontFamily, fontSize: 10 },
   group: { gap: 8, paddingTop: 8 },
   subtitle: { color: colors.text, fontFamily: fontFamilyBold, fontSize: 14, lineHeight: 20 },
   line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 },
