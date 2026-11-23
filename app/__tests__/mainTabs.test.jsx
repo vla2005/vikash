@@ -27,6 +27,9 @@ import { createTransaction, fetchTransactions, fetchTransactionDetails, fetchCre
 jest.mock('../src/services/transactions', () => ({ createTransaction: jest.fn(), updateTransaction: jest.fn(), fetchTransactions: jest.fn(async () => ({ rows: [], page: 0, hasNext: false })), fetchTransactionDetails: jest.fn(), fetchCreditCardPurchaseDetails: jest.fn(), deleteTransaction: jest.fn(), deleteCreditCardPurchase: jest.fn() }));
 import { fetchAccounts, fetchAccountDetails } from '../src/services/accounts';
 jest.mock('../src/services/accounts', () => ({ fetchAccounts: jest.fn(), fetchAccountDetails: jest.fn(), createAccount: jest.fn() }));
+import { createDebt, fetchDebts, payDebtInstallment, updateDebt } from '../src/services/debts';
+jest.mock('../src/services/debts', () => ({ createDebt: jest.fn(), fetchDebts: jest.fn(), payDebtInstallment: jest.fn(), updateDebt: jest.fn() }));
+jest.mock('expo-crypto', () => ({ randomUUID: () => 'debt-id' }));
 import useToast from '../src/hooks/useToast';
 jest.mock('../src/hooks/useToast', () => { const showToast = jest.fn(); return { __esModule: true, default: () => ({ showToast }) }; });
 import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../src/services/categories';
@@ -104,9 +107,122 @@ beforeEach(() => {
   fetchAccounts.mockReset();
   fetchAccounts.mockResolvedValue([]);
   fetchAccountDetails.mockReset();
+  fetchDebts.mockReset().mockResolvedValue([]);
+  createDebt.mockReset();
+  payDebtInstallment.mockReset();
+  updateDebt.mockReset();
   fetchCategories.mockReset();
   fetchCategories.mockResolvedValue({ defaultCategories: [{ name: 'Saúde', icon: 'health', color: 'sage' }, { name: 'Mercado', icon: 'basket', color: 'ochre' }], customCategories: [] });
 });
+
+test('cadastra uma dívida em andamento com descrição e registra a última parcela', async () => {
+  const debt = {
+    uuid: 'debt-id', creditor: 'Fulano', description: 'Empréstimo pessoal', totalAmount: 1400, version: 0,
+    installmentCount: 3, paidInstallments: 2, installments: [{ number: 3, amount: 466.66, dueDate: '2099-03-10' }],
+  };
+  const wallet = { uuid: 'wallet-debt', description: 'Carteira', name: 'Carteira', type: 'CARTEIRA', balance: 1000 };
+  const savings = { ...wallet, uuid: 'savings-debt', description: 'Reserva', name: 'Reserva', balance: 150 };
+  fetchAccounts.mockResolvedValue([savings, wallet]);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  expect(labels()).toContain('Dívidas');
+  await act(async () => button('Mostrar cartões').props.onPress());
+  expect(labels()).toContain('Dívidas');
+  await act(async () => button('Nova dívida').props.onPress());
+  await fillDebtField('debt-creditor', 'Fulano');
+  await fillDebtField('debt-description', 'Empréstimo pessoal');
+  await fillDebtField('debt-amount', '140000');
+  await fillDebtField('debt-installment-count', '3');
+  await fillDebtField('debt-paid-installments', '2');
+  await fillDebtField('debt-next-due-date', '10032099');
+  createDebt.mockRejectedValueOnce(new Error('Sem conexão')).mockImplementationOnce(async () => {
+    fetchDebts.mockResolvedValue([debt]);
+  });
+  await act(async () => button('Salvar dívida').props.onPress());
+  expect(labels()).toContain('Sem conexão');
+  await act(async () => button('Salvar dívida').props.onPress());
+  expect(createDebt).toHaveBeenNthCalledWith(2, {
+    uuid: 'debt-id', creditor: 'Fulano', description: 'Empréstimo pessoal', totalAmount: 1400,
+    installmentCount: 3, paidInstallments: 2, nextDueDate: '2099-03-10',
+  }, 'test-access');
+  expect(createDebt.mock.calls[0]).toEqual(createDebt.mock.calls[1]);
+  await act(async () => button('Detalhes da dívida de Fulano').props.onPress());
+  expect(labels()).toContain('Empréstimo pessoal');
+  expect(labels()).toContain('Março 2099');
+  expect(labels().flat().join('')).toContain('2 de 3 parcelas pagas');
+  expect(labels()).toContain('R$\u00a0466,66');
+  await act(async () => button('Pagar parcela: Fulano').props.onPress());
+  const dialog = renderer.root.findAllByType(ConfirmationDialog).find(node => node.props.title === 'Pagar parcela?');
+  expect(dialog.props.confirmDisabled).toBe(true);
+  await act(async () => dialog.props.onConfirm());
+  expect(payDebtInstallment).not.toHaveBeenCalled();
+  expect(button('Pagar com Reserva')).toBeTruthy();
+  await act(async () => button('Pagar com Carteira').props.onPress());
+  expect(dialog.props.confirmDisabled).toBe(false);
+  payDebtInstallment.mockRejectedValueOnce(new Error('Conexão interrompida')).mockImplementationOnce(async () => {
+    fetchDebts.mockResolvedValue([{ ...debt, paidInstallments: 3, installments: [], hasRecordedPayments: true }]);
+    fetchAccounts.mockResolvedValue([savings, { ...wallet, balance: 533.34 }]);
+  });
+  await act(async () => dialog.props.onConfirm());
+  expect(dialog.props.error).toBe('Conexão interrompida');
+  await act(async () => dialog.props.onConfirm());
+  expect(payDebtInstallment).toHaveBeenCalledWith('debt-id', 3, { accountUuid: 'wallet-debt', version: 0 }, 'test-access');
+  expect(labels()).toContain('Quitada');
+  await act(async () => button('Mostrar contas').props.onPress());
+  expect(labels()).toContain('R$\u00a0533,34');
+  await act(async () => button('Editar dívida de Fulano').props.onPress());
+  expect(debtField('debt-amount').props.editable).toBe(false);
+  expect(debtField('debt-description').props.editable).toBe(true);
+});
+
+test('expande a dívida, edita o formulário preenchido e atualiza o gráfico e as parcelas', async () => {
+  const debt = {
+    uuid: 'debt-id', creditor: 'Fulano', description: 'Empréstimo pessoal', totalAmount: 900, version: 1,
+    installmentCount: 3, paidInstallments: 1, installments: [
+      { number: 2, amount: 300, dueDate: '2099-03-10' },
+      { number: 3, amount: 300, dueDate: '2099-04-10' },
+    ],
+  };
+  fetchDebts.mockResolvedValue([debt]);
+  await act(async () => { renderer = TestRenderer.create(<MainTabs />); });
+  await act(async () => button('Contas').props.onPress());
+  expect(labels()).toContain('Progresso de pagamento');
+  expect(labels()).toContain('A pagar por mês');
+  expect(labels()).not.toContain('Empréstimo pessoal');
+  const details = button('Detalhes da dívida de Fulano');
+  expect(details.props.accessibilityState.expanded).toBe(false);
+  await act(async () => details.props.onPress());
+  expect(details.props.accessibilityState.expanded).toBe(true);
+  expect(labels()).toContain('10/04/2099');
+  await act(async () => button('Editar dívida de Fulano').props.onPress());
+  expect(debtField('debt-description').props.value).toBe('Empréstimo pessoal');
+  expect(debtField('debt-next-due-date').props.value).toBe('10/03/2099');
+  await fillDebtField('debt-description', 'Compra parcelada');
+  await fillDebtField('debt-amount', '120000');
+  updateDebt.mockRejectedValueOnce(new Error('Sem conexão')).mockImplementationOnce(async () => {
+    fetchDebts.mockResolvedValue([{ ...debt, description: 'Compra parcelada', totalAmount: 1200, version: 2,
+      installments: debt.installments.map(item => ({ ...item, amount: 400 })) }]);
+  });
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(labels()).toContain('Sem conexão');
+  expect(debtField('debt-description').props.value).toBe('Compra parcelada');
+  await act(async () => button('Salvar alterações').props.onPress());
+  expect(updateDebt).toHaveBeenCalledWith('debt-id', {
+    uuid: 'debt-id', creditor: 'Fulano', description: 'Compra parcelada', totalAmount: 1200,
+    installmentCount: 3, paidInstallments: 1, nextDueDate: '2099-03-10', version: 1,
+  }, 'test-access');
+  expect(button('Detalhes da dívida de Fulano').props.accessibilityState.expanded).toBe(true);
+  expect(labels()).toContain('Compra parcelada');
+  expect(labels()).toContain('R$\u00a0800,00');
+});
+
+function debtField(testID) {
+  return renderer.root.findAll(node => node.props.testID === testID && node.props.onChangeText)[0];
+}
+
+async function fillDebtField(testID, value) {
+  await act(async () => debtField(testID).props.onChangeText(value));
+}
 
 test.each(['android', 'ios'])('mantém só uma luz e isola a captura da barra no %s', async platform => {
   jest.replaceProperty(Platform, 'OS', platform);

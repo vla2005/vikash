@@ -15,6 +15,27 @@ lançamento ocorrer depois de abrir a confirmação. Faturas com vínculos retor
 Os resumos de fatura em `GET /api/credit-card` e `GET /api/credit-card/{uuid}`
 incluem `deletable`, usado pelo app para exibir o botão de exclusão.
 
+## Acompanhar dívidas
+
+`GET /api/debt` lista as dívidas do usuário autenticado, com o progresso e as parcelas em aberto.
+`POST /api/debt/create` recebe `uuid`, `creditor`, `description` (opcional), `totalAmount`,
+`installmentCount`, `paidInstallments` e `nextDueDate`. A próxima parcela vence na data informada.
+As demais vencem no mesmo dia dos meses seguintes, limitado ao último dia de cada mês.
+Centavos que sobram na divisão do valor total são distribuídos entre as primeiras parcelas.
+
+`PUT /api/debt/{uuid}/installments/{number}/payment` recebe `accountUuid` e `version`.
+O servidor busca o nome exato **Pagamento de dívida** na tabela `default_categories`.
+A categoria precisa existir antes da confirmação. Se estiver ausente, a API retorna `422`.
+O débito na conta escolhida, a despesa no extrato e a quitação da parcela usam a mesma
+transação de banco. Repetir a confirmação com a mesma conta preserva o saldo e o progresso.
+
+`PUT /api/debt/update/{uuid}` recebe os mesmos campos do cadastro e a `version` atual
+da dívida. Alterações concorrentes retornam `409`. Para editar o parcelamento após
+um débito, estorne as parcelas registradas, da mais recente à mais antiga, pelo extrato.
+Cada estorno devolve o valor à conta e reabre a parcela. Se todas as parcelas estiverem
+pagas, envie `nextDueDate` nulo. A configuração `ddl-auto=update` cria a tabela `debts`,
+a coluna `version` e o vínculo entre o lançamento e a parcela.
+
 ## Qual Compose usar?
 
 O `compose.yaml` contém a configuração principal da API e do PostgreSQL. Ele é usado em produção, sem publicar portas diretamente no servidor.

@@ -25,7 +25,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @DataJpaTest(showSql = false, properties = {"integrations.fuellog.enabled=true", "spring.config.import=", "spring.datasource.url=jdbc:h2:mem:fuellog-financial;DB_CLOSE_DELAY=-1", "spring.jpa.show-sql=false"})
 @Import({FuelLogFinancialService.class, TransactionService.class, CreditCardPurchaseService.class,
-        CreditCardInvoiceService.class, TransactionEditService.class})
+        CreditCardInvoiceService.class, TransactionEditService.class, DebtService.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class FuelLogFinancialServiceTest {
     @Autowired FuelLogFinancialService service;

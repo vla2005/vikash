@@ -23,11 +23,13 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions", uniqueConstraints = @UniqueConstraint(name = "uq_transaction_debt_installment",
+        columnNames = {"debt_id", "debt_installment_number"}))
 @Getter
 @Setter
 public class TransactionEntity {
@@ -50,6 +52,13 @@ public class TransactionEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "credit_card_invoice_id")
     private CreditCardInvoiceEntity creditCardInvoice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "debt_id", updatable = false)
+    private DebtEntity debt;
+
+    @Column(name = "debt_installment_number", updatable = false)
+    private Integer debtInstallmentNumber;
 
     @Column(nullable = false, length = 255)
     private String description;

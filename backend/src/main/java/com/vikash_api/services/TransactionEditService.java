@@ -63,6 +63,9 @@ public class TransactionEditService {
         var user = authenticatedUserService.getCurrentUser();
         var entry = transactionRepository.findOwnedForUpdate(uuid, user.getId())
                 .orElseThrow(() -> new TransactionNotFoundException("Transação não encontrada."));
+        if (entry.getDebt() != null) {
+            throw invalid("description", "Estorne o pagamento no extrato para registrá-lo novamente.");
+        }
         validatePayment(request, entry.getType());
         var category = getCategory(request, user.getId(), defaultCategoryId);
         if (entry.getType() == TransactionType.INVOICE_PAYMENT) {

@@ -21,7 +21,8 @@ public record TransactionResponse(
     UUID creditCardInvoiceUuid,
     String transcription,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    boolean debtPayment
 ) {
 
 }

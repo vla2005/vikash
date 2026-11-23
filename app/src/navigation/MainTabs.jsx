@@ -21,6 +21,7 @@ import CategoriesScreen from '../screens/CategoriesScreen';
 import CategoryFormScreen from '../screens/CategoryFormScreen';
 import AccountsScreen from '../screens/AccountsScreen';
 import CreateAccountScreen from '../screens/CreateAccountScreen';
+import DebtFormScreen from '../screens/DebtFormScreen';
 import CreateCreditCardScreen from '../screens/CreateCreditCardScreen';
 import CreditCardDetailsScreen from '../screens/CreditCardDetailsScreen';
 import CreditCardInitialInvoicesScreen from '../screens/CreditCardInitialInvoicesScreen';
@@ -35,6 +36,7 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import useCategories from '../hooks/useCategories';
 import useAccounts from '../hooks/useAccounts';
+import useDebts from '../hooks/useDebts';
 import useCreditCards from '../hooks/useCreditCards';
 import useToast from '../hooks/useToast';
 import BottomNavigator from '../components/BottomNavigator';
@@ -76,6 +78,8 @@ export default function MainTabs({ navigation }) {
   const [profilesVisible, setProfilesVisible] = useState(false);
   const [profileForm, setProfileForm] = useState(null);
   const [accountForm, setAccountForm] = useState(null);
+  const [expandedDebt, setExpandedDebt] = useState(null);
+  const debtSaving = useRef(false);
   const [cardUuid, setCardUuid] = useState(null);
   const [initialBalanceUuid, setInitialBalanceUuid] = useState(null);
   const [cardRevision, setCardRevision] = useState(0);
@@ -127,8 +131,10 @@ export default function MainTabs({ navigation }) {
     onboarding?.session?.accessToken,
     accountsActive,
   );
+  const debtList = useDebts(onboarding?.session?.accessToken, accountsActive);
   const retryAccounts = accountList.retry;
   const retryCards = cardList.retry;
+  const retryDebts = debtList.retry;
   const insets = useSafeAreaInsets();
   const showAppHeader =
     !profileVisible &&
@@ -185,7 +191,9 @@ export default function MainTabs({ navigation }) {
           return false;
         }
         if (current.accountForm) {
-          setAccountForm(null);
+          if (!debtSaving.current) {
+            setAccountForm(null);
+          }
           return true;
         }
         if (current.cardUuid) {
@@ -219,18 +227,19 @@ export default function MainTabs({ navigation }) {
       });
     });
   }, []);
-  const refreshAfterDeletion = useCallback(() => {
+  const refreshFinancialData = useCallback(() => {
     setDashboardRevision(value => value + 1);
     setStatementRevision(value => value + 1);
     setCardRevision(value => value + 1);
     setAccountRevision(value => value + 1);
     retryAccounts();
     retryCards();
-  }, [retryAccounts, retryCards]);
-  useEffect(() => subscribeFinancialChanges(refreshAfterDeletion), [refreshAfterDeletion]);
+    retryDebts();
+  }, [retryAccounts, retryCards, retryDebts]);
+  useEffect(() => subscribeFinancialChanges(refreshFinancialData), [refreshFinancialData]);
   function closeDeletedDetails() {
     setItemDetails(null);
-    refreshAfterDeletion();
+    refreshFinancialData();
   }
   const openInvoice = useCallback((card, invoice) => {
     runSceneUpdate(() => {
@@ -297,6 +306,9 @@ export default function MainTabs({ navigation }) {
   const viewCards = useCallback(() => runSceneUpdate(() => setSelected('AccountManagement')), []);
   const viewStatement = useCallback(() => runSceneUpdate(() => setSelected('Statement')), []);
   const createAccount = useCallback(() => runSceneUpdate(() => setAccountForm({ kind: 'account', account: null })), []);
+  const createDebt = useCallback(() => runSceneUpdate(() => setAccountForm({ kind: 'debt' })), []);
+  const editDebt = useCallback(debt => runSceneUpdate(() => setAccountForm({ kind: 'debt', debt })), []);
+  const toggleDebt = useCallback(uuid => setExpandedDebt(previous => previous === uuid ? null : uuid), []);
   const createCard = useCallback(() => runSceneUpdate(() => setAccountForm({ kind: 'card' })), []);
   const editAccount = useCallback(account => runSceneUpdate(() => setAccountUuid(account.uuid)), []);
   const createCategory = useCallback(() => runSceneUpdate(() => setCategoryForm({ category: null })), []);
@@ -329,6 +341,18 @@ export default function MainTabs({ navigation }) {
     }
     if (accountForm) {
       const close = () => setAccountForm(null);
+      if (accountForm.kind === 'debt') {
+        return (
+          <DebtFormScreen
+            key={accountForm.debt?.uuid || 'new-debt'}
+            debt={accountForm.debt}
+            accessToken={onboarding?.session?.accessToken}
+            onBack={close}
+            onSaved={close}
+            onSavingChange={isSaving => { debtSaving.current = isSaving; }}
+          />
+        );
+      }
       if (accountForm.kind === 'card') {
         return (
           <CreateCreditCardScreen
@@ -378,7 +402,7 @@ export default function MainTabs({ navigation }) {
           }}
           onOpenTransaction={openDetails}
           initialInvoiceUuid={invoiceToOpen}
-          onDeleted={refreshAfterDeletion}
+          onDeleted={refreshFinancialData}
         />
       );
     }
@@ -392,7 +416,7 @@ export default function MainTabs({ navigation }) {
           onEdit={account => setAccountForm({ kind: 'account', account })}
           revision={accountRevision}
           onOpenTransaction={openDetails}
-          onDeleted={refreshAfterDeletion}
+          onDeleted={refreshFinancialData}
         />
       );
     }
@@ -451,7 +475,7 @@ export default function MainTabs({ navigation }) {
                 accessToken={onboarding?.session?.accessToken}
                 onOpenTransaction={openDetails}
                 revision={statementRevision}
-                onDeleted={refreshAfterDeletion}
+                onDeleted={refreshFinancialData}
               />
             </View>
           )}
@@ -469,6 +493,8 @@ export default function MainTabs({ navigation }) {
               ]}
             >
               <View
+                accessibilityElementsHidden={!!accountSubscreen}
+                importantForAccessibility={accountSubscreen ? 'no-hide-descendants' : 'auto'}
                 style={[styles.tabPane, !!accountSubscreen && styles.hidden]}
               >
                 <AccountsScreen
@@ -482,6 +508,11 @@ export default function MainTabs({ navigation }) {
                   onRetry={accountList.retry}
                   onCreate={createAccount}
                   onCreateCard={createCard}
+                  debtList={debtList}
+                  onCreateDebt={createDebt}
+                  onEditDebt={editDebt}
+                  expandedDebt={expandedDebt}
+                  onToggleDebt={toggleDebt}
                   onEdit={editAccount}
                 />
               </View>
@@ -552,29 +583,40 @@ export default function MainTabs({ navigation }) {
           accessToken={onboarding?.session?.accessToken}
           onOpenTransaction={openDetails}
           revision={statementRevision}
-          onDeleted={refreshAfterDeletion}
+          onDeleted={refreshFinancialData}
         />
       );
     }
     if (selected === 'AccountManagement') {
       const subscreen = renderAccountManagementSubscreen();
-      if (subscreen) {
+      const debtFormOpen = accountForm?.kind === 'debt';
+      if (subscreen && !debtFormOpen) {
         return subscreen;
       }
       return (
-        <AccountsScreen
-          {...accountList}
-          profile={onboarding?.profile}
-          cards={cardList.cards}
-          cardsLoading={cardList.loading}
-          cardsError={cardList.error}
-          onRetryCards={cardList.retry}
-          onOpenCard={openInvoice}
-          onRetry={accountList.retry}
-          onCreate={createAccount}
-          onCreateCard={createCard}
-          onEdit={editAccount}
-        />
+        <>
+          <View accessibilityElementsHidden={debtFormOpen} style={[styles.tabPane, debtFormOpen && styles.hidden]}>
+            <AccountsScreen
+              {...accountList}
+              profile={onboarding?.profile}
+              cards={cardList.cards}
+              cardsLoading={cardList.loading}
+              cardsError={cardList.error}
+              onRetryCards={cardList.retry}
+              onOpenCard={openInvoice}
+              onRetry={accountList.retry}
+              onCreate={createAccount}
+              onCreateCard={createCard}
+              debtList={debtList}
+              onCreateDebt={createDebt}
+              onEditDebt={editDebt}
+              expandedDebt={expandedDebt}
+              onToggleDebt={toggleDebt}
+              onEdit={editAccount}
+            />
+          </View>
+          {subscreen}
+        </>
       );
     }
     if (categoryForm) {
@@ -663,7 +705,7 @@ export default function MainTabs({ navigation }) {
         base.depth = 3;
       } else if (accountForm) {
         base.key += `:form:${accountForm.kind}:${
-          accountForm.card?.uuid || accountForm.account?.uuid || 'new'
+          accountForm.card?.uuid || accountForm.account?.uuid || accountForm.debt?.uuid || 'new'
         }`;
         base.depth = cardUuid || accountUuid ? 2 : 1;
       } else if (cardUuid || accountUuid) {

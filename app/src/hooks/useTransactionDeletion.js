@@ -29,7 +29,8 @@ export default function useTransactionDeletion(accessToken, onDeleted) {
       return;
     }
     busy.current = false; setSaving(false); setPending(null);
-    showToast({ type: 'success', message: pending.purchase ? 'Compra excluída. Limite atualizado.' : 'Transação excluída. Saldo atualizado.' });
+    showToast({ type: 'success', message: pending.debtPayment ? 'Pagamento estornado. Saldo e dívida atualizados.'
+      : pending.purchase ? 'Compra excluída. Limite atualizado.' : 'Transação excluída. Saldo atualizado.' });
     onDeleted?.(pending);
   }
 
@@ -37,10 +38,12 @@ export default function useTransactionDeletion(accessToken, onDeleted) {
   if (pending?.type === 'TRANSFER') { effect = 'Os saldos das duas contas serão revertidos.'; }
   if (pending?.type === 'INVOICE_PAYMENT') { effect = 'O valor voltará ao saldo da conta e a fatura ficará fechada, aguardando pagamento.'; }
   if (pending?.purchase) { effect = 'A compra inteira e todas as suas parcelas serão removidas das faturas. O limite será liberado. Se houver parcelas pagas, desfaça esses pagamentos primeiro.'; }
+  if (pending?.debtPayment) { effect = 'O valor voltará ao saldo da conta e a parcela ficará em aberto.'; }
+  const action = pending?.debtPayment ? 'Estornar pagamento' : pending?.purchase ? 'Excluir compra' : 'Excluir transação';
   return { requestDelete, saving, dialogProps: {
-    visible: !!pending, title: pending?.purchase ? 'Excluir compra?' : 'Excluir transação?',
-    message: `Excluir “${pending?.description || ''}”${pending?.amount != null && !pending?.purchaseUuid ? ` de ${formatCurrency(pending.amount)}` : ''}? ${effect} Essa ação não pode ser desfeita.`,
-    confirmText: pending?.purchase ? 'Excluir compra' : 'Excluir transação', variant: 'danger', icon: 'trash',
+    visible: !!pending, title: `${action}?`,
+    message: `${pending?.debtPayment ? 'Estornar' : 'Excluir'} “${pending?.description || ''}”${pending?.amount != null && !pending?.purchaseUuid ? ` de ${formatCurrency(pending.amount)}` : ''}? ${effect} Essa ação não pode ser desfeita.`,
+    confirmText: action, variant: 'danger', icon: 'trash',
     loading: saving, error, onConfirm: confirm, onCancel: cancel,
   } };
 }

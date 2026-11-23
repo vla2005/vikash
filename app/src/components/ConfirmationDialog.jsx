@@ -7,12 +7,13 @@ import { fontFamily, fontFamilyBold, fontFamilyMedium } from '../theme';
 
 // The caller controls visibility, runs the action and supplies its loading/error states.
 export default function ConfirmationDialog({ visible, title, message, confirmText = 'Confirmar', cancelText = 'Cancelar',
-  variant = 'primary', icon, loading = false, error, onConfirm, onCancel }) {
+  variant = 'primary', icon, loading = false, confirmDisabled = false, error, onConfirm, onCancel, children }) {
   const { colors } = useTheme();
   const styles = useThemeStyles(createStyles);
   const cancelButton = useRef(null);
   const reducedMotion = useReducedMotion();
   const danger = variant === 'danger';
+  const unavailable = loading || confirmDisabled;
   const accent = danger ? colors.error : colors.primary;
   const cancel = () => { if (!loading) { onCancel(); } };
   return <Modal hardwareAccelerated={Platform.OS === 'android'} visible={visible} transparent animationType={reducedMotion ? 'none' : 'fade'}
@@ -33,14 +34,15 @@ export default function ConfirmationDialog({ visible, title, message, confirmTex
           </View>
           <Text accessibilityRole="header" style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
+          {children}
           {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
           <View style={styles.actions}>
             <Pressable ref={cancelButton} accessibilityRole="button" disabled={loading} onPress={cancel}
               style={({ pressed }) => [styles.button, styles.cancel, pressed && styles.pressed, loading && styles.disabled]}>
               <Text style={styles.cancelText}>{cancelText}</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityState={{ busy: loading, disabled: loading }} disabled={loading}
-              onPress={onConfirm} style={({ pressed }) => [styles.button, { backgroundColor: danger ? colors.dangerButton : colors.brandPrimary }, pressed && styles.pressed, loading && styles.disabled]}>
+            <Pressable accessibilityRole="button" accessibilityState={{ busy: loading, disabled: unavailable }} disabled={unavailable}
+              onPress={onConfirm} style={({ pressed }) => [styles.button, { backgroundColor: danger ? colors.dangerButton : colors.brandPrimary }, pressed && styles.pressed, unavailable && styles.disabled]}>
               <Text style={[styles.confirmText, { color: danger ? colors.onDanger : colors.onBrand }]}>{loading ? 'Aguarde…' : confirmText}</Text>
             </Pressable>
           </View>

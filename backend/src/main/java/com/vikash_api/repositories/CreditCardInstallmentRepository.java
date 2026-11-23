@@ -29,7 +29,7 @@ public interface CreditCardInstallmentRepository extends JpaRepository<CreditCar
             purchase.occurredAt, COALESCE(customCategory.name, defaultCategory.name),
             COALESCE(customCategory.color, defaultCategory.color),
             COALESCE(customCategory.icon, defaultCategory.icon), institution.name,
-            installment.installmentNumber, purchase.installmentCount, purchase.uuid
+            installment.installmentNumber, purchase.installmentCount, purchase.uuid, false
         )
         FROM CreditCardInstallmentEntity installment
         JOIN installment.purchase purchase

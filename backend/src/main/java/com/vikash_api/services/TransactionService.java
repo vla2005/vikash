@@ -71,6 +71,7 @@ public class TransactionService {
     private final EntityManager entityManager;
     private final PlatformTransactionManager transactionManager;
     private final AiUsageService aiUsageService;
+    private final DebtService debtService;
     /** No financial write, including when the analysis contains missing fields. */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AiAnalysisResponse preview(TransactionRequest request) {
@@ -116,7 +117,7 @@ public class TransactionService {
                 transaction.getType(), transaction.getPaymentMethod(), transaction.getOccurredAt(),
                 accountSummary(transaction.getAccount()), accountSummary(transaction.getDestinationAccount()), category,
                 creditCard, invoice == null ? null : invoice.getUuid(), transaction.getTranscription(),
-                transaction.getCreatedAt(), transaction.getUpdatedAt());
+                transaction.getCreatedAt(), transaction.getUpdatedAt(), transaction.getDebt() != null);
     }
 
     private AccountSummaryResponse accountSummary(AccountEntity account) {
@@ -135,6 +136,9 @@ public class TransactionService {
         if (transaction.getType() == TransactionType.INVOICE_PAYMENT) {
             creditCardInvoiceService.reversePayment(transaction, userId);
         } else {
+            if (transaction.getDebt() != null) {
+                debtService.reverseInstallment(transaction, userId);
+            }
             UUID accountUuid = transaction.getAccount().getUuid();
             var destination = transaction.getDestinationAccount();
             AccountEntity account;

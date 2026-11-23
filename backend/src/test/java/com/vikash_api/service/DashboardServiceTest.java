@@ -129,7 +129,7 @@ class DashboardServiceTest {
         stubTotals(period, "100", "50", "0", "0");
         var transaction = new TransactionSummaryResponse(UUID.randomUUID(), "Mercado", new BigDecimal("50"),
                 TransactionType.EXPENSE, PaymentMethod.PIX, LocalDateTime.now(),
-                "Mercado", "ochre", "basket", "Carteira", 1, 1, null);
+                "Mercado", "ochre", "basket", "Carteira", 1, 1, null, false);
         var firstFive = PageRequest.of(0, 5);
         when(transactionRepository.findSummariesByUserId(user.getId(), firstFive))
                 .thenReturn(new SliceImpl<>(List.of(transaction), firstFive, false));

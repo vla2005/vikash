@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.List;
+import java.util.Set;
 
 import com.vikash_api.dtos.responses.CategoryExpenseResponse;
 import com.vikash_api.dtos.responses.DailyTransactionTotalsResponse;
@@ -31,6 +32,13 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     int clearCustomCategory(@Param("categoryId") Long categoryId, @Param("userId") Long userId);
 
     boolean existsByCreditCardInvoiceId(Long invoiceId);
+
+    boolean existsByDebtId(Long debtId);
+
+    Optional<TransactionEntity> findByDebtIdAndDebtInstallmentNumber(Long debtId, int installmentNumber);
+
+    @Query("SELECT DISTINCT t.debt.id FROM TransactionEntity t WHERE t.user.id = :userId AND t.debt IS NOT NULL")
+    Set<Long> findPaidDebtIds(@Param("userId") Long userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM TransactionEntity t WHERE t.uuid = :uuid AND t.user.id = :userId")
@@ -69,7 +77,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
                     CASE WHEN account.type = com.vikash_api.enums.AccountType.CARTEIRA THEN 'Carteira' ELSE institution.name END
                 ELSE
                     CASE WHEN destination.type = com.vikash_api.enums.AccountType.CARTEIRA THEN 'Carteira' ELSE destinationInstitution.name END
-            END, 1, 1, null
+            END, 1, 1, null, t.debt IS NOT NULL
         )
         FROM TransactionEntity t
         LEFT JOIN t.account account
@@ -101,7 +109,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
                 WHEN account.type = com.vikash_api.enums.AccountType.CARTEIRA
                     THEN 'Carteira'
                 ELSE institution.name
-            END, 1, 1, null
+            END, 1, 1, null, t.debt IS NOT NULL
         )
         FROM TransactionEntity t
         LEFT JOIN t.account account

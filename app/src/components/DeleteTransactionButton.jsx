@@ -6,7 +6,7 @@ import useTransactionDeletion from '../hooks/useTransactionDeletion';
 
 export default function DeleteTransactionButton({ details, purchase = false, accessToken, onDeleted }) {
   const deletion = useTransactionDeletion(accessToken, onDeleted);
-  const label = purchase ? 'Excluir compra' : 'Excluir transação';
+  const label = details.debtPayment ? 'Estornar pagamento' : purchase ? 'Excluir compra' : 'Excluir transação';
   return <View style={s.container}>
     <DeleteActionButton label={label} disabled={deletion.saving} onPress={() => deletion.requestDelete(details, purchase)} />
     <ConfirmationDialog {...deletion.dialogProps} />

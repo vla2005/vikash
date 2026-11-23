@@ -7,6 +7,7 @@ import Skeleton, { CreditCardSkeleton, ListSkeleton } from '../components/Skelet
 import Icon from '../components/Icon';
 import InstitutionLogo from '../components/InstitutionLogo';
 import CreditCardSummary from '../components/CreditCardSummary';
+import DebtsSection from '../components/DebtsSection';
 import HomeCreditCards from '../components/HomeCreditCards';
 import SegmentedControl from '../components/SegmentedControl';
 import {
@@ -15,7 +16,7 @@ import {
 } from '../components/motion/AnimatedPrimitives';
 import { getAccountType } from '../constants/accountTypes';
 import { formatCurrency } from '../utils/money';
-import { fontFamilyMedium, fontFamily, fontFamilyBold } from '../theme';
+import { fontFamily, fontFamilyBold } from '../theme';
 
 function AccountsScreen({
   accounts,
@@ -30,6 +31,11 @@ function AccountsScreen({
   onRetryCards,
   onCreateCard,
   onOpenCard,
+  debtList,
+  onCreateDebt,
+  onEditDebt,
+  expandedDebt,
+  onToggleDebt,
   profile,
 }) {
   const { colors } = useTheme();
@@ -38,22 +44,24 @@ function AccountsScreen({
   const [stackInteracting, setStackInteracting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const refreshStarted = useRef(false);
+  const isLoading = loading || cardsLoading || debtList?.loading;
 
   useEffect(() => {
     if (!refreshing) return;
-    if (loading || cardsLoading) {
+    if (isLoading) {
       refreshStarted.current = true;
     } else if (refreshStarted.current) {
       refreshStarted.current = false;
       setRefreshing(false);
     }
-  }, [refreshing, loading, cardsLoading]);
+  }, [refreshing, isLoading]);
 
   function refresh() {
-    refreshStarted.current = loading || cardsLoading;
+    refreshStarted.current = isLoading;
     setRefreshing(true);
     onRetry();
     onRetryCards?.();
+    debtList?.retry();
   }
 
   const total = accounts.reduce((sum, account) => sum + account.balance, 0);
@@ -295,6 +303,9 @@ function AccountsScreen({
           )}
         </GlassPanel>
       </StaggeredSection>
+      {debtList && <DebtsSection list={debtList} accounts={accounts} accountsLoading={loading}
+        accountsError={error} onRetryAccounts={onRetry} onCreate={onCreateDebt} onEdit={onEditDebt}
+        expandedDebt={expandedDebt} onToggleDebt={onToggleDebt} />}
     </ScrollView>
   );
 }

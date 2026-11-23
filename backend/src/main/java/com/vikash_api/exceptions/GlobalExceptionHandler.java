@@ -96,6 +96,12 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(), Map.of(ex.getField(), ex.getMessage()));
     }
 
+    @ExceptionHandler(DebtException.class)
+    public ResponseEntity<ErrorResponse> handleDebt(DebtException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex.getStatus(), ex.getStatus().getReasonPhrase(), ex.getMessage(),
+                request.getRequestURI(), ex.getField() == null ? null : Map.of(ex.getField(), ex.getMessage()));
+    }
+
     @ExceptionHandler(RegistrationVerificationException.class)
     public ResponseEntity<ErrorResponse> handleRegistrationVerification(RegistrationVerificationException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Registration Verification", ex.getMessage(), request.getRequestURI(), null);

@@ -39,6 +39,7 @@ export function normalizeTransactionSummaries(items) {
       date: item.occurredAt.slice(0, 10), occurredAt: item.occurredAt, category: item.categoryName,
       color: item.categoryColor, icon: item.categoryIcon, account: item.institutionName,
       purchaseUuid: item.purchaseUuid ?? null,
+      ...(item.debtPayment === true && { debtPayment: true }),
       installmentNumber: item.installmentNumber ?? 1, installmentCount: item.installmentCount ?? 1,
       payment: paymentLabels[item.paymentMethod] || 'Outro' };
   });

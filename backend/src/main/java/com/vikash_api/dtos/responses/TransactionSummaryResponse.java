@@ -20,5 +20,6 @@ public record TransactionSummaryResponse(
         String institutionName,
         Integer installmentNumber,
         Integer installmentCount,
-        UUID purchaseUuid
+        UUID purchaseUuid,
+        boolean debtPayment
     ) {}

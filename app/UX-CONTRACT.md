@@ -16,6 +16,7 @@ A identidade prateada oferece modos claro e escuro em todas as telas, escolhidos
 | Voltar nas páginas | `GlassBackButton` | Testes de detalhes, perfil, formulários e recuperação |
 | Toast opaco com anúncio e toque para fechar | `ToastContext`, `ToastContent`, `Toast` | `toast.test.jsx`, inspeção em 320 px |
 | Contas e cartões separados | `AccountsScreen` | `mainTabs.test.jsx` |
+| Gráficos, edição e pagamento de dívidas pela conta escolhida | `DebtsSection`, `DebtFormScreen`, Bar Chart Reacticx, `FormField`, `ConfirmationDialog` | `mainTabs.test.jsx`, `DebtIntegrationTest` |
 | Drawers e confirmações opacos | `DrawerModal`, `DrawerPanel`, `useDrawerAnimation`, `ConfirmationDialog`, `colors.dialogSurface` | `drawerMotion.test.jsx`, `drawerMotionWeb.test.jsx`, `voiceDrawer.test.jsx`, `profileSwitcher.test.jsx`, `invoicePayment.test.jsx`, inspeção de filtros, seletores e confirmação |
 | Exclusão por arraste | `SwipeableRow` | `categoryDeletion.test.jsx`, `transactionDeletion.test.jsx`, inspeção de abertura e retorno parcial no extrato |
 | Escuta em tela inteira e revisão | `VoiceDrawer`, `VoiceScene`, `VoiceMicGlyph`, `useVoiceReviewProgress`, `DrawerPanel`, `VoiceMicButton`, `VoiceMicPulse`, `VoiceMicGlow`, `ListeningOrb`, `ListeningOrbSurface`, `ListeningWave`, `ListeningWaveSurface`, `voiceOrb` | `voiceScene.test.jsx`, `listeningOrb.test.jsx`, `listeningOrbWeb.test.jsx`, `voiceDrawer.test.jsx`, prévia com transcrição simulada |

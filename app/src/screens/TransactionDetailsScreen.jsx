@@ -14,7 +14,7 @@ export default function TransactionDetailsScreen({ uuid, accessToken, onBack, on
   const state = useTransactionDetails(uuid, accessToken);
   const data = state.details;
   return <TransactionDetailsLayout {...state} title="Detalhes da transação" onBack={onBack} subtitle={types[data?.type]}
-    heroAction={onEdit && <EditTransactionButton onPress={() => onEdit(data)} />}
+    heroAction={onEdit && !data?.debtPayment && <EditTransactionButton onPress={() => onEdit(data)} />}
     sign={data?.type === 'INCOME' ? '+ ' : ['EXPENSE', 'INVOICE_PAYMENT'].includes(data?.type) ? '− ' : ''} amountLabel={methods[data?.paymentMethod] ? `Pagamento via ${methods[data.paymentMethod]}` : 'Valor da transação'}>
     {data && <>
       <Text style={s.section}>Informações da transação</Text>
