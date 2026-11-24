@@ -90,5 +90,5 @@ public class AssistantMemory {
     }
     private static String normalize(String text){return Normalizer.normalize(text,Normalizer.Form.NFKC).toLowerCase(Locale.ROOT).replaceAll("\\s+"," ").strip();}
     private static boolean controls(String text){return text.codePoints().anyMatch(c->Character.isISOControl(c) && c!='\n' && c!='\t');}
-    private AssistantPlanningException invalid(){return new AssistantPlanningException("O Gemini retornou uma atualização de contexto inválida.");}
+    private AssistantPlanningException invalid(){return new AssistantPlanningException(AssistantPlanningException.Reason.INVALID);}
 }

@@ -14,7 +14,10 @@ const errors = {
   ASSISTANT_QUERY_QUERY_FAILED: 'Não foi possível concluir esta consulta. Tente reformular sua pergunta.',
 
   ASSISTANT_SQL_REJECTED: 'Não foi possível preparar uma consulta dentro das regras de segurança. Tente reformular ou enviar novamente.',
-  ASSISTANT_PLANNING_UNAVAILABLE: 'Sua pergunta foi salva, mas o Gemini está indisponível. Tente enviar novamente.',
+  ASSISTANT_PLANNING_UNAVAILABLE: 'Sua pergunta foi salva. O Gemini está temporariamente indisponível. Tente novamente.',
+  ASSISTANT_PLANNING_INVALID: 'Sua pergunta foi salva, mas o Gemini não gerou uma consulta válida. Tente reformular.',
+  ASSISTANT_PLANNING_CONTEXT_LIMIT: 'O contexto da pergunta ficou grande demais. Tente uma pergunta mais específica.',
+  ASSISTANT_PLANNING_CONTEXT_CHANGED: 'O contexto da pergunta mudou. Tente novamente.',
   ASSISTANT_PLANNING_IN_PROGRESS: 'Sua pergunta ainda está sendo preparada. Aguarde e tente novamente.',
   ASSISTANT_MESSAGE_KEY_MISMATCH: 'A identificação do envio mudou. Tente novamente.',
   ASSISTANT_CONVERSATION_NOT_FOUND: 'Conversa não encontrada na API. Inicie uma nova conversa.',
@@ -34,7 +37,7 @@ export async function sendAssistantMessage({ conversation, message, accessToken,
   const abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
   signal?.addEventListener('abort', abort);
-  const timer = setTimeout(abort, 90000);
+  const timer = setTimeout(abort, 120000);
   try {
     if (controller.signal.aborted) throw new Error('Envio cancelado.');
     const response = await authenticatedFetch(assistantEndpoint, {

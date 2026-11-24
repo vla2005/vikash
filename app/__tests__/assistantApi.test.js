@@ -98,6 +98,11 @@ test('SQL rejeitado retorna orientação segura sem expor SQL do modelo', async 
   await expect(sendAssistantMessage({ conversation, message })).rejects.toThrow('regras de segurança');
 });
 
+test('plano inválido orienta reformular a pergunta', async () => {
+  authenticatedFetch.mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({ code: 'ASSISTANT_PLANNING_INVALID' }) });
+  await expect(sendAssistantMessage({ conversation, message })).rejects.toThrow('reformular');
+});
+
 
 test.each([
   ['COST_LIMIT', 'limitar'], ['TIME_LIMIT', 'tempo'], ['RESULT_LIMIT', 'específica'],

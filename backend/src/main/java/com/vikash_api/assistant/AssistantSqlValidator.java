@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 @Slf4j @Component
 public final class AssistantSqlValidator {
     public static final String POLICY_VERSION = "financial-select-v1";
+    static final String DEBT_MATCH_BINDING = "__assistant_debt_ids";
     private final FinancialCatalog catalog;
     public AssistantSqlValidator(FinancialCatalog catalog) { this.catalog = catalog; }
     public record Binding(String type, Object value) {}
@@ -34,7 +35,7 @@ public final class AssistantSqlValidator {
         private ValidatedSql(String sql, Map<String, Binding> bindings, FinancialPlan plan) {
             this.sql = sql; this.bindings = Map.copyOf(bindings);
             source = new FinancialPlan(plan.catalogVersion(), plan.decision(), plan.interpretation(), plan.sql(),
-                    List.copyOf(plan.parameters()), List.copyOf(plan.views()), plan.clarification());
+                    List.copyOf(plan.parameters()), List.copyOf(plan.views()), plan.clarification(), plan.debtMatchCriterion());
         }
         public String sql() { return sql; }
         public Map<String, Binding> bindings() { return bindings; }
@@ -48,7 +49,7 @@ public final class AssistantSqlValidator {
     public ValidatedSql validate(FinancialPlan plan) {
         long start = System.nanoTime();
         try {
-            if (plan == null || plan.decision() != FinancialPlan.Decision.query || !catalog.version().equals(plan.catalogVersion())) throw reject("PLAN");
+            if (plan == null || plan.decision() != FinancialPlan.Decision.query || !catalog.version().equals(plan.catalogVersion()) || !plan.validDebtMatch()) throw reject("PLAN");
             String sql = preflight(plan.sql());
             var statements = CCJSqlParserUtil.parseStatements(sql, parser -> parser.withTimeOut(1000).withAllowComplexParsing(false));
             if (statements.size() != 1 || !(statements.get(0) instanceof Select select)) throw reject("SELECT_ONLY");
@@ -118,8 +119,10 @@ public final class AssistantSqlValidator {
     private final class Compiler {
         final Map<String, Binding> inputParameters=new LinkedHashMap<>(), bindings=new LinkedHashMap<>();
         final Set<String> usedParameters=new HashSet<>(), views=new HashSet<>();
+        final boolean matchDebts;
         int nodes, selects, literals;
         Compiler(FinancialPlan plan) {
+            matchDebts=plan.debtMatchCriterion()!=null;
             if (plan.parameters()==null || plan.parameters().size()>20) throw reject("PARAMETERS");
             for (var parameter:plan.parameters()) {
                 if (parameter==null || parameter.name()==null || !parameter.name().matches("[a-z][a-z0-9_]{0,39}") ||
@@ -236,6 +239,10 @@ public final class AssistantSqlValidator {
                 else {
                     columns=catalog.columns().get(full); if (columns==null) throw reject("VIEW_NOT_ALLOWED");
                     views.add(full);name=id(table.getName());sql=q("assistant_finance")+"."+q(name);
+                    if (matchDebts && full.equals(FinancialPlan.DEBT_VIEW)) {
+                        // Apply the trusted UUID selection before any projection or aggregation.
+                        sql="(SELECT * FROM "+sql+" WHERE debt_uuid = ANY(CAST(:"+DEBT_MATCH_BINDING+" AS uuid[])))";
+                    }
                 }
                 if (table.getAlias()!=null) name=alias(table.getAlias());
             } else if (item!=null && item.getClass()==ParenthesedSelect.class) {

@@ -69,5 +69,38 @@ class AssistantPresentationLiveTest extends com.vikash_api.support.VerifiedUserF
   var metric=ask("balance","Qual é o saldo atual somado de todas as minhas contas?","metric");
   assertThat(metric.path("reply").path("presentation").toString()).contains("1.703,80");
  }
+ @Test void realGeminiChoosesDebtChartsBasedOnTheQuestion() throws Exception {
+  long id=users.findByEmail(user.getUser().getEmail()).orElseThrow().getId();
+  long foreign=users.findByEmail(other.getUser().getEmail()).orElseThrow().getId();
+  UUID debt=UUID.randomUUID();
+  jdbc.update("""
+   INSERT INTO debts(uuid,user_id,creditor,total_amount,installment_count,initially_paid_installments,paid_installments,initial_next_due_date,version)
+   VALUES (?,?,'Loja fictícia',1950.02,5,1,3,DATE '2026-02-21',0),
+          (?,?,'Credor de outra conta',9999,1,0,0,DATE '2026-02-21',0)
+   """,debt,id,UUID.randomUUID(),foreign);
+  jdbc.update("""
+   INSERT INTO transactions(uuid,user_id,account_id,debt_id,debt_installment_number,description,amount,type,payment_method,
+                            occurred_at,transcription,created_at,updated_at)
+   SELECT p.uuid,d.user_id,a.id,d.id,p.number,'Pagamento fictício',p.amount,'EXPENSE','OTHER',p.paid_at,'',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+   FROM debts d JOIN accounts a ON a.user_id=d.user_id CROSS JOIN (VALUES
+     (?::uuid,2,390.01,TIMESTAMP '2026-02-21 12:00'),(?::uuid,3,390,TIMESTAMP '2026-04-01 12:00')
+   ) AS p(uuid,number,amount,paid_at) WHERE d.uuid=?
+   """,UUID.randomUUID(),UUID.randomUUID(),debt);
+  var reply=ask("debt-months","Quanto eu tenho que pagar de dívidas por mês?","bar").path("reply");
+  var bar=reply.path("presentation").path("blocks").valueStream().filter(block->block.path("type").asText().equals("bar")).findFirst().orElseThrow();
+  assertThat(bar.path("items").size()).isEqualTo(2);
+  assertThat(bar.path("items").path(0).path("formattedValue").asText()).isEqualTo("R$ 390,00");
+  assertThat(bar.path("items").path(1).path("formattedValue").asText()).isEqualTo("R$ 390,00");
+  var pie=ask("debt-split","Como minhas dívidas se dividem entre o que já paguei e o que ainda está em aberto?","pie");
+  assertThat(pie.path("reply").path("presentation").toString()).contains("R$ 1.170,02","R$ 780,00");
+  var timeline=ask("debt-payments","Como evoluiu o valor que eu paguei em dívidas mês a mês?","line");
+  var line=timeline.path("reply").path("presentation").path("blocks").valueStream().filter(block->block.path("type").asText().equals("line")).findFirst().orElseThrow();
+  var months=line.path("items");
+  assertThat(months.size()).isEqualTo(2);
+  assertThat(months.path(0).path("label").asText()).isEqualTo("2026-02");
+  assertThat(months.path(0).path("formattedValue").asText()).isEqualTo("R$ 390,01");
+  assertThat(months.path(1).path("label").asText()).isEqualTo("2026-04");
+  assertThat(months.path(1).path("formattedValue").asText()).isEqualTo("R$ 390,00");
+ }
  @AfterAll void save() throws Exception {String file=System.getProperty("assistant.presentation.report");if(file!=null)Files.writeString(Path.of(file),mapper.writerWithDefaultPrettyPrinter().writeValueAsString(Map.of("syntheticOnly",true,"providerCalls",calls,"minimumProviderIntervalMs",7000,"cases",report)));}
 }

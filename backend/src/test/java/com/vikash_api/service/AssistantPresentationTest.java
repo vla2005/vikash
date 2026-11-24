@@ -27,6 +27,14 @@ class AssistantPresentationTest {
   assertThatThrownBy(()->p.blocks().clear()).isInstanceOf(UnsupportedOperationException.class);
  }
  @ParameterizedTest @ValueSource(strings={"pie","bar","list"}) void permitsOnlyKnownVisuals(String type){assertThat(parse(input(rows()),List.of(chart(type))).presentation().blocks().getFirst().type()).isEqualTo(type);}
+ @Test void lineRequiresChronologicalMonthsAndPreservesGaps() {
+  List<Map<String,Object>> months=List.of(Map.of("category_name","2026-02","total",390),Map.of("category_name","2026-04","total",215));
+  var line=parse(input(months),List.of(chart("line"))).presentation().blocks().getFirst();
+  assertThat(line.type()).isEqualTo("line");
+  assertThat(line.items()).extracting(FinancialReplyPresentation.Item::label).containsExactly("2026-02","2026-04");
+  for(var unsuitable:List.of(months.reversed(),months.subList(0,1),rows()))
+   assertThat(parse(input(unsuitable),List.of(chart("line"))).presentation().blocks().getFirst().type()).isEqualTo("list");
+ }
  @Test void metricMustBeNumericResultReferenceAndTitlesUseSameGrounding() {
   var block=Map.of("type","metric","title","Total em {{r0c0:text}}","caption","Consulta atual","value","{{r0c1:money}}");
   var metric=parse(input(rows()),List.of(block)).presentation().blocks().getFirst();assertThat(metric.value()).isEqualTo("R$ 150,00");assertThat(metric.title()).isEqualTo("Total em Mercado");
@@ -38,7 +46,16 @@ class AssistantPresentationTest {
   for(var change:List.of(Map.of("type","html"),Map.of("valueColumn","other_users_balance"),Map.of("labelColumn","account_uuid"),Map.of("format","html"),Map.of("title","Total R$ 9999"),Map.of("caption","<script>"),Map.of("url","https://external.test"))) {
    var block=new HashMap<String,Object>(chart("pie"));block.putAll(change);assertThatThrownBy(()->parse(input(rows()),List.of(block))).isInstanceOf(AssistantAnswerException.class);
   }
-  assertThatThrownBy(()->parse(input(rows()),List.of(chart("bar"),chart("pie")))).isInstanceOf(AssistantAnswerException.class);
+  assertThatThrownBy(()->parse(input(rows()),List.of(chart("bar"),chart("pie"),chart("bar")))).isInstanceOf(AssistantAnswerException.class);
+ }
+ @Test void twoChartsUseTheirOwnResultColumns() {
+  var base=input(rows());
+  var data=Map.of("columns",List.of("category_name","total","saida_de_caixa"),"rows",List.of(
+      Map.of("category_name","Setembro","total",150,"saida_de_caixa",90)),"rowCount",1);
+  var comparison=new FinancialAnswerInput(base.ownerUuid(),base.questionId(),base.question(),base.history(),base.plan(),mapper.writeValueAsString(data));
+  var cash=new HashMap<>(chart("bar"));cash.put("title","Saída de caixa");cash.put("valueColumn","saida_de_caixa");
+  var blocks=parse(comparison,List.of(chart("bar"),cash)).presentation().blocks();
+  assertThat(blocks).extracting(block->block.items().getFirst().formattedValue()).containsExactly("R$ 150,00","R$ 90,00");
  }
  @Test void negativeZeroHugeDuplicateAndLongSeriesUseHonestPaginatedList() {
   for(String value:List.of("-50","0","1234567890123456.78")) {

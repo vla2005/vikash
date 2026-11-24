@@ -72,6 +72,33 @@ test('preserves exact formatted large values and negative values as lists withou
   expect(renderer.root.findAllByType(PieChart.Root)).toHaveLength(0);
   expect(JSON.stringify(renderer.toJSON())).toContain('-R$ 1,23');
 });
+test('plots monthly trends and highlights a point from its accessible legend', () => {
+  const trend = presentation('line');
+  trend.blocks[0].items[0].label = '2026-02';
+  trend.blocks[0].items[1].label = '2026-05';
+  act(() => {
+    renderer = TestRenderer.create(<AssistantRichAnswer content="Evolução mensal." presentation={trend} />);
+  });
+  expect(renderer.root.findAllByProps({ testID: 'assistant-line' }).length).toBeGreaterThan(0);
+  const row = renderer.root.findAll(n => n.props.accessibilityLabel === '2026-05, R$ 50,25' && n.props.onPress)[0];
+  act(() => row.props.onPress());
+  expect(renderer.root.findAllByProps({ testID: 'line-chart-selected-point' }).length).toBeGreaterThan(0);
+  expect(renderer.root.findAll(n => n.props.accessibilityLabel === '2026-05, R$ 50,25, selecionado')[0].props.accessibilityState.selected).toBe(true);
+  trend.blocks[0].items.reverse();
+  expect(normalizeAssistantPresentation(trend).blocks[0].type).toBe('list');
+});
+test('renders consumption and cash outflow as separate charts in one reply', () => {
+  const comparison = presentation('bar');
+  comparison.blocks[0].title = 'Consumo';
+  comparison.blocks.push({ ...block('bar'), title: 'Saída de caixa' });
+  act(() => {
+    renderer = TestRenderer.create(<AssistantRichAnswer content="As duas visões." presentation={comparison} />);
+  });
+  expect(renderer.root.findAll(node => node.props.data && typeof node.props.onSelectionChange === 'function').length).toBeGreaterThanOrEqual(2);
+  expect(JSON.stringify(renderer.toJSON())).toContain('Saída de caixa');
+  comparison.blocks.push(block('pie'));
+  expect(normalizeAssistantPresentation(comparison)).toBeNull();
+});
 test('paginates long lists without deleting rows and marks limited results', () => {
   const data = presentation('list');
   data.limited = true;

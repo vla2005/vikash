@@ -18,7 +18,7 @@ Anexos ainda são recusados antes do envio à API.
    Usuário, histórico e papéis informados pelo cliente não são utilizados.
 2. `AssistantQuestionService` identifica o usuário autenticado, confere propriedade,
    limites e idempotência e persiste a pergunta em uma transação curta.
-3. `AssistantPlanningStore` reserva o processamento por até 90 segundos, com token
+3. `AssistantPlanningStore` reserva o processamento por até 120 segundos, com token
    de controle. Recupera até 12 mensagens oficiais anteriores da mesma conversa,
    limitadas a 24.000 bytes. Perguntas incompletas/falhas não entram no contexto.
    Quando habilitada, a memória acrescenta resumo de intenção e filtros persistidos
@@ -34,7 +34,7 @@ Anexos ainda são recusados antes do envio à API.
 6. `AssistantQueryExecutor` revalida o plano e exige a comprovação correspondente.
    Obtém o UUID de `AuthenticatedUserService`, nunca do plano, parâmetro ou payload.
 7. Empresta uma conexão de um pool Hikari exclusivo. Confere login, privilégios e
-   acesso apenas às sete views. Configuração incompatível bloqueia a consulta;
+   acesso apenas às views catalogadas. Configuração incompatível bloqueia a consulta;
    não existe fallback para a conexão principal da API.
 8. Inicia transação `REPEATABLE READ`, `READ ONLY`; define UUID, search_path
    `pg_catalog`, timezone, row_security e limites com `SET LOCAL`/`set_config(...,true)`.
@@ -69,23 +69,23 @@ Anexos ainda são recusados antes do envio à API.
     faz uma consulta nova. Snapshot com owner/hash/versão inválidos não é reutilizado.
 
 Nenhuma chamada Gemini mantém uma conexão leitora, transação de escrita ou lock
-aberto. A reserva tem 90 segundos; o app aguarda até 90 segundos para o fluxo completo.
+aberto. A reserva tem 120 segundos. O app aguarda até 120 segundos para o fluxo completo.
 
 ## Isolamento e permissões
 
 - `vikash_assistant_reader`: login exclusivo, sem superuser, BYPASSRLS, criação de
-  roles/bancos, herança ou memberships. SELECT somente nas sete views do catálogo.
+  roles/bancos, herança ou memberships. SELECT somente nas views do catálogo.
   Sem acesso às tabelas-base, sequências ou escrita/criação de objetos permanentes.
 - `vikash_assistant_view_owner`: NOLOGIN, sem privilégios administrativos/memberships.
   Possui schema/views e somente SELECT das colunas necessárias das tabelas-base.
   Não recebe e-mail, senha, transcrição ou outras colunas fora do contrato.
 - Views `security_barrier` no schema `assistant_finance`: accounts, cards,
-  transactions, purchases, installments, invoices e categories.
+  transactions, purchases, installments, invoices, categories e debt_installments.
 - Contexto `app.assistant_user_uuid`: UUID global do JWT resolvido pela API. Evita
   associar IDs numéricos coincidentes de bancos diferentes. Ausente, desconhecido
   ou inativo não retorna linhas; categorias padrão só aparecem com contexto válido.
 - Relacionamentos internos também conferem propriedade: movimentação/conta,
-  categoria personalizada e compra/parcela/fatura não misturam donos.
+  categoria personalizada, compra/parcela/fatura e pagamento/dívida.
 - `current_user`, permissões efetivas, owner/barreira das views e postura do owner
   são verificados a cada empréstimo. Adicionar grants indevidos bloqueia a execução.
 - SQL validado não pode trocar sessão/usuário, chamar funções arbitrárias, ler
@@ -139,7 +139,7 @@ continuar tratando pergunta, nomes e descrições como conteúdo, não instruç�
 
 ## Regras financeiras do catálogo
 
-Contrato `financial-v2-2026-10-16` em `src/main/resources/assistant/financial-catalog.json`;
+Contrato `financial-v5-2026-11-24` em `src/main/resources/assistant/financial-catalog.json`;
 prompt em `src/main/resources/prompts/financial-assistant.txt`. Sem RAG por enquanto.
 
 Despesas de conta usam EXPENSE; pagamento de fatura é saída de caixa sem repetir
@@ -195,6 +195,22 @@ roles, grants ou as configurações do leitor**. Após as tabelas, aplicar:
 6. migrations/2026-10-16-assistant-query-results.sql
 7. migrations/2026-10-16-assistant-answers.sql
 8. migrations/2026-10-17-assistant-memory.sql
+9. migrations/2026-10-17-assistant-presentation.sql
+10. migrations/2026-11-23-assistant-debt-installments.sql
+
+Em instalações existentes, aplique a migração de dívidas antes de ativar o novo
+catálogo na API. A view usa o cronograma de Contas e limita as parcelas ao usuário
+autenticado. Comparações por vencimento ou credor usam os gráficos existentes do
+chat. Consultas de pagamento por data consideram somente lançamentos no extrato.
+Quando o plano pede um filtro temático em `debtMatchCriterion`, a API envia ao
+Gemini apenas credor, descrição e um índice temporário das dívidas do usuário.
+A seleção aceita somente índices daquela lista. O leitor usa os UUIDs correspondentes
+como parâmetro validado e aplica o filtro antes de calcular valores, parcelas e
+datas. Uma seleção vazia continua vazia na consulta. Perguntas sem tema seguem
+direto para o leitor. Listas simples de dívidas com parentes e correções de
+parentesco no mesmo contexto usam `is_family_debt` diretamente. A API monta a
+lista com o resultado validado do PostgreSQL e pode responder durante um `503`
+do Gemini. Pedidos com outros recortes continuam no fluxo temático.
 
 As duas roles são criadas sem login inicialmente. Provisionar senha exclusiva e
 LOGIN somente ao leitor; nunca compartilhar a senha principal da API. Não mudar
@@ -325,7 +341,7 @@ pedem esclarecimento.
 
 ## Verificação
 
-- AssistantQueryIsolationTest: PostgreSQL 18 descartável com dois usuários, sete views,
+- AssistantQueryIsolationTest: PostgreSQL 18 descartável com dois usuários, views catalogadas,
   pool de uma conexão, concorrência, contexto ausente/inativo, parâmetros alheios,
   bloqueio de tabelas/escrita, grants indevidos, owner com login, custo/cardinalidade,
   complexidade, timeouts reais de lock/statement, tamanho de resultado, autenticação,
@@ -418,7 +434,9 @@ nova, mudança visual, commit ou push foi realizado nesta etapa.
 
 ## Respostas visuais fundamentadas
 
-O redator retorna `template` e `blocks` na mesma chamada Gemini já existente. Não há chamada adicional para desenhar, gerar imagem ou escolher estilos. O schema fechado aceita `metric`, `pie`, `bar` e `list`; no máximo três blocos e um gráfico/lista. Títulos, legendas e destaques obedecem às referências dos fatos atuais. Valores de métrica devem referenciar uma célula numérica do resultado; colunas de gráfico devem existir e usar todas as linhas desse resultado, sem pontos inventados ou escolhidos pelo modelo. Datas de filtro continuam respeitando limites exclusivos. Cálculos e comparações financeiras continuam sendo produzidos pelo SQL, não pelo redator.
+O redator retorna `template` e `blocks` na mesma chamada Gemini já existente. O schema fechado aceita `metric`, `pie`, `bar`, `line` e `list`, com até três blocos e até dois gráficos ou listas. Consumo e saída de caixa podem ocupar gráficos distintos com colunas de valor próprias. Títulos, legendas e destaques obedecem às referências dos fatos atuais. Valores de métrica devem referenciar uma célula numérica do resultado; colunas de gráfico devem existir e usar todas as linhas desse resultado, sem pontos inventados ou escolhidos pelo modelo. Datas de filtro continuam respeitando limites exclusivos. Cálculos e comparações financeiras continuam sendo produzidos pelo SQL, não pelo redator.
+
+Planejamento e redação fazem até duas retentativas curtas em respostas HTTP 502–504 do Gemini, com espera crescente e margem para o limite da requisição do chat. A retentativa chama apenas o provedor na etapa que falhou. `ASSISTANT_PLANNING_UNAVAILABLE` indica falha na comunicação com o provedor e `ASSISTANT_PLANNING_INVALID` indica resposta recebida fora do contrato do planejador.
 
 `FinancialReplyPresentation` é o contrato `financial-presentation-v1`. A API resolve referências e envia rótulo, decimal exato em string e valor já formatado em pt-BR. O JavaScript converte números somente para coordenadas do gráfico; o texto usa o formato exato da API. Gráficos com mais de doze itens, números negativos/extremos, rótulos repetidos, todos os valores zerados ou resultado potencialmente truncado viram lista. O aplicativo pagina os itens de cinco em cinco e oferece botões acessíveis equivalentes ao toque no gráfico. Não transforma soma de uma lista limitada em total geral. A apresentação é limitada a 48 KiB, sem HTML, SVG, SQL, código, URLs ou ações fornecidas pelo modelo.
 
@@ -426,6 +444,6 @@ A apresentação fica em `assistant_messages.presentation_json` da resposta ofic
 
 `AssistantRichAnswer` mantém respostas à esquerda sem balão, valores destacados, parágrafos, legenda selecionável e origem “Dados dos seus registros no ViKash”. A data exibida é a consulta, sem alegar atualização de banco/Open Finance. Logos são exclusivamente as imagens locais existentes de instituições reconhecidas; não se aceitam imagens/URLs livres do Gemini. O Pie Chart já instalado foi reutilizado. O Bar Chart veio do MCP Reacticx, com Skia/Reanimated no nativo e adaptação SVG/CSS na web. O detector de arraste foi adaptado ao toque controlado já usado na pizza; nenhum pacote npm/nativo foi instalado. Gráficos não capturam scroll vertical, não usam Number Flow, blur ou loop por quadro em JavaScript. O chat limita a janela de renderização e memoiza cada resposta.
 
-Escolha do gráfico é semântica: pizza para partes exclusivas de um mesmo conjunto, barras para comparação temporal/entre grupos, lista para lançamentos e métrica para pergunta escalar. O contrato valida fontes, limites e tipos, mas não prova toda interpretação da linguagem natural. Não deve afirmar média, tendência, causalidade ou vencimento se a consulta não trouxer essa evidência.
+O redator usa rosca para partes exclusivas do mesmo total, barras para comparar montantes, linha para evoluções mensais, lista para lançamentos e métrica para uma pergunta escalar. A linha exige pelo menos dois rótulos `AAAA-MM` em ordem cronológica. O contrato valida fontes, limites e tipos, mas não prova toda interpretação da linguagem natural. Não deve afirmar média, tendência, causalidade ou vencimento se a consulta não trouxer essa evidência.
 
 Verificação desta etapa: testes de formato/referências/limites, HTTP em PostgreSQL descartável com dois usuários, persistência/replay/adulteração, seleção/legenda/paginação/histórico local e exportações dos bundles. Três perguntas reais de dados fictícios produziram pizza, barras e saldo; seis chamadas Gemini na execução final, com intervalo mínimo de sete segundos entre CADA chamada (planejador e redator), sem chamadas extras nos replays. O ensaio inicial encontrou SQLSTATE 42803 em agrupamento parametrizado; o prompt agora exige aliases no GROUP BY/ORDER BY dessas expressões, e o cenário mensal passou. Não se fez benchmark/FPS nem teste físico de iOS/Android nesta etapa.

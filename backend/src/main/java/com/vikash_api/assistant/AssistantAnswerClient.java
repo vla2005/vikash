@@ -7,11 +7,11 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import tools.jackson.databind.*;
 
 @Slf4j @Service
@@ -46,7 +46,8 @@ public class AssistantAnswerClient {
                 "generationConfig",Map.of("candidateCount",1,"temperature",0,"maxOutputTokens",maxOutputTokens,
                     "responseFormat",Map.of("text",Map.of("mimeType","APPLICATION_JSON","schema",schema))));
             log.info("event=assistant.answer.send inputBytes={} historyTurns={} answerVersion={}",bytes,input.history().size(),AssistantAnswerFormatter.VERSION);
-            JsonNode response=client.post().uri(apiUrl).header("x-goog-api-key",apiKey).contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(JsonNode.class);
+            String raw=AssistantGeminiRequest.generate(client,apiUrl,apiKey,body);
+            JsonNode response=raw==null?null:mapper.readTree(raw);
             if(response==null || !"STOP".equals(response.path("candidates").path(0).path("finishReason").asText())) throw new AssistantAnswerException("INVALID");
             var text=new StringBuilder();
             for(var part:response.path("candidates").path(0).path("content").path("parts"))
@@ -57,7 +58,7 @@ public class AssistantAnswerClient {
         } catch(RuntimeException failure) {
             SafeDiagnostics.failure(log,"assistant.answer.failed","AssistantAnswerClient.answer",failure,SafeDiagnostics.elapsedMs(started),false);
             if(failure instanceof AssistantAnswerException known)throw known;
-            throw new AssistantAnswerException("UNAVAILABLE",failure);
+            throw new AssistantAnswerException(failure instanceof RestClientException ? "UNAVAILABLE" : "INVALID",failure);
         }
     }
 }

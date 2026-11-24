@@ -4,10 +4,14 @@ import com.vikash_api.dtos.responses.AuthResponse;
 import com.vikash_api.exceptions.*;
 import com.vikash_api.repositories.UserRepository;
 import com.vikash_api.services.AssistantPlanningStore;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -65,6 +69,95 @@ class AssistantAnswerIntegrationTest extends com.vikash_api.support.VerifiedUser
   assertThat(send(a,input).getBody()).isEqualTo(first.getBody());verify(planner,times(1)).plan(anyString(),anyList(),any());verify(writer,times(1)).answer(any());verify(executor,times(1)).execute(any(),any());
   assertThat(jdbc.queryForObject("SELECT answer_version FROM assistant_messages WHERE uuid=?",String.class,questionId("one"))).isEqualTo(AssistantAnswerFormatter.VERSION);
  }
+ @ParameterizedTest
+ @ValueSource(strings={"bar","pie","line"})
+ void debtChartsUseOnlyOwnedInstallmentsAndPreserveCents(String type) {
+  long otherUserId=users.findByEmail(b.getUser().getEmail()).orElseThrow().getId();
+  jdbc.update("""
+   INSERT INTO debts(uuid,user_id,creditor,total_amount,installment_count,initially_paid_installments,paid_installments,
+                     initial_next_due_date,version)
+   VALUES (?,?,'Loja fictícia',?,4,1,2,DATE '2026-01-31',0),
+          (?,?,'Outro credor',390,1,0,0,DATE '2026-02-21',0),
+          (?,?,'Credor de outra conta',900,1,0,0,DATE '2026-02-21',0)
+   """,UUID.randomUUID(),userId,new BigDecimal("10.03"),UUID.randomUUID(),userId,UUID.randomUUID(),otherUserId);
+  boolean distribution=type.equals("pie");
+  String sql=distribution
+    ? "SELECT CASE WHEN is_paid THEN 'Pago' ELSE 'Em aberto' END AS grupo, SUM(amount) AS total FROM assistant_finance.debt_installments GROUP BY grupo ORDER BY grupo"
+    : "SELECT TO_CHAR(due_date,'YYYY-MM') AS grupo, SUM(amount) AS total FROM assistant_finance.debt_installments WHERE is_paid = false GROUP BY grupo ORDER BY grupo";
+  when(planner.plan(anyString(),anyList(),any())).thenReturn(new FinancialPlan(
+    catalog.version(),FinancialPlan.Decision.query,"Valores das parcelas da dívida",sql,
+    List.of(),List.of("assistant_finance.debt_installments"),null));
+  doAnswer(call->formatter.parse("""
+   {"template":"Valores da consulta. {{r0c0:text}} tem {{r0c1:money}}.","blocks":[
+     {"type":"%s","title":"Dívidas","caption":"Parcelas da consulta","labelColumn":"grupo","valueColumn":"total","format":"money"}
+   ]}
+   """.formatted(type),formatter.prepare(call.getArgument(0)))).when(writer).answer(any());
+
+  var response=send(a,payload("debt-monthly","Quanto preciso pagar em dívidas por mês? Mostre um gráfico."));
+  assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+  var reply=response.getBody().path("reply");
+  assertThat(reply.path("content").asText()).contains(distribution?"R$ 395,01":"R$ 392,51");
+  var chart=reply.path("presentation").path("blocks").path(0);
+  assertThat(chart.path("type").asText()).isEqualTo(type);
+  var items=chart.path("items");
+  assertThat(items.size()).isEqualTo(2);
+  assertThat(items.path(0).path("label").asText()).isEqualTo(distribution?"Em aberto":"2026-02");
+  assertThat(items.path(0).path("value").asText()).isEqualTo(distribution?"395.01":"392.51");
+  assertThat(items.path(1).path("label").asText()).isEqualTo(distribution?"Pago":"2026-03");
+  assertThat(items.path(1).path("value").asText()).isEqualTo(distribution?"5.02":"2.50");
+ }
+ @ParameterizedTest
+ @CsvSource({"eletrônicos,R$ 120,Eletrônica fictícia", "viagens,R$ 240,Credor fictício", "educação,R$ 0,Nenhum"})
+ void freeThemeDebtSelectionUsesOwnedCandidateTextBeforeSumming(String theme,String expected,String selectedCreditor) {
+  long otherId=users.findByEmail(b.getUser().getEmail()).orElseThrow().getId();
+  jdbc.update("""
+   INSERT INTO debts(uuid,user_id,creditor,description,total_amount,installment_count,initially_paid_installments,paid_installments,initial_next_due_date,version)
+   VALUES (?,?,'Eletrônica fictícia',NULL,120,1,0,0,DATE '2026-11-21',0),
+          (?,?,'Credor fictício','Passagem para Recife',240,1,0,0,DATE '2026-11-21',0),
+          (?,?,'Mercado','Compras de casa',50,1,0,0,DATE '2026-11-21',0),
+          (?,?,'Credor de outra conta','Passagem e eletrônicos',900,1,0,0,DATE '2026-11-21',0)
+   """,UUID.randomUUID(),userId,UUID.randomUUID(),userId,UUID.randomUUID(),userId,UUID.randomUUID(),otherId);
+  when(planner.plan(anyString(),anyList(),any())).thenReturn(new FinancialPlan(catalog.version(),FinancialPlan.Decision.query,
+      "Total em aberto do tema consultado", "SELECT COALESCE(SUM(amount),0) AS total FROM assistant_finance.debt_installments WHERE is_paid = false",
+      List.of(),List.of("assistant_finance.debt_installments"),null,theme));
+  when(planner.matchDebts(eq(theme),anyList())).thenAnswer(call -> {
+   List<AssistantGeminiClient.DebtCandidate> candidates=call.getArgument(1);
+   assertThat(candidates).extracting(AssistantGeminiClient.DebtCandidate::creditor).containsExactlyInAnyOrder("Eletrônica fictícia","Credor fictício","Mercado");
+   assertThat(candidates).extracting(AssistantGeminiClient.DebtCandidate::description).contains("Passagem para Recife");
+   return candidates.stream().filter(candidate->candidate.creditor().equals(selectedCreditor)).map(AssistantGeminiClient.DebtCandidate::id).toList();
+  });
+  var response=send(a,payload("theme","Quanto devo em dívidas de "+theme+"?"));
+  assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+  assertThat(response.getBody().path("reply").path("content").asText()).contains(expected+",00");
+  verify(executor).execute(any(),any(),argThat(ids->ids.size()==(selectedCreditor.equals("Nenhum")?0:1)));
+ }
+ @Test void familyListAndCorrectionIncludeExplicitRelativesWithoutCallingGemini() {
+  long otherId=users.findByEmail(b.getUser().getEmail()).orElseThrow().getId();
+  jdbc.update("""
+   INSERT INTO debts(uuid,user_id,creditor,description,total_amount,installment_count,initially_paid_installments,paid_installments,initial_next_due_date,version)
+   VALUES (?,?,'Pai',NULL,700,7,0,0,DATE '2026-11-21',0),
+          (?,?,'Bia Prima',NULL,200,2,0,0,DATE '2026-11-21',0),
+          (?,?,'Painel de LED',NULL,500,1,0,0,DATE '2026-11-21',0),
+          (?,?,'Tia quitada',NULL,400,1,1,1,DATE '2026-11-21',0),
+          (?,?,'Outra prima',NULL,900,1,0,0,DATE '2026-11-21',0)
+   """,UUID.randomUUID(),userId,UUID.randomUUID(),userId,UUID.randomUUID(),userId,UUID.randomUUID(),userId,UUID.randomUUID(),otherId);
+  doThrow(new com.vikash_api.exceptions.AssistantPlanningException(com.vikash_api.exceptions.AssistantPlanningException.Reason.UNAVAILABLE))
+      .when(planner).plan(anyString(),anyList(),any());
+  doThrow(new AssistantAnswerException("UNAVAILABLE")).when(writer).answer(any());
+
+  var original=send(a,payload("family", "Quais dívidas eu tenho com parentes?"));
+  var correction=send(a,payload("family-correction", "Vc não considerou a minha prima como parente?"));
+  for(var response:List.of(original,correction)) {
+   assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+   assertThat(response.getBody().path("status").asText()).isEqualTo("answered");
+   var items=response.getBody().path("reply").path("presentation").path("blocks").path(0).path("items");
+   assertThat(items.valueStream().map(item->item.path("label").asText())).containsExactly("Pai","Bia Prima");
+  }
+  verify(planner,never()).plan(anyString(),anyList(),any());
+  verify(writer,never()).answer(any());
+  var otherContext=send(a,payload("different-scope", "Quais dívidas com parentes vencem este mês?"));
+  assertThat(otherContext.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+ }
  @Test void ambiguousSpendingAsksForMetricWithoutQueryOrAnswerAndChoiceUsesOwnedHistory() {
   String clarification="Você quer consumo (sem repetir faturas pagas) ou saída de caixa (incluindo faturas pagas)?";
   when(planner.plan(anyString(),anyList(),any())).thenReturn(new FinancialPlan(catalog.version(),FinancialPlan.Decision.clarify,
@@ -89,6 +182,39 @@ class AssistantAnswerIntegrationTest extends com.vikash_api.support.VerifiedUser
   assertThat(follow.getBody().path("status").asText()).isEqualTo("answered");
   assertThat(follow.getBody().path("reply").path("content").asText()).contains("Saída de caixa","Inclui faturas pagas");
   verify(executor,times(1)).execute(any(),any());verify(writer,times(1)).answer(any());
+ }
+ @Test void comparisonFollowUpUsesTheCatalogQueryAndReturnsTwoIndependentCharts() {
+  long account=jdbc.queryForObject("SELECT id FROM accounts WHERE user_id=?",Long.class,userId);
+  long category=fixture.category(userId,"Mercado");
+  long institution=jdbc.queryForObject("INSERT INTO financial_institutions(name,logo_url) VALUES ('Banco de teste','fixture') RETURNING id",Long.class);
+  long card=jdbc.queryForObject("INSERT INTO credit_cards(uuid,user_id,financial_institution_id,last_four_digits,credit_limit,unallocated_used_limit,closing_day,due_day,active,created_at,updated_at) VALUES (?,?,?,1234,500,0,1,10,true,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id",Long.class,UUID.randomUUID(),userId,institution);
+  jdbc.update("INSERT INTO transactions(uuid,user_id,account_id,custom_category_id,description,amount,type,payment_method,occurred_at,transcription,created_at,updated_at) VALUES (?,?,?,?,'Compra à vista',90,'EXPENSE','PIX',TIMESTAMP '2026-10-10 12:00:00','',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",UUID.randomUUID(),userId,account,category);
+  jdbc.update("INSERT INTO credit_card_purchases(uuid,credit_card_id,custom_category_id,description,amount,installment_count,occurred_at,transcription,created_at,updated_at) VALUES (?,?,?,'Compra no cartão',60,1,TIMESTAMP '2026-10-11 12:00:00','',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)",UUID.randomUUID(),card,category);
+  String original="Quanto gastei com mercado no mês passado?";
+  String clarification="Você quer consumo ou saída de caixa?";
+  when(planner.plan(eq(original),anyList(),any())).thenReturn(new FinancialPlan(catalog.version(),FinancialPlan.Decision.clarify,"Aguardando escolha",null,List.of(),List.of(),clarification));
+  assertThat(send(a,payload("market",original)).getBody().path("status").asText()).isEqualTo("clarification");
+
+  var example=mapper.readTree(catalog.json()).path("examples").valueStream()
+      .filter(item->item.path("question").asText().equals("Quero ambos, mas em gráficos separados.")).findFirst().orElseThrow();
+  var params=example.path("parameters").valueStream().map(p->mapper.treeToValue(p,FinancialPlan.Parameter.class)).toList();
+  when(planner.plan(eq(example.path("question").asText()),anyList(),any())).thenAnswer(call->{
+   assertThat(call.<List<FinancialPlan.Turn>>getArgument(1)).extracting(FinancialPlan.Turn::content).containsExactly(original,clarification);
+   return new FinancialPlan(catalog.version(),FinancialPlan.Decision.query,"As duas métricas para mercado em outubro",
+       example.path("sql").asText(),params,List.of("assistant_finance.transactions","assistant_finance.purchases"),null);
+  });
+  doAnswer(call->formatter.parse("""
+   {"template":"Consumo de {{r0c1:money}} e saída de caixa de {{r0c2:money}}.","blocks":[
+    {"type":"bar","title":"Consumo","caption":"","labelColumn":"periodo","valueColumn":"consumo","format":"money"},
+    {"type":"bar","title":"Saída de caixa","caption":"","labelColumn":"periodo","valueColumn":"saida_de_caixa","format":"money"}
+   ]}
+   """,formatter.prepare(call.getArgument(0)))).when(writer).answer(any());
+  var response=send(a,payload("market-both",example.path("question").asText()));
+  assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+  var charts=response.getBody().path("reply").path("presentation").path("blocks");
+  assertThat(charts.size()).isEqualTo(2);
+  assertThat(charts.valueStream().map(chart->chart.path("items").path(0).path("formattedValue").asText()))
+      .containsExactly("R$ 150,00","R$ 90,00");
  }
  @Test void providerFailurePreservesSnapshotAndRetryOnlyGeneratesAnswer() {
   doThrow(new AssistantAnswerException("UNAVAILABLE")).when(writer).answer(any());var input=payload("one","Meu saldo");
@@ -125,7 +251,7 @@ class AssistantAnswerIntegrationTest extends com.vikash_api.support.VerifiedUser
  @Test void expiredAnswerWorkerCannotOverwriteNewLease() {
   doThrow(new AssistantAnswerException("UNAVAILABLE")).when(writer).answer(any());var input=payload("one","Saldo");send(a,input);UUID id=questionId("one");
   var old=store.claim(id,userId);var answer=formatter.parse("{\"template\":\"Saldo {{r0c0:money}}.\"}",formatter.prepare(old.pendingAnswer()));
-  jdbc.update("UPDATE assistant_messages SET planning_started_at=CURRENT_TIMESTAMP-interval '100 seconds' WHERE uuid=?",id);
+  jdbc.update("UPDATE assistant_messages SET planning_started_at=CURRENT_TIMESTAMP-interval '130 seconds' WHERE uuid=?",id);
   var fresh=store.claim(id,userId);assertThat(fresh.token()).isNotEqualTo(old.token());
   assertThatThrownBy(()->store.completeAnswer(id,userId,old.token(),answer)).isInstanceOf(AssistantQuestionException.class);
   assertThat(store.completeAnswer(id,userId,fresh.token(),answer).status()).isEqualTo("answered");

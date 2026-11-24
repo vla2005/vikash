@@ -69,7 +69,8 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
     }
     void migrate() throws Exception {
         try(var connection=jdbc.getDataSource().getConnection();var statement=connection.createStatement()) {
-            for(String script:List.of("2026-10-16-assistant-financial-views.sql","2026-10-16-assistant-reader-permissions.sql","2026-10-16-assistant-query-results.sql"))
+            for(String script:List.of("2026-10-16-assistant-financial-views.sql","2026-10-16-assistant-reader-permissions.sql","2026-10-16-assistant-query-results.sql",
+                "2026-11-23-assistant-debt-installments.sql"))
                 statement.execute(Files.readString(migrations.resolve(script)));
         }
     }
@@ -88,6 +89,7 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
         long invoice=jdbc.queryForObject("INSERT INTO credit_card_invoices(uuid,credit_card_id,reference_month,initial_amount,closing_date,due_date,status,created_at,updated_at) VALUES (?,?,'2026-11',0,'2026-11-01','2026-11-10','OPEN',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id",Long.class,UUID.randomUUID(),card);
         long purchase=jdbc.queryForObject("INSERT INTO credit_card_purchases(uuid,credit_card_id,description,amount,installment_count,custom_category_id,occurred_at,transcription,created_at,updated_at) VALUES (?,?,?,?,1,?,CURRENT_TIMESTAMP,'fictício',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id",Long.class,UUID.randomUUID(),card,"Compra "+amount,amount,category);
         jdbc.update("INSERT INTO credit_card_installments(uuid,purchase_id,credit_card_invoice_id,installment_number,amount) VALUES (?,?,?,1,?)",UUID.randomUUID(),purchase,invoice,amount);
+        jdbc.update("INSERT INTO debts(uuid,user_id,creditor,total_amount,installment_count,initially_paid_installments,paid_installments,initial_next_due_date,version) VALUES (?,?,'Credor fictício',?,2,1,1,DATE '2026-11-21',0)",UUID.randomUUID(),user.getId(),amount);
         return account;
     }
     FinancialPlan plan(String sql,String view) { return new FinancialPlan(catalog.version(),FinancialPlan.Decision.query,"Teste fictício",sql,List.of(),List.of("assistant_finance."+view),null); }
@@ -110,7 +112,7 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
     void reason(Runnable action,String reason) { assertThatThrownBy(action::run).isInstanceOfSatisfying(AssistantQueryException.class,e->assertThat(e.getReason()).isEqualTo(reason)); }
 
     @Test void everyFinancialViewRestrictsRowsToAuthenticatedUuidOnReusedConnection() {
-        var expressions=Map.of("accounts","balance","cards","credit_limit","transactions","amount","purchases","amount","installments","amount","invoices","total_amount");
+        var expressions=Map.of("accounts","balance","cards","credit_limit","transactions","amount","purchases","amount","installments","amount","invoices","total_amount","debt_installments","amount");
         for(var entry:expressions.entrySet()) {
             var plan=plan("SELECT SUM("+entry.getValue()+") AS total FROM assistant_finance."+entry.getKey(),entry.getKey());
             assertThat(amount(run(executor,one,plan))).isEqualByComparingTo("100");
@@ -128,6 +130,20 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
             for(int i=0;i<12;i++) { var user=i%2==0?one:two;futures.add(threads.submit(()->assertThat(amount(run(executor,user,plan))).isEqualByComparingTo(user==one?"100":"900"))); }
             for(var future:futures) future.get(15,TimeUnit.SECONDS);
         }
+    }
+    @Test void recognizesWholeKinshipTermsInCreditorOrDescriptionWithoutPoolingUsers() {
+        var first=fixtureUser("family-one");var second=fixtureUser("family-two");
+        jdbc.update("""
+            INSERT INTO debts(uuid,user_id,creditor,description,total_amount,installment_count,initially_paid_installments,
+                              paid_installments,initial_next_due_date,version)
+            VALUES (?,?,'MÃE',NULL,100,1,0,0,DATE '2026-11-21',0),
+                   (?,?,'Pessoa fictícia','Emprestado pela minha tia.',80,1,0,0,DATE '2026-11-21',0),
+                   (?,?,'Painel de LED','Fornecedor',500,1,0,0,DATE '2026-11-21',0),
+                   (?,?,'Primo',NULL,900,1,0,0,DATE '2026-11-21',0)
+            """,UUID.randomUUID(),first.getId(),UUID.randomUUID(),first.getId(),UUID.randomUUID(),first.getId(),UUID.randomUUID(),second.getId());
+        var family=plan("SELECT SUM(amount) AS total FROM assistant_finance.debt_installments WHERE is_family_debt = true AND is_paid = false","debt_installments");
+        assertThat(amount(run(executor,first,family))).isEqualByComparingTo("180");
+        assertThat(amount(run(executor,second,family))).isEqualByComparingTo("900");
     }
     @Test void missingUnknownOrInactiveUuidReturnsNoRowsAndNumericContextIsIgnored() throws Exception {
         try(var c=reader()) {
@@ -156,7 +172,7 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
         assertThat(run(executor,two,plan).snapshot().get("rowCount")).isEqualTo(1);
     }
     @Test void readerCannotReadBaseTablesOrWriteEvenWhenReadonlySettingIsOverridden() throws Exception {
-        for(String sql:List.of("SELECT email,password FROM public.users","SELECT balance FROM public.accounts","UPDATE public.accounts SET balance=0","DELETE FROM public.accounts","CREATE TABLE public.assistant_forbidden(id int)")) {
+        for(String sql:List.of("SELECT email,password FROM public.users","SELECT balance FROM public.accounts","SELECT total_amount FROM public.debts","UPDATE public.accounts SET balance=0","DELETE FROM public.accounts","CREATE TABLE public.assistant_forbidden(id int)")) {
             try(var c=reader()) {
                 c.createStatement().execute("SET default_transaction_read_only=off");
                 assertThatThrownBy(()->c.createStatement().execute(sql)).isInstanceOf(SQLException.class);

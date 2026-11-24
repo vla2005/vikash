@@ -3,6 +3,7 @@ import com.vikash_api.assistant.*;
 import com.vikash_api.exceptions.AssistantAnswerException;
 import java.util.*;
 import org.junit.jupiter.api.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -44,5 +45,11 @@ class AssistantAnswerClientTest {
         assertThatThrownBy(()->client.answer(fixture.input())).isInstanceOf(AssistantAnswerException.class);
         server.reset();server.expect(anything()).andRespond(withSuccess(response("STOP","{\"template\":\"Total: R$ 500,00\"}"),MediaType.APPLICATION_JSON));
         assertThatThrownBy(()->client.answer(fixture.input())).isInstanceOf(AssistantAnswerException.class);
+    }
+    @Test void retriesTemporaryUnavailabilityWithTheSameGroundedAnswerInput() {
+        server.expect(anything()).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        server.expect(anything()).andRespond(withSuccess(response("STOP","{\"template\":\"Total {{r0c0:money}}.\"}"),MediaType.APPLICATION_JSON));
+        assertThat(client.answer(fixture.input()).content()).contains("1.234.567.890.123.456,78");
+        server.verify();
     }
 }

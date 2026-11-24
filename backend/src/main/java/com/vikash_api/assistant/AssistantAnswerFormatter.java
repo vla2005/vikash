@@ -30,6 +30,7 @@ public class AssistantAnswerFormatter {
         private final JsonNode result;
         private Evidence(String hash,Map<String,Object> payload,Map<String,Fact> facts,JsonNode result) { this.hash=hash;this.payload=payload;this.facts=facts;this.result=result; }
         public Map<String,Object> payload() { return payload; }
+        int rowCount() { return result.path("rows").size(); }
     }
     public static final class Answer {
         private final String content,inputHash;
@@ -174,7 +175,7 @@ public class AssistantAnswerFormatter {
         var columns=evidence.result.path("columns");var rows=evidence.result.path("rows");
         for(var block:blocks) {
             String type=block.path("type").asText();boolean metric=type.equals("metric");
-            if(!Set.of("metric","pie","bar","list").contains(type) || !block.isObject())throw invalid("VISUAL_TYPE");
+            if(!Set.of("metric","pie","bar","line","list").contains(type) || !block.isObject())throw invalid("VISUAL_TYPE");
             var keys=new HashSet<>(block.propertyNames());
             if(!keys.equals(metric?Set.of("type","title","caption","value"):Set.of("type","title","caption","labelColumn","valueColumn","format")))throw invalid("VISUAL_STRUCTURE");
             String title=caption(block.path("title"),evidence,120,true),caption=caption(block.path("caption"),evidence,240,false);
@@ -184,13 +185,14 @@ public class AssistantAnswerFormatter {
                 if(fact==null || !fact.result || !Set.of("money","number").contains(ref.group(2)) || !fact.formats.containsKey(ref.group(2)))throw invalid("VISUAL_METRIC");
                 result.add(new FinancialReplyPresentation.Block(type,title,caption,fact.formats.get(ref.group(2)),ref.group(2),List.of()));continue;
             }
-            if(++charts>1)throw invalid("VISUAL_LIMIT");
+            if(++charts>2)throw invalid("VISUAL_LIMIT");
             String label=block.path("labelColumn").asText(),value=block.path("valueColumn").asText(),format=block.path("format").asText();
             if(label.equals(value) || !Set.of("money","number").contains(format))throw invalid("VISUAL_COLUMN");
             int lc=-1,vc=-1;
             for(int i=0;i<columns.size();i++) { if(columns.path(i).asText().equals(label))lc=i;if(columns.path(i).asText().equals(value))vc=i; }
             if(lc<0 || vc<0)throw invalid("VISUAL_COLUMN");
             var items=new ArrayList<FinancialReplyPresentation.Item>();var seen=new HashSet<String>();boolean drawable=true;
+            String previousMonth="";
             for(int r=0;r<rows.size();r++) {
                 var lf=evidence.facts.get("r"+r+"c"+lc);var vf=evidence.facts.get("r"+r+"c"+vc);
                 if(lf==null || vf==null || !lf.formats.containsKey("text") && !lf.formats.containsKey("date") || !vf.formats.containsKey(format))throw invalid("VISUAL_COLUMN");
@@ -198,6 +200,10 @@ public class AssistantAnswerFormatter {
                 var cell=rows.path(r).path(value);
                 if(!cell.isNumber() || name.length()>240)throw invalid("VISUAL_VALUE");
                 if(!seen.add(name))drawable=false;
+                if(type.equals("line")) {
+                    if(!name.matches("[0-9]{4}-(0[1-9]|1[0-2])") || name.compareTo(previousMonth)<=0) drawable=false;
+                    previousMonth=name;
+                }
                 BigDecimal number=cell.decimalValue();
                 // Número exato fica em string; o gráfico só usa coordenadas seguras para JS.
                 if(number.signum()<0 || number.abs().compareTo(new BigDecimal("90071992547409"))>0 || number.signum()!=0 && number.abs().compareTo(new BigDecimal("0.000001"))<0)drawable=false;
@@ -205,7 +211,7 @@ public class AssistantAnswerFormatter {
             }
             if(items.isEmpty())continue;
             boolean positive=items.stream().anyMatch(i->new BigDecimal(i.value()).signum()>0);
-            if(items.size()>12 || !drawable || !positive || rows.size()>=100)type="list";
+            if(items.size()>12 || !drawable || !positive || rows.size()>=100 || type.equals("line") && items.size()<2)type="list";
             result.add(new FinancialReplyPresentation.Block(type,title,caption,null,format,items));
         }
         if(result.isEmpty())return null;

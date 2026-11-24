@@ -2,6 +2,7 @@ import React, { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import PieChart from '../../shared/components/reacticx/charts/pie-chart';
 import BarChart from '../../shared/components/reacticx/charts/bar-chart';
+import LineChart from '../../shared/components/reacticx/charts/line-chart';
 import InstitutionLogo from '../InstitutionLogo';
 import Icon from '../Icon';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -55,7 +56,7 @@ const FinancialBlock = memo(function FinancialBlock({ block }) {
         {!!block.caption && <Text style={s.caption}>{block.caption}</Text>}
       </View>
     );
-  const isChart = ['pie', 'bar'].includes(block.type),
+  const isChart = ['pie', 'bar', 'line'].includes(block.type),
     pages = Math.ceil(block.items.length / PAGE);
   const select = index => {
     setSelected(previous => (previous === index ? -1 : index));
@@ -110,6 +111,8 @@ const FinancialBlock = memo(function FinancialBlock({ block }) {
                 </Text>
               </View>
             </>
+          ) : block.type === 'line' ? (
+            <LineChart data={data} selectedIndex={selected} color={amberAccent.dark} />
           ) : (
             <BarChart.Root
               data={data}
@@ -163,7 +166,7 @@ const FinancialBlock = memo(function FinancialBlock({ block }) {
             {institution ? (
               <InstitutionLogo institution={institution} size={32} />
             ) : (
-              <View style={[s.dot, { backgroundColor: data[index].color }]} />
+              <View style={[s.dot, { backgroundColor: block.type === 'line' ? amberAccent.dark : data[index].color }]} />
             )}
             <Text style={[s.rowName, active && s.selectedText]}>
               {item.label}

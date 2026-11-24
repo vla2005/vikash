@@ -50,7 +50,7 @@ class AssistantMemoryIntegrationTest extends com.vikash_api.support.VerifiedUser
   assertThat(send(auth,payload("clear","Agora todos os bancos e todas as categorias")).getStatusCode().is2xxSuccessful()).isTrue();assertThat(state().view().filters()).doesNotContainKeys("institution","category").containsEntry("paymentMethod","PIX");
  }
  @Test void olderFailedQuestionCannotOverwriteNewerCheckpoint(){
-  intro();doThrow(new AssistantPlanningException("Synthetic failure")).when(gemini).planWithMemory(anyString(),anyList(),any(),any());var old=payload("old","Gastos do Inter");assertThat(send(auth,old).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+  intro();doThrow(new AssistantPlanningException(AssistantPlanningException.Reason.UNAVAILABLE)).when(gemini).planWithMemory(anyString(),anyList(),any(),any());var old=payload("old","Gastos do Inter");assertThat(send(auth,old).getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
   doAnswer(call->turn(call.getArgument(3),call.getArgument(0),List.of(patch("institution","Nubank","Nubank")))).when(gemini).planWithMemory(anyString(),anyList(),any(),any());assertThat(send(auth,payload("new","Agora Nubank")).getStatusCode().is2xxSuccessful()).isTrue();var newer=state();
   doAnswer(call->{AssistantMemory.Context context=call.getArgument(3);assertThat(context.state().view().filters()).containsEntry("institution","Inter");return turn(context,call.getArgument(0),List.of(patch("institution","Inter","Inter")));}).when(gemini).planWithMemory(anyString(),anyList(),any(),any());
   assertThat(send(auth,old).getStatusCode().is2xxSuccessful()).isTrue();assertThat(state()).isEqualTo(newer);

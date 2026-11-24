@@ -1,5 +1,5 @@
 {
-  "version": "financial-v2-2026-10-16",
+  "version": "financial-v5-2026-11-24",
   "dialect": "PostgreSQL 18",
   "timezone": "America/Sao_Paulo",
   "currency": "BRL",
@@ -104,6 +104,22 @@
       }
     },
     {
+      "name": "assistant_finance.debt_installments",
+      "grain": "Uma linha por parcela de dívida cadastrada em Contas, inclusive parcelas marcadas como pagas. Não inclui faturas nem parcelas de cartão. Some amount com o filtro desejado; installment_count se repete e não deve ser somado.",
+      "columns": {
+        "debt_uuid": "uuid de agrupamento da dívida; não exibir",
+        "creditor": "text",
+        "description": "text nullable",
+        "installment_number": "integer, começando em 1",
+        "installment_count": "integer",
+        "amount": "numeric(12,2), valor da parcela",
+        "due_date": "date, vencimento original da parcela em aberto; nulo se paga",
+        "is_paid": "boolean, inclui parcelas já pagas informadas ao cadastrar a dívida",
+        "paid_at": "timestamp sem timezone em America/Sao_Paulo, data do pagamento registrado no extrato; nulo quando não há lançamento associado",
+        "is_family_debt": "boolean legado; use debtMatchCriterion para perguntas sobre parentesco e outros temas"
+      }
+    },
+    {
       "name": "assistant_finance.categories",
       "grain": "Categorias padrão e personalizadas visíveis ao usuário. Nomes não são IDs nem necessariamente únicos.",
       "columns": {
@@ -120,7 +136,7 @@
     "Consumo combinado: despesas EXPENSE das contas + compras totais de cartão por occurred_at. Não adicionar pagamentos de fatura nem parcelas a essa soma.",
     "Consumo mede compras/despesas no período em que ocorreram. Pagamento de fatura quita compras e não é novo consumo; excluí-lo evita contar compra e quitação duas vezes, não significa que os registros estejam duplicados.",
     "Saída de caixa mede dinheiro que efetivamente saiu das contas no período, incluindo faturas pagas nesse período, mesmo quando as compras ocorreram antes. Não somar purchases, installments ou totais de invoices à saída de caixa: o pagamento já está em transactions.",
-    "Pedido explícito de consumo, pela data da compra ou sem pagamentos de fatura resolve o critério de consumo. Pedido de saída de caixa, dinheiro que saiu das contas ou incluindo pagamentos de fatura resolve saída de caixa. Contas/cartões/ambos é escopo, não resolve sozinho consumo versus caixa. Após definir consumo, pedir escopo somente se ausente; não exigir banco ou método para agregados de todas as contas.",
+    "Pedido explícito de consumo, pela data da compra ou sem pagamentos de fatura resolve o critério de consumo. Pedido de saída de caixa, dinheiro que saiu das contas ou incluindo pagamentos de fatura resolve saída de caixa. Contas/cartões é escopo. Após uma escolha entre consumo e saída de caixa, ambos significa as duas métricas e mantém o escopo da pergunta. Se as duas métricas forem pedidas sem restringir escopo, use contas e cartões para consumo e contas para caixa.",
     "Reutilizar o critério que o usuário escolheu para continuações como e no mês passado, sem perguntar de novo; uma mudança explícita de critério prevalece sobre o histórico e a memória. Se pedir as duas visões, retornar métricas separadas e nunca somá-las. Em interpretation informar a visão, o escopo, o período e o tratamento dos pagamentos de fatura para o redator explicar o resultado.",
     "Gastos do cartão por compra: purchases e occurred_at. Compromissos mensais do cartão: installments e reference_month. Fatura a pagar: invoices e status.",
     "Gastos, despesas e quanto gastei são ambíguos entre consumo e saída de caixa, mesmo com conta, banco, categoria e período definidos. Sem escolha explícita do usuário na pergunta ou no contexto, decision=clarify, sem SQL. Perguntar: Você quer consumo (compras e despesas, sem contar novamente as faturas pagas) ou saída de caixa (dinheiro que saiu das contas, incluindo faturas pagas)? Não escolher consumo como padrão. Uma suposição/resposta anterior do assistente não é escolha do usuário.",
@@ -138,6 +154,31 @@
     "Parâmetros SQL são nomeados (:inicio, :fim, :instituicao, :valor_minimo); cada referência tem um item em parameters. Não interpolar texto do usuário em SQL nem usar $1 ou ?. Não criar parâmetro de usuário."
   ],
   "examples": [
+    {
+      "question": "Quero ambos, mas em gráficos separados.",
+      "context": "O usuário perguntou quanto gastou com mercado no mês passado e escolheu as duas métricas na pergunta de esclarecimento. As datas ilustram a consulta em novembro de 2026.",
+      "decision": "query",
+      "sql": "WITH gastos AS (SELECT CASE WHEN is_consumption = true THEN amount ELSE 0 END AS consumo, amount AS saida_de_caixa FROM assistant_finance.transactions WHERE is_cash_outflow = true AND category_name ILIKE :categoria AND occurred_at >= CAST(:inicio AS timestamp) AND occurred_at < CAST(:fim AS timestamp) UNION ALL SELECT amount AS consumo, 0 AS saida_de_caixa FROM assistant_finance.purchases WHERE category_name ILIKE :categoria AND occurred_at >= CAST(:inicio AS timestamp) AND occurred_at < CAST(:fim AS timestamp)) SELECT CAST(:periodo AS text) AS periodo, COALESCE(SUM(consumo), 0) AS consumo, COALESCE(SUM(saida_de_caixa), 0) AS saida_de_caixa FROM gastos",
+      "parameters": [
+        { "name": "categoria", "type": "text", "value": "%mercado%" },
+        { "name": "inicio", "type": "date", "value": "2026-10-01" },
+        { "name": "fim", "type": "date", "value": "2026-11-01" },
+        { "name": "periodo", "type": "text", "value": "Outubro de 2026" }
+      ]
+    },
+    {
+      "question": "Quais dívidas ativas são de compras de eletrônicos?",
+      "decision": "query",
+      "debtMatchCriterion": "Dívidas de compras de eletrônicos",
+      "sql": "SELECT creditor, description, SUM(amount) AS saldo_em_aberto FROM assistant_finance.debt_installments WHERE is_paid = false GROUP BY debt_uuid, creditor, description ORDER BY saldo_em_aberto DESC",
+      "parameters": []
+    },
+    {
+      "question": "Quanto tenho que pagar em dívidas por mês?",
+      "decision": "query",
+      "sql": "SELECT TO_CHAR(due_date, 'YYYY-MM') AS mes, SUM(amount) AS total FROM assistant_finance.debt_installments WHERE is_paid = false GROUP BY mes ORDER BY mes",
+      "parameters": []
+    },
     {
       "question": "Qual foi meu consumo nas contas por categoria em setembro de 2026, sem pagamentos de fatura?",
       "decision": "query",

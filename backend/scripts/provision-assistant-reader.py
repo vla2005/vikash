@@ -32,7 +32,8 @@ def main():
     if not password or not re.fullmatch(r"[A-Za-z0-9_-]{30,100}",password):
         raise SystemExit("Forneça uma senha exclusiva de 30–100 caracteres seguros via ambiente; no local, permita gerar com --enable-local.")
     sql="\n".join((root/"migrations"/name).read_text(encoding="utf-8") for name in (
-        "2026-10-16-assistant-financial-views.sql","2026-10-16-assistant-reader-permissions.sql","2026-10-16-assistant-query-results.sql","2026-10-16-assistant-answers.sql","2026-10-17-assistant-memory.sql","2026-10-17-assistant-presentation.sql"))
+        "2026-10-16-assistant-financial-views.sql","2026-10-16-assistant-reader-permissions.sql","2026-10-16-assistant-query-results.sql","2026-10-16-assistant-answers.sql","2026-10-17-assistant-memory.sql","2026-10-17-assistant-presentation.sql",
+        "2026-11-23-assistant-debt-installments.sql"))
     sql+="\nALTER ROLE vikash_assistant_reader LOGIN PASSWORD '"+password+"';\n"
     command=["docker","exec","-i",args.container,"sh","-c",'exec psql -X -v ON_ERROR_STOP=1 -q -U "$POSTGRES_USER" -d "$1"',"assistant-setup",args.database]
     result=subprocess.run(command,input=sql,text=True,encoding="utf-8",capture_output=True)

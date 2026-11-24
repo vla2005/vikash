@@ -104,7 +104,7 @@ class AssistantPlanningIntegrationTest extends com.vikash_api.support.VerifiedUs
         assertThat(body.path("reply").path("content").asText()).contains("Não consigo responder").doesNotContain("Texto não exibido");
     }
     @Test void providerFailureKeepsOneQuestionAndRetryUsesSameId() {
-        when(gemini.plan(anyString(), anyList(), any())).thenThrow(new AssistantPlanningException("secret provider detail"));
+        when(gemini.plan(anyString(), anyList(), any())).thenThrow(new AssistantPlanningException(AssistantPlanningException.Reason.UNAVAILABLE, new RuntimeException("secret provider detail")));
         var input = payload("one", "Pergunta fictícia");
         var failed = send(auth, input);
         assertThat(failed.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
@@ -118,6 +118,12 @@ class AssistantPlanningIntegrationTest extends com.vikash_api.support.VerifiedUs
         var retry = send(auth, input).getBody();
         assertThat(retry.path("message").path("id").asText()).isEqualTo(saved.getUuid().toString());
         assertThat(messages.countByConversationId(conv.getId())).isEqualTo(2);
+    }
+    @Test void invalidProviderPlanIsReportedSeparatelyFromUnavailability() {
+        when(gemini.plan(anyString(), anyList(), any())).thenThrow(new AssistantPlanningException(AssistantPlanningException.Reason.INVALID));
+        var failed = send(auth, payload("invalid-plan", "Pergunta fictícia"));
+        assertThat(failed.getStatusCode()).isEqualTo(HttpStatus.BAD_GATEWAY);
+        assertThat(failed.getBody().path("code").asText()).isEqualTo("ASSISTANT_PLANNING_INVALID");
     }
     @Test void followUpUsesOnlyServerOwnedHistoryNotClientRoles() {
         send(auth, payload("one", "Gastos nas contas Inter"));
@@ -160,7 +166,7 @@ class AssistantPlanningIntegrationTest extends com.vikash_api.support.VerifiedUs
         var first = send(auth, payload("one", "Fictícia"));
         var q = question(first.getBody(), "one");
         q.setStatus("planning"); q.setReplyUuid(null); q.setProposalJson(null);
-        q.setPlanningToken(UUID.randomUUID()); q.setPlanningStartedAt(Instant.now().minusSeconds(100)); messages.save(q);
+        q.setPlanningToken(UUID.randomUUID()); q.setPlanningStartedAt(Instant.now().minusSeconds(130)); messages.save(q);
         var oldToken = q.getPlanningToken();
         var claim = store.claim(q.getUuid(), userId());
         assertThat(claim.token()).isNotEqualTo(oldToken);

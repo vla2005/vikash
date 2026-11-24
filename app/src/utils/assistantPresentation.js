@@ -26,7 +26,7 @@ export function normalizeAssistantPresentation(value) {
     let charts = 0;
     const blocks = value.blocks.map(block => {
       if (
-        !['metric', 'pie', 'bar', 'list'].includes(block.type) ||
+        !['metric', 'pie', 'bar', 'line', 'list'].includes(block.type) ||
         !safeText(block.title, 360) ||
         !block.title.trim() ||
         !safeText(block.caption, 720) ||
@@ -46,7 +46,7 @@ export function normalizeAssistantPresentation(value) {
           items: [],
         };
       }
-      if (++charts > 1 || !block.items.length || block.items.length > 100)
+      if (++charts > 2 || !block.items.length || block.items.length > 100)
         throw new Error();
       const labels = new Set();
       const items = block.items.map(item => {
@@ -65,7 +65,12 @@ export function normalizeAssistantPresentation(value) {
           formattedValue: item.formattedValue,
         };
       });
+      const orderedMonths = items.length >= 2 && items.every((item, index) =>
+        /^[0-9]{4}-(0[1-9]|1[0-2])$/.test(item.label) &&
+        (index === 0 || item.label > items[index - 1].label),
+      );
       const drawable =
+        (block.type !== 'line' || orderedMonths) &&
         labels.size === items.length &&
         items.length <= 12 &&
         items.every(

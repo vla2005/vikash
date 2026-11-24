@@ -63,12 +63,17 @@ public class AssistantQueryExecutor implements AutoCloseable {
         return readerPool;
     }
     public QueryResult execute(FinancialPlan plan,AssistantSqlValidator.ValidatedSql supplied) {
+        return execute(plan, supplied, null);
+    }
+
+    public QueryResult execute(FinancialPlan plan,AssistantSqlValidator.ValidatedSql supplied,List<UUID> matchedDebts) {
         if (!isEnabled()) throw new AssistantQueryException("READER_UNAVAILABLE");
         if (TransactionSynchronizationManager.isActualTransactionActive()) throw new AssistantQueryException("ISOLATION_GUARD");
         var user=auth.getCurrentUser();
         if (!user.isActive() || user.getUuid()==null) throw new AccessDeniedException("Sessão indisponível para consulta.");
         var validated=validator.validate(plan); // Nunca executar coluna/cache sem revalidar.
         if (supplied==null || !supplied.matches(plan) || !supplied.fingerprint().equals(validated.fingerprint())) throw new AssistantSqlRejectedException("EXECUTION_PROOF");
+        if ((plan.debtMatchCriterion()==null) != (matchedDebts==null)) throw new AssistantSqlRejectedException("DEBT_MATCH_PROOF");
         long started=System.nanoTime();
         log.info("event=assistant.query.start executionVersion={} policyVersion={}",VERSION,AssistantSqlValidator.POLICY_VERSION);
         try (var connection=pool().getConnection()) {
@@ -78,6 +83,11 @@ public class AssistantQueryExecutor implements AutoCloseable {
                 try (var statement=connection.createStatement()) { statement.execute("SET TRANSACTION READ ONLY"); }
                 configure(connection,user.getUuid());
                 var values=new MapSqlParameterSource();validated.bindings().forEach((name,binding)->values.addValue(name,binding.value()));
+                if (matchedDebts!=null) {
+                    var ids=new StringJoiner(",", "{", "}");
+                    matchedDebts.forEach(uuid -> ids.add(uuid.toString()));
+                    values.addValue(AssistantSqlValidator.DEBT_MATCH_BINDING,ids.toString());
+                }
                 var parsed=NamedParameterUtils.parseSqlStatement(validated.sql());
                 String sql=NamedParameterUtils.substituteNamedParameters(parsed,values);
                 Object[] arguments=NamedParameterUtils.buildValueArray(parsed,values,null);

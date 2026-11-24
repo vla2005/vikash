@@ -12,7 +12,7 @@ public record FinancialReplyPresentation(String version,List<Block> blocks,Strin
     public static Map<String,Object> schema() {
         var text=Map.of("type","string","maxLength",240);
         var metric=Map.of("type","object","properties",Map.of("type",Map.of("type","string","enum",List.of("metric")),"title",text,"caption",text,"value",text),"required",List.of("type","title","caption","value"),"additionalProperties",false);
-        var chart=Map.of("type","object","properties",Map.of("type",Map.of("type","string","enum",List.of("pie","bar","list")),"title",text,"caption",text,"labelColumn",text,"valueColumn",text,"format",Map.of("type","string","enum",List.of("money","number"))),"required",List.of("type","title","caption","labelColumn","valueColumn","format"),"additionalProperties",false);
+        var chart=Map.of("type","object","properties",Map.of("type",Map.of("type","string","enum",List.of("pie","bar","line","list")),"title",text,"caption",text,"labelColumn",text,"valueColumn",text,"format",Map.of("type","string","enum",List.of("money","number"))),"required",List.of("type","title","caption","labelColumn","valueColumn","format"),"additionalProperties",false);
         return Map.of("type","object","properties",Map.of("template",Map.of("type","string","maxLength",4000),"blocks",Map.of("type","array","maxItems",3,"items",Map.of("anyOf",List.of(metric,chart)))),"required",List.of("template","blocks"),"additionalProperties",false);
     }
 }

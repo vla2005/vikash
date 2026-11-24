@@ -5,6 +5,7 @@ import com.vikash_api.exceptions.AssistantPlanningException;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.http.client.MockClientHttpRequest;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -23,14 +24,17 @@ class AssistantGeminiClientTest {
         catalog = new FinancialCatalog(mapper);
         client = new AssistantGeminiClient(mapper, catalog, "https://gemini.test/plan", "fake-key");
         var builder = RestClient.builder(); server = MockRestServiceServer.bindTo(builder).build();
-        ReflectionTestUtils.setField(client, "client", builder.build());
+        var restClient = builder.build();
+        ReflectionTestUtils.setField(client, "client", restClient);
+        ReflectionTestUtils.setField(client, "debtClient", restClient);
     }
     Map<String,Object> proposal() {
         var root = new LinkedHashMap<String,Object>();
         root.put("catalogVersion", catalog.version()); root.put("decision", "query"); root.put("interpretation", "Contas neste mês");
         root.put("sql", "SELECT SUM(amount) FROM assistant_finance.transactions WHERE occurred_at >= CAST(:inicio AS timestamp)");
         root.put("parameters", List.of(Map.of("name", "inicio", "type", "date", "value", "2026-10-01")));
-        root.put("views", List.of("assistant_finance.transactions")); root.put("clarification", null); return root;
+        root.put("views", List.of("assistant_finance.transactions")); root.put("clarification", null);
+        root.put("debtMatchCriterion", null); return root;
     }
     String response(String finish, String text) {
         return mapper.writeValueAsString(Map.of("candidates", List.of(Map.of("finishReason", finish,
@@ -57,10 +61,45 @@ class AssistantGeminiClientTest {
     }
     @Test void rejectsTruncationAndProviderFailures() {
         server.expect(anything()).andRespond(withSuccess(response("MAX_TOKENS", "{}"), MediaType.APPLICATION_JSON));
-        assertThatThrownBy(() -> client.plan("Fictícia", List.of(), now)).isInstanceOf(AssistantPlanningException.class);
+        assertThatThrownBy(() -> client.plan("Fictícia", List.of(), now)).isInstanceOfSatisfying(AssistantPlanningException.class,
+            error -> assertThat(error.getReason()).isEqualTo(AssistantPlanningException.Reason.INVALID));
         server.reset();
         server.expect(anything()).andRespond(withServerError());
         assertThatThrownBy(() -> client.plan("Fictícia", List.of(), now)).isInstanceOf(AssistantPlanningException.class);
+    }
+    @Test void retriesTemporaryProviderUnavailabilityBeforeReturningThePlan() {
+        server.expect(anything()).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        server.expect(anything()).andRespond(withSuccess(response("STOP", mapper.writeValueAsString(proposal())), MediaType.APPLICATION_JSON));
+        assertThat(client.plan("Fictícia", List.of(), now).decision()).isEqualTo(FinancialPlan.Decision.query);
+        server.verify();
+    }
+    @Test void temporaryFailuresStopAfterThreeAttempts() {
+        server.expect(org.springframework.test.web.client.ExpectedCount.times(3), anything())
+            .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        assertThatThrownBy(() -> client.plan("Fictícia", List.of(), now)).isInstanceOfSatisfying(AssistantPlanningException.class,
+            error -> assertThat(error.getReason()).isEqualTo(AssistantPlanningException.Reason.UNAVAILABLE));
+        server.verify();
+    }
+    @Test void debtMatchingUsesCandidateTextAndRejectsInventedIds() {
+        var candidates = List.of(new AssistantGeminiClient.DebtCandidate(0,"Loja fictícia","Monitor ultrawide"),
+            new AssistantGeminiClient.DebtCandidate(1,"Outro credor","Passagem para Recife"));
+        server.expect(anything()).andExpect(request -> {
+            var body=mapper.readTree(((MockClientHttpRequest)request).getBodyAsString());
+            var input=mapper.readTree(body.path("contents").path(0).path("parts").path(0).path("text").asText());
+            assertThat(input.path("criterion").asText()).isEqualTo("Viagens");
+            assertThat(input.path("debts").path(0).propertyNames()).containsExactlyInAnyOrder("id","creditor","description");
+            assertThat(input.path("debts").path(1).path("description").asText()).isEqualTo("Passagem para Recife");
+        }).andRespond(withSuccess(response("STOP","{\"ids\":[1]}"), MediaType.APPLICATION_JSON));
+        assertThat(client.matchDebts("Viagens",candidates)).containsExactly(1);
+        server.verify();
+        server.reset();
+        server.expect(anything()).andRespond(withSuccess(response("STOP","{\"ids\":[2]}"), MediaType.APPLICATION_JSON));
+        assertThatThrownBy(()->client.matchDebts("Viagens",candidates)).isInstanceOfSatisfying(AssistantPlanningException.class,
+            error -> assertThat(error.getReason()).isEqualTo(AssistantPlanningException.Reason.INVALID));
+    }
+    @Test void cannotApplyDebtMatchingToAnUnrelatedQuery() {
+        var proposed=proposal();proposed.put("debtMatchCriterion","Viagens");
+        assertThatThrownBy(()->client.parse(mapper.writeValueAsString(proposed))).isInstanceOf(AssistantPlanningException.class);
     }
     @Test void rejectsOversizedContextBeforeNetwork() {
         ReflectionTestUtils.setField(client, "maxInputBytes", 100);

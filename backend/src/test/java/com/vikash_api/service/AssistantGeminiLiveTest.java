@@ -14,6 +14,23 @@ import static org.assertj.core.api.Assertions.*;
 class AssistantGeminiLiveTest {
     final JsonMapper mapper = JsonMapper.builder().build();
     final ZonedDateTime now = ZonedDateTime.parse("2026-10-16T12:00:00-03:00[America/Sao_Paulo]");
+
+    @Test void plansAndSelectsDebtsByFreeThemeUsingSyntheticRecords() throws Exception {
+        var catalog = new FinancialCatalog(mapper);
+        String key = System.getenv("ASSISTANT_LIVE_GEMINI_API_KEY");
+        assertThat(key).isNotBlank();
+        var client = new AssistantGeminiClient(mapper, catalog,
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent", key);
+        var plan = client.plan("Quais dívidas ativas são compras de eletrônicos?", List.of(), now);
+        assertThat(plan.decision()).isEqualTo(FinancialPlan.Decision.query);
+        assertThat(plan.debtMatchCriterion()).isNotBlank();
+        assertThat(new AssistantSqlValidator(catalog).validate(plan).matches(plan)).isTrue();
+        var candidates = List.of(new AssistantGeminiClient.DebtCandidate(0, "Credor fictício", "Monitor ultrawide"),
+            new AssistantGeminiClient.DebtCandidate(1, "Loja fictícia", "Passagem aérea para Recife"),
+            new AssistantGeminiClient.DebtCandidate(2, "Outro credor", null));
+        assertThat(client.matchDebts(plan.debtMatchCriterion(), candidates)).containsExactly(0);
+        assertThat(client.matchDebts("Dívidas relacionadas a viagens", candidates)).containsExactly(1);
+    }
     @Test void evaluatesRealGeminiWithSyntheticFinancialQuestionsAndFollowUp() throws Exception {
         var catalog = new FinancialCatalog(mapper);
         String key = System.getenv("ASSISTANT_LIVE_GEMINI_API_KEY");
@@ -43,8 +60,7 @@ class AssistantGeminiLiveTest {
                 int attempts = 1;
                 try { plan = client.plan(c.question(), c.history(), now); }
                 catch (com.vikash_api.exceptions.AssistantPlanningException failure) {
-                    // Uma repetição somente no smoke test para indisponibilidade HTTP 503.
-                    // O endpoint real continua exigindo reenvio explícito, sem retry automático.
+                    // Nova tentativa do smoke test, além das retentativas curtas do cliente.
                     if (!(failure.getCause() instanceof org.springframework.web.client.RestClientResponseException response) ||
                             response.getStatusCode().value() != 503) throw failure;
                     attempts++;

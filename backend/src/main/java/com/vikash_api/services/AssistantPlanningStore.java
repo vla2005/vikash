@@ -28,6 +28,7 @@ public class AssistantPlanningStore {
     @org.springframework.beans.factory.annotation.Value("${assistant.memory.enabled:false}") private boolean memoryEnabled=false;
     private static final Set<String> COMPLETE=Set.of("planned","queried","answered","clarification","unsupported");
     private static final Set<String> RUNNING=Set.of("planning","answering");
+    private static final int CLAIM_TIMEOUT_SECONDS=120;
     public record Claim(UUID token,String question,List<FinancialPlan.Turn> history,AssistantMessageResponse cached,FinancialAnswerInput pendingAnswer,AssistantMemory.Context memory) {}
     @Transactional(readOnly=true)
     public Optional<AssistantMessageResponse> completed(UUID id,Long userId) {
@@ -39,7 +40,7 @@ public class AssistantPlanningStore {
         var question=owned(id,userId,true);
         entityManager.refresh(question.getConversation(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         if(isComplete(question))return new Claim(null,null,List.of(),response(question,userId),null,null);
-        var cutoff=Instant.now().minusSeconds(90);
+        var cutoff=Instant.now().minusSeconds(CLAIM_TIMEOUT_SECONDS);
         boolean live=RUNNING.contains(question.getStatus()) && question.getPlanningStartedAt()!=null && question.getPlanningStartedAt().isAfter(cutoff);
         if(live || messages.existsByConversationIdAndStatusInAndPlanningStartedAtAfter(question.getConversation().getId(),RUNNING,cutoff))throw busy();
         boolean resume=answers.isEnabled() && validResult(question);
@@ -74,7 +75,7 @@ public class AssistantPlanningStore {
         var question=owned(id,userId,true);checkLease(question,token);
         var conversation=question.getConversation();entityManager.refresh(conversation,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         var actual=memoryContext(question);
-        if(base==null || !memory.hash(base).equals(memory.hash(actual)))throw new AssistantPlanningException("O contexto da pergunta mudou. Tente novamente.");
+        if(base==null || !memory.hash(base).equals(memory.hash(actual)))throw new AssistantPlanningException(AssistantPlanningException.Reason.CONTEXT_CHANGED);
         var next=memory.apply(update,base,question.getContent(),question.getId(),now());
         question.setMemoryContextJson(memory.json(next));question.setMemoryContextHash(AssistantSqlValidator.fingerprint(question.getMemoryContextJson()));
         var current=memory.restore(conversation.getMemoryJson(),conversation.getMemoryHash(),conversation.getUser().getUuid(),conversation.getUuid(),Long.MAX_VALUE);
@@ -131,7 +132,7 @@ public class AssistantPlanningStore {
         return finish(question,userId,"answered",answer.content(),presentation);
     }
     private void checkLease(AssistantMessageEntity question,UUID token) {
-        if(token==null || !token.equals(question.getPlanningToken()) || question.getPlanningStartedAt()==null || question.getPlanningStartedAt().isBefore(Instant.now().minusSeconds(90)))throw busy();
+        if(token==null || !token.equals(question.getPlanningToken()) || question.getPlanningStartedAt()==null || question.getPlanningStartedAt().isBefore(Instant.now().minusSeconds(CLAIM_TIMEOUT_SECONDS)))throw busy();
     }
     private void checkProof(AssistantMessageEntity question,FinancialPlan plan,AssistantSqlValidator.ValidatedSql validated,AssistantQueryExecutor.QueryResult result) {
         if(plan.decision()==FinancialPlan.Decision.query && (validated==null || !validated.matches(plan)))throw new AssistantSqlRejectedException("PROOF_REQUIRED");
@@ -139,7 +140,7 @@ public class AssistantPlanningStore {
     }
     private void savePlan(AssistantMessageEntity question,FinancialPlan plan,AssistantSqlValidator.ValidatedSql validated,AssistantQueryExecutor.QueryResult result) {
         String json=mapper.writeValueAsString(plan);
-        if(json.length()>24000)throw new AssistantPlanningException("Proposta excedeu o limite de armazenamento.");
+        if(json.length()>24000)throw new AssistantPlanningException(AssistantPlanningException.Reason.INVALID);
         question.setCatalogVersion(plan.catalogVersion());question.setProposalJson(json);clearValidation(question);
         if(validated!=null) {
             question.setSqlValidationVersion(AssistantSqlValidator.POLICY_VERSION);question.setValidatedSql(validated.sql());

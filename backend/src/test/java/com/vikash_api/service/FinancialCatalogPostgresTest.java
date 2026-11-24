@@ -8,9 +8,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
@@ -29,10 +27,12 @@ class FinancialCatalogPostgresTest {
     @Autowired ObjectMapper mapper;
     @Test void realPostgresMatchesCatalogAndViewsIsolateUsersWithoutDoubleCounting() throws Exception {
         assertThat(System.getenv("ASSISTANT_TEST_DB_URL")).contains("/assistant_catalog_test");
-        try (var connection = Objects.requireNonNull(jdbc.getDataSource()).getConnection()) {
-            var migration = Path.of(System.getProperty("basedir"), "migrations", "2026-10-16-assistant-financial-views.sql");
-            ScriptUtils.executeSqlScript(connection, new FileSystemResource(migration));
-            ScriptUtils.executeSqlScript(connection, new FileSystemResource(migration)); // idempotente
+        try (var connection = Objects.requireNonNull(jdbc.getDataSource()).getConnection(); var statement = connection.createStatement()) {
+            var migrations = Path.of(System.getProperty("basedir"), "migrations");
+            for (String name : List.of("2026-10-16-assistant-financial-views.sql", "2026-10-16-assistant-reader-permissions.sql",
+                    "2026-11-23-assistant-debt-installments.sql")) {
+                statement.execute(Files.readString(migrations.resolve(name)));
+            }
         }
         var definition = mapper.readTree(catalog.json());
         for (var view : definition.path("views")) {

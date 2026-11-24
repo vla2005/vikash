@@ -70,9 +70,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AssistantPlanningException.class)
     public ResponseEntity<ErrorResponse> handleAssistantPlanning(AssistantPlanningException ex, HttpServletRequest request) {
         SafeDiagnostics.failure(log, "assistant.plan.failed", "assistant.plan", ex, 0, true);
-        var response = buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, "Assistant Planning Unavailable",
-                "Sua pergunta foi salva, mas não foi possível prepará-la agora. Tente enviar novamente.", request.getRequestURI(), null);
-        response.getBody().setCode("ASSISTANT_PLANNING_UNAVAILABLE");
+        var status = switch (ex.getReason()) {
+            case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case INVALID -> HttpStatus.BAD_GATEWAY;
+            case CONTEXT_LIMIT -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case CONTEXT_CHANGED -> HttpStatus.CONFLICT;
+        };
+        var response = buildErrorResponse(status, "Assistant Planning", ex.getMessage(), request.getRequestURI(), null);
+        response.getBody().setCode("ASSISTANT_PLANNING_" + ex.getReason());
         return response;
     }
 

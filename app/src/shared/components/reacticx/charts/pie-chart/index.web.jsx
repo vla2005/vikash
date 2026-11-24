@@ -148,8 +148,7 @@ const RootView = memo(function PieChartRoot({
                 stroke="white"
                 strokeWidth={radius - inner + 2 * activeOffset + 4}
                 strokeDasharray={`${length} ${length}`}
-                rotation={startAngle - 90}
-                origin={`${centerX}, ${centerY}`}
+                transform={`rotate(${startAngle - 90} ${centerX} ${centerY})`}
                 style={revealStyle}
               />
             </Mask>
