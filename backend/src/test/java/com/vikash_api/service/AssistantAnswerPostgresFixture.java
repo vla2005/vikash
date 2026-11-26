@@ -11,7 +11,7 @@ final class AssistantAnswerPostgresFixture {
         if(!System.getenv("ASSISTANT_TEST_DB_URL").endsWith("/assistant_catalog_test"))throw new IllegalStateException("Disposable database required");
         try(var c=jdbc.getDataSource().getConnection();var statement=c.createStatement()) {
             for(String name:List.of("2026-10-16-assistant-financial-views.sql","2026-10-16-assistant-reader-permissions.sql","2026-10-16-assistant-query-results.sql","2026-10-16-assistant-answers.sql","2026-10-17-assistant-memory.sql","2026-10-17-assistant-presentation.sql",
-                "2026-11-23-assistant-debt-installments.sql"))
+                "2026-11-23-assistant-debt-installments.sql","2026-11-26-assistant-financial-summaries.sql"))
                 statement.execute(Files.readString(Path.of(System.getProperty("basedir"),"migrations",name)));
             String password=System.getenv("ASSISTANT_READER_TEST_PASSWORD");
             if(!password.matches("[A-Za-z0-9_-]{30,100}"))throw new IllegalStateException("Test credential format");

@@ -1,5 +1,5 @@
 {
-  "version": "financial-v5-2026-11-24",
+  "version": "financial-v6-2026-11-26",
   "dialect": "PostgreSQL 18",
   "timezone": "America/Sao_Paulo",
   "currency": "BRL",
@@ -120,6 +120,36 @@
       }
     },
     {
+      "name": "assistant_finance.debt_overview",
+      "grain": "Uma linha por dívida cadastrada em Contas. Saldos e contagens vêm das parcelas, inclusive progresso pago informado no cadastro; não inclui faturas nem parcelas de cartão.",
+      "columns": {
+        "debt_uuid": "uuid interno para filtro e agrupamento; não exibir",
+        "creditor": "text",
+        "description": "text nullable",
+        "installment_count": "bigint, total de parcelas",
+        "paid_installments": "bigint",
+        "pending_installments": "bigint, maior que zero para dívidas ativas",
+        "total_amount": "numeric",
+        "paid_amount": "numeric",
+        "pending_amount": "numeric",
+        "next_due_date": "date do primeiro vencimento em aberto, inclusive atrasos; nulo se quitada",
+        "max_pending_installment_amount": "numeric, maior valor de parcela em aberto; nulo se quitada"
+      }
+    },
+    {
+      "name": "assistant_finance.monthly_account_cash_flow",
+      "grain": "Uma linha por conta e mês com receitas ou débitos. Transferências próprias são excluídas. Sem categoria ou lançamentos individuais; meses sem movimentação não geram linhas.",
+      "columns": {
+        "account_uuid": "uuid interno para agrupar contas; não exibir",
+        "account_name": "text",
+        "institution_name": "text",
+        "month_start": "date, primeiro dia do mês da movimentação em America/Sao_Paulo",
+        "income": "numeric, total de receitas",
+        "cash_outflow": "numeric, despesas e pagamentos de fatura pela data do débito",
+        "consumption": "numeric, despesas da conta, sem pagamentos de fatura nem compras de cartão"
+      }
+    },
+    {
       "name": "assistant_finance.categories",
       "grain": "Categorias padrão e personalizadas visíveis ao usuário. Nomes não são IDs nem necessariamente únicos.",
       "columns": {
@@ -136,6 +166,8 @@
     "Consumo combinado: despesas EXPENSE das contas + compras totais de cartão por occurred_at. Não adicionar pagamentos de fatura nem parcelas a essa soma.",
     "Consumo mede compras/despesas no período em que ocorreram. Pagamento de fatura quita compras e não é novo consumo; excluí-lo evita contar compra e quitação duas vezes, não significa que os registros estejam duplicados.",
     "Saída de caixa mede dinheiro que efetivamente saiu das contas no período, incluindo faturas pagas nesse período, mesmo quando as compras ocorreram antes. Não somar purchases, installments ou totais de invoices à saída de caixa: o pagamento já está em transactions.",
+    "Para séries mensais de uma conta, sem categoria ou recorte de dias dentro do mês, prefira monthly_account_cash_flow. Filtre account_name quando o pedido identificar a conta pelo nome e institution_name quando identificar o banco. Use transactions para lançamentos, categorias ou períodos parciais.",
+    "Para listar dívidas em aberto que têm parcela individual acima de um valor, use debt_overview.max_pending_installment_amount > :limite. Para somar vencimentos por mês ou listar datas de parcelas, use debt_installments.",
     "Pedido explícito de consumo, pela data da compra ou sem pagamentos de fatura resolve o critério de consumo. Pedido de saída de caixa, dinheiro que saiu das contas ou incluindo pagamentos de fatura resolve saída de caixa. Contas/cartões é escopo. Após uma escolha entre consumo e saída de caixa, ambos significa as duas métricas e mantém o escopo da pergunta. Se as duas métricas forem pedidas sem restringir escopo, use contas e cartões para consumo e contas para caixa.",
     "Reutilizar o critério que o usuário escolheu para continuações como e no mês passado, sem perguntar de novo; uma mudança explícita de critério prevalece sobre o histórico e a memória. Se pedir as duas visões, retornar métricas separadas e nunca somá-las. Em interpretation informar a visão, o escopo, o período e o tratamento dos pagamentos de fatura para o redator explicar o resultado.",
     "Gastos do cartão por compra: purchases e occurred_at. Compromissos mensais do cartão: installments e reference_month. Fatura a pagar: invoices e status.",
@@ -165,6 +197,19 @@
         { "name": "fim", "type": "date", "value": "2026-11-01" },
         { "name": "periodo", "type": "text", "value": "Outubro de 2026" }
       ]
+    },
+    {
+      "question": "Tenho alguma dívida com parcelas acima de 1500 reais por mês?",
+      "decision": "query",
+      "debtMatchCriterion": null,
+      "sql": "SELECT creditor, description, max_pending_installment_amount, next_due_date FROM assistant_finance.debt_overview WHERE max_pending_installment_amount > :limite ORDER BY max_pending_installment_amount DESC, creditor, debt_uuid",
+      "parameters": [{ "name": "limite", "type": "decimal", "value": "1500" }]
+    },
+    {
+      "question": "Mostre a saída de caixa da minha conta Inter mês a mês.",
+      "decision": "query",
+      "sql": "SELECT TO_CHAR(month_start, 'YYYY-MM') AS mes, SUM(cash_outflow) AS saida_de_caixa FROM assistant_finance.monthly_account_cash_flow WHERE account_name ILIKE :conta GROUP BY month_start ORDER BY month_start",
+      "parameters": [{ "name": "conta", "type": "text", "value": "%Inter%" }]
     },
     {
       "question": "Quais dívidas ativas são de compras de eletrônicos?",

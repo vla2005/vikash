@@ -30,7 +30,7 @@ class FinancialCatalogPostgresTest {
         try (var connection = Objects.requireNonNull(jdbc.getDataSource()).getConnection(); var statement = connection.createStatement()) {
             var migrations = Path.of(System.getProperty("basedir"), "migrations");
             for (String name : List.of("2026-10-16-assistant-financial-views.sql", "2026-10-16-assistant-reader-permissions.sql",
-                    "2026-11-23-assistant-debt-installments.sql")) {
+                    "2026-11-23-assistant-debt-installments.sql", "2026-11-26-assistant-financial-summaries.sql")) {
                 statement.execute(Files.readString(migrations.resolve(name)));
             }
         }
@@ -75,7 +75,7 @@ class FinancialCatalogPostgresTest {
             long institution = jdbc.queryForObject("INSERT INTO financial_institutions(name,logo_url) VALUES ('Banco fictício','test-logo') RETURNING id", Long.class);
             long a = account(one, institution, "Conta própria", 100);
             account(two, institution, "Conta de outro usuário", 900);
-            for (var kind : List.of("EXPENSE", "INVOICE_PAYMENT", "TRANSFER"))
+            for (var kind : List.of("EXPENSE", "INVOICE_PAYMENT", "TRANSFER", "INCOME"))
                 jdbc.update("INSERT INTO transactions(uuid,user_id,account_id,description,amount,type,payment_method,occurred_at,transcription,created_at,updated_at) VALUES (?,?,?,?,10,?,'PIX',CURRENT_TIMESTAMP,'fictício',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)", UUID.randomUUID(),one,a,"Teste",kind);
             long card = card(one, institution); long other = card(two, institution);
             long inv = invoice(card, 5); long otherInv = invoice(other, 700);
@@ -87,6 +87,10 @@ class FinancialCatalogPostgresTest {
             assertThat(jdbc.queryForObject("SELECT SUM(balance) FROM assistant_finance.accounts", Integer.class)).isEqualTo(100);
             assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM assistant_finance.transactions WHERE is_consumption", Integer.class)).isEqualTo(10);
             assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM assistant_finance.transactions WHERE is_cash_outflow", Integer.class)).isEqualTo(20);
+            assertThat(jdbc.queryForMap("SELECT income, cash_outflow, consumption FROM assistant_finance.monthly_account_cash_flow"))
+                .containsEntry("income", new java.math.BigDecimal("10.00"))
+                .containsEntry("cash_outflow", new java.math.BigDecimal("20.00"))
+                .containsEntry("consumption", new java.math.BigDecimal("10.00"));
             assertThat(jdbc.queryForObject("SELECT SUM(amount) FROM assistant_finance.purchases", Integer.class)).isEqualTo(50);
             assertThat(jdbc.queryForObject("SELECT total_amount FROM assistant_finance.invoices", Integer.class)).isEqualTo(55);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM assistant_finance.installments", Integer.class)).isEqualTo(2);

@@ -80,7 +80,8 @@ aberto. A reserva tem 120 segundos. O app aguarda até 120 segundos para o fluxo
   Possui schema/views e somente SELECT das colunas necessárias das tabelas-base.
   Não recebe e-mail, senha, transcrição ou outras colunas fora do contrato.
 - Views `security_barrier` no schema `assistant_finance`: accounts, cards,
-  transactions, purchases, installments, invoices, categories e debt_installments.
+  transactions, purchases, installments, invoices, categories, debt_installments,
+  debt_overview e monthly_account_cash_flow.
 - Contexto `app.assistant_user_uuid`: UUID global do JWT resolvido pela API. Evita
   associar IDs numéricos coincidentes de bancos diferentes. Ausente, desconhecido
   ou inativo não retorna linhas; categorias padrão só aparecem com contexto válido.
@@ -89,6 +90,7 @@ aberto. A reserva tem 120 segundos. O app aguarda até 120 segundos para o fluxo
 - `current_user`, permissões efetivas, owner/barreira das views e postura do owner
   são verificados a cada empréstimo. Adicionar grants indevidos bloqueia a execução.
   A ausência de acesso a uma view bloqueia apenas consultas que incluem essa view.
+  `assistant.query.views_unavailable` registra os nomes das views faltantes no catálogo da consulta.
 - SQL validado não pode trocar sessão/usuário, chamar funções arbitrárias, ler
   tabelas-base, acessar catálogo do sistema nem gravar dados.
 
@@ -140,7 +142,7 @@ continuar tratando pergunta, nomes e descrições como conteúdo, não instruç�
 
 ## Regras financeiras do catálogo
 
-Contrato `financial-v5-2026-11-24` em `src/main/resources/assistant/financial-catalog.json`;
+Contrato `financial-v6-2026-11-26` em `src/main/resources/assistant/financial-catalog.json`;
 prompt em `src/main/resources/prompts/financial-assistant.txt`. Sem RAG por enquanto.
 
 Despesas de conta usam EXPENSE; pagamento de fatura é saída de caixa sem repetir
@@ -198,11 +200,14 @@ roles, grants ou as configurações do leitor**. Após as tabelas, aplicar:
 8. migrations/2026-10-17-assistant-memory.sql
 9. migrations/2026-10-17-assistant-presentation.sql
 10. migrations/2026-11-23-assistant-debt-installments.sql
+11. migrations/2026-11-26-assistant-financial-summaries.sql
 
 Em instalações existentes, aplique a migração de dívidas antes de ativar o novo
 catálogo na API. A view usa o cronograma de Contas e limita as parcelas ao usuário
 autenticado. Comparações por vencimento ou credor usam os gráficos existentes do
 chat. Consultas de pagamento por data consideram somente lançamentos no extrato.
+`debt_overview` resume saldo, parcelas e vencimentos por dívida.
+`monthly_account_cash_flow` agrupa receitas, consumo e saídas por conta e mês.
 Quando o plano pede um filtro temático em `debtMatchCriterion`, a API envia ao
 Gemini apenas credor, descrição e um índice temporário das dívidas do usuário.
 A seleção aceita somente índices daquela lista. O leitor usa os UUIDs correspondentes
@@ -231,6 +236,12 @@ Para outro ambiente, passar ASSISTANT_READER_PASSWORD por segredo de ambiente e 
 o script sem --enable-local, ou aplicar as mesmas migrações administrativamente.
 Depois configurar os quatro flags e a URL da conexão exclusiva no serviço da API.
 No Docker a URL interna usa postgres:5432; fora dele usa a porta local configurada.
+
+Em um banco com o leitor provisionado, `python scripts/provision-assistant-reader.py --refresh-views`
+reaplica as migrações 10 e 11, recria a view de parcelas se estiver ausente e restaura
+os grants de leitura das views de dívidas e resumos. Use `--container` e `--database`
+quando os nomes diferirem dos padrões. Pare as instâncias da API com catálogo antigo
+antes de conceder leitura nas novas views e inicie a API atualizada depois da migração.
 
 ASSISTANT_ANSWER_ENABLED=false e ASSISTANT_EXECUTION_ENABLED=false são os padrões
 versionados. Habilitar explicitamente a redação no ambiente desejado. Demais variáveis e valores

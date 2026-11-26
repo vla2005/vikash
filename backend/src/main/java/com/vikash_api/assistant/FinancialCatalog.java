@@ -23,7 +23,7 @@ public class FinancialCatalog {
         version = catalog.path("version").asText();
         var names = new LinkedHashSet<String>();
         catalog.path("views").forEach(view -> names.add(view.path("name").asText()));
-        if (version.isBlank() || names.size() != 8 || names.stream().anyMatch(n -> !n.matches("assistant_finance\\.[a-z_]+")))
+        if (version.isBlank() || names.size() != 10 || names.stream().anyMatch(n -> !n.matches("assistant_finance\\.[a-z_]+")))
             throw new IllegalStateException("Catálogo financeiro inválido.");
         viewNames = Set.copyOf(names);
         var definitions = new LinkedHashMap<String, Set<String>>();

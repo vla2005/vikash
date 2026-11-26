@@ -216,7 +216,11 @@ public class AssistantQueryExecutor implements AutoCloseable {
                 }
             }
         }
-        if (!readable.containsAll(requiredViews)) throw new AssistantQueryException("ISOLATION_GUARD");
+        if (!readable.containsAll(requiredViews)) {
+            var missing=requiredViews.stream().filter(view->!readable.contains(view)).sorted().toList();
+            log.warn("event=assistant.query.views_unavailable views={}",missing);
+            throw new AssistantQueryException("ISOLATION_GUARD");
+        }
         String ownerSql="SELECT NOT(rolcanlogin OR rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb OR rolreplication OR rolinherit) AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_auth_members WHERE member=owner.oid OR roleid=owner.oid) FROM pg_catalog.pg_roles owner WHERE rolname='vikash_assistant_view_owner'";
         try (var statement=connection.createStatement();var rows=statement.executeQuery(ownerSql)) {
             if (!rows.next() || !rows.getBoolean(1)) throw new AssistantQueryException("ISOLATION_GUARD");

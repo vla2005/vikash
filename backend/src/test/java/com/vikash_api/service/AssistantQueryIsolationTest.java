@@ -70,7 +70,7 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
     void migrate() throws Exception {
         try(var connection=jdbc.getDataSource().getConnection();var statement=connection.createStatement()) {
             for(String script:List.of("2026-10-16-assistant-financial-views.sql","2026-10-16-assistant-reader-permissions.sql","2026-10-16-assistant-query-results.sql",
-                "2026-11-23-assistant-debt-installments.sql"))
+                "2026-11-23-assistant-debt-installments.sql","2026-11-26-assistant-financial-summaries.sql"))
                 statement.execute(Files.readString(migrations.resolve(script)));
         }
     }
@@ -112,7 +112,8 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
     void reason(Runnable action,String reason) { assertThatThrownBy(action::run).isInstanceOfSatisfying(AssistantQueryException.class,e->assertThat(e.getReason()).isEqualTo(reason)); }
 
     @Test void everyFinancialViewRestrictsRowsToAuthenticatedUuidOnReusedConnection() {
-        var expressions=Map.of("accounts","balance","cards","credit_limit","transactions","amount","purchases","amount","installments","amount","invoices","total_amount","debt_installments","amount");
+        var expressions=Map.of("accounts","balance","cards","credit_limit","transactions","amount","purchases","amount","installments","amount","invoices","total_amount","debt_installments","amount",
+                "monthly_account_cash_flow","cash_outflow","debt_overview","total_amount");
         for(var entry:expressions.entrySet()) {
             var plan=plan("SELECT SUM("+entry.getValue()+") AS total FROM assistant_finance."+entry.getKey(),entry.getKey());
             assertThat(amount(run(executor,one,plan))).isEqualByComparingTo("100");
@@ -122,6 +123,30 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
         var categories=plan("SELECT category_name FROM assistant_finance.categories WHERE is_custom=true","categories");
         assertThat(run(executor,one,categories).snapshot().get("rows").toString()).contains("Categoria 100").doesNotContain("Categoria 900");
         assertThat(run(executor,two,categories).snapshot().get("rows").toString()).contains("Categoria 900").doesNotContain("Categoria 100");
+    }
+    @Test void groupsCashOutflowByMonthForOneAccount() {
+        var plan=new FinancialPlan(catalog.version(),FinancialPlan.Decision.query,"Saída de caixa mensal",
+                "SELECT TO_CHAR(month_start, 'YYYY-MM') AS mes, SUM(cash_outflow) AS total FROM assistant_finance.monthly_account_cash_flow WHERE account_name ILIKE :conta GROUP BY month_start ORDER BY month_start",
+                List.of(new FinancialPlan.Parameter("conta","text","Conta 100")),List.of("assistant_finance.monthly_account_cash_flow"),null);
+        assertThat(amount(run(executor,one,plan))).isEqualByComparingTo("100");
+        assertThat(run(executor,two,plan).snapshot()).containsEntry("rowCount",0);
+    }
+    @Test void findsDebtsAboveAPendingInstallmentThreshold() {
+        var user=fixtureUser("threshold");
+        fixtureData(user,4002);
+        jdbc.update("""
+            INSERT INTO debts(uuid,user_id,creditor,total_amount,installment_count,initially_paid_installments,
+                              paid_installments,initial_next_due_date,version)
+            VALUES (?,?,'No limite',3000,2,0,0,DATE '2026-11-21',0),
+                   (?,?,'Quitada',4000,2,2,2,DATE '2026-11-21',0)
+            """,UUID.randomUUID(),user.getId(),UUID.randomUUID(),user.getId());
+        var plan=new FinancialPlan(catalog.version(),FinancialPlan.Decision.query,"Parcelas em aberto acima do limite",
+                "SELECT max_pending_installment_amount AS total FROM assistant_finance.debt_overview WHERE max_pending_installment_amount > :limite",
+                List.of(new FinancialPlan.Parameter("limite","decimal","1500")),List.of("assistant_finance.debt_overview"),null);
+        var result=run(executor,user,plan);
+        assertThat(result.snapshot()).containsEntry("rowCount",1);
+        assertThat(amount(result)).isEqualByComparingTo("2001");
+        assertThat(run(executor,two,plan).snapshot()).containsEntry("rowCount",0);
     }
     @Test void concurrentUsersCannotBorrowAnotherUsersContext() throws Exception {
         var plan=plan("SELECT SUM(balance) AS total FROM assistant_finance.accounts","accounts");

@@ -128,6 +128,13 @@ class AssistantSqlValidatorTest {
     @Test void rejectsFanOutJoinsEvenWhenColumnNamesMatch() {
         assertThatThrownBy(()->validator.validate(plan("SELECT p.amount FROM assistant_finance.purchases p JOIN assistant_finance.invoices i ON p.card_uuid=i.card_uuid",List.of(),List.of("assistant_finance.purchases","assistant_finance.invoices")))).isInstanceOf(AssistantSqlRejectedException.class);
     }
+    @Test void appliesThemeSelectionToEveryDebtViewInThePlan() {
+        var thematicPlan=new FinancialPlan(catalog.version(),FinancialPlan.Decision.query,"Dívidas de viagem",
+                "SELECT total_amount FROM assistant_finance.debt_overview UNION ALL SELECT amount FROM assistant_finance.debt_installments",
+                List.of(),List.of("assistant_finance.debt_overview","assistant_finance.debt_installments"),null,"Viagens");
+        var validated=validator.validate(thematicPlan);
+        assertThat(validated.sql().split(":__assistant_debt_ids",-1)).hasSize(3);
+    }
 
     static Stream<String> hiddenFunctionAttacks() {
         var functions=List.of("pg_sleep(3)","pg_read_file('/etc/passwd')","set_config('app.assistant_user_id','2',true)",

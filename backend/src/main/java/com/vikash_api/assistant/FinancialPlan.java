@@ -1,6 +1,7 @@
 package com.vikash_api.assistant;
 
 import java.util.List;
+import java.util.Set;
 
 /** Proposta do modelo. Nenhum objeto deste tipo autoriza execução de SQL. */
 public record FinancialPlan(String catalogVersion, Decision decision, String interpretation,
@@ -11,8 +12,9 @@ public record FinancialPlan(String catalogVersion, Decision decision, String int
     }
 
     static final String DEBT_VIEW = "assistant_finance.debt_installments";
+    static final Set<String> DEBT_VIEWS = Set.of(DEBT_VIEW, "assistant_finance.debt_overview");
     boolean validDebtMatch() {
-        return debtMatchCriterion == null || decision == Decision.query && views != null && views.contains(DEBT_VIEW)
+        return debtMatchCriterion == null || decision == Decision.query && views != null && views.stream().anyMatch(DEBT_VIEWS::contains)
                 && !debtMatchCriterion.isBlank() && debtMatchCriterion.length() <= 500;
     }
 

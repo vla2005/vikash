@@ -14,7 +14,9 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--container",default="vikash-postgres-1")
     parser.add_argument("--database",default="vikash_db")
-    parser.add_argument("--enable-local",action="store_true",help="Salva a configuração no backend/.env local, sem alterar o padrão versionado")
+    mode=parser.add_mutually_exclusive_group()
+    mode.add_argument("--enable-local",action="store_true",help="Salva a configuração no backend/.env local, sem alterar o padrão versionado")
+    mode.add_argument("--refresh-views",action="store_true",help="Atualiza as views de dívidas e os resumos de um leitor já provisionado")
     args=parser.parse_args()
     if not re.fullmatch(r"[a-zA-Z0-9_.-]+",args.container) or not re.fullmatch(r"[a-zA-Z0-9_]+",args.database):
         raise SystemExit("Nome inválido de container/banco.")
@@ -29,12 +31,16 @@ def main():
             key,value=line.split("=",1);values[key.strip()]=value.strip().strip(chr(34)).strip(chr(39))
     password=os.environ.get("ASSISTANT_READER_PASSWORD") or values.get("ASSISTANT_READER_PASSWORD")
     if not password and args.enable_local: password=secrets.token_urlsafe(36)
-    if not password or not re.fullmatch(r"[A-Za-z0-9_-]{30,100}",password):
+    if not args.refresh_views and (not password or not re.fullmatch(r"[A-Za-z0-9_-]{30,100}",password)):
         raise SystemExit("Forneça uma senha exclusiva de 30–100 caracteres seguros via ambiente; no local, permita gerar com --enable-local.")
-    sql="\n".join((root/"migrations"/name).read_text(encoding="utf-8") for name in (
+    base_migrations=(
         "2026-10-16-assistant-financial-views.sql","2026-10-16-assistant-reader-permissions.sql","2026-10-16-assistant-query-results.sql","2026-10-16-assistant-answers.sql","2026-10-17-assistant-memory.sql","2026-10-17-assistant-presentation.sql",
-        "2026-11-23-assistant-debt-installments.sql"))
-    sql+="\nALTER ROLE vikash_assistant_reader LOGIN PASSWORD '"+password+"';\n"
+    )
+    view_migrations=("2026-11-23-assistant-debt-installments.sql","2026-11-26-assistant-financial-summaries.sql")
+    migrations=view_migrations if args.refresh_views else base_migrations+view_migrations
+    sql="\n".join((root/"migrations"/name).read_text(encoding="utf-8") for name in migrations)
+    if not args.refresh_views:
+        sql+="\nALTER ROLE vikash_assistant_reader LOGIN PASSWORD '"+password+"';\n"
     command=["docker","exec","-i",args.container,"sh","-c",'exec psql -X -v ON_ERROR_STOP=1 -q -U "$POSTGRES_USER" -d "$1"',"assistant-setup",args.database]
     result=subprocess.run(command,input=sql,text=True,encoding="utf-8",capture_output=True)
     if result.returncode: raise SystemExit("Provisionamento falhou. Verifique o banco/container e os privilégios administrativos; nenhum detalhe sensível foi exibido.")
@@ -49,6 +55,8 @@ def main():
         lines.extend(key+"="+value for key,value in updates.items())
         env_file.write_text("\n".join(lines)+"\n",encoding="utf-8")
         print("Leitor provisionado e configuração local salva. Reinicie somente a API para ativar.")
+    elif args.refresh_views:
+        print("Views de dívidas e resumos financeiros atualizados. A credencial do leitor foi preservada.")
     else: print("Leitor provisionado. Configure o mesmo segredo no serviço da API antes de habilitar ASSISTANT_EXECUTION_ENABLED.")
 
 if __name__=="__main__": main()

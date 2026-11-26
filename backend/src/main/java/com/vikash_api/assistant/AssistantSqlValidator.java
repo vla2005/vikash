@@ -239,7 +239,7 @@ public final class AssistantSqlValidator {
                 else {
                     columns=catalog.columns().get(full); if (columns==null) throw reject("VIEW_NOT_ALLOWED");
                     views.add(full);name=id(table.getName());sql=q("assistant_finance")+"."+q(name);
-                    if (matchDebts && full.equals(FinancialPlan.DEBT_VIEW)) {
+                    if (matchDebts && FinancialPlan.DEBT_VIEWS.contains(full)) {
                         // Apply the trusted UUID selection before any projection or aggregation.
                         sql="(SELECT * FROM "+sql+" WHERE debt_uuid = ANY(CAST(:"+DEBT_MATCH_BINDING+" AS uuid[])))";
                     }
