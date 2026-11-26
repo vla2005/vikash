@@ -21,8 +21,10 @@ public class AssistantAnswerFormatter {
     private final ObjectMapper mapper;
     private static final Pattern TOKEN=Pattern.compile("\\{\\{([rp][0-9]+(?:c[0-9]+)?):(money|number|text|date)\\}\\}");
     private static final Pattern UNSAFE=Pattern.compile("(?i)https?://|www\\.|<|>|```|\\b(?:SELECT|INSERT|UPDATE|DELETE|DROP|pg_catalog|assistant_finance|systemInstruction|api[_ -]?key)\\b");
+    private static final Pattern LIKE_FILTER=Pattern.compile("%*((?:\\\\.|[^%\\\\])+)%*",Pattern.DOTALL);
     public AssistantAnswerFormatter(ObjectMapper mapper) { this.mapper=mapper; }
     private record Fact(String column,Map<String,String> formats,boolean result) {}
+    private record FilterParameters(Set<String> exclusiveEnds,Set<String> likePatterns) {}
     public static final class Evidence {
         private final String hash;
         private final Map<String,Object> payload;
@@ -61,12 +63,21 @@ public class AssistantAnswerFormatter {
                     add(facts,sent,"r"+r+"c"+c,column,formats(value),true);
                 }
             }
-            var exclusiveEnds=exclusiveEnds(input.plan().sql());
+            var filters=filterParameters(input.plan().sql());
+            String interpretation=input.plan().interpretation();
             for(int i=0;i<input.plan().parameters().size();i++) {
                 var parameter=input.plan().parameters().get(i);
-                var formats=new LinkedHashMap<String,String>();formats.put("text",parameter.value());
+                String text=parameter.value();
+                if ("text".equals(parameter.type()) && filters.likePatterns().contains(parameter.name())) {
+                    var match=LIKE_FILTER.matcher(text);
+                    if (match.matches()) {
+                        text=match.group(1).replaceAll("\\\\([%_\\\\])","$1");
+                        if (interpretation!=null) interpretation=interpretation.replace(parameter.value(),text);
+                    }
+                }
+                var formats=new LinkedHashMap<String,String>();formats.put("text",text);
                 if (Set.of("date","timestamp").contains(parameter.type())) {
-                    String suffix=exclusiveEnds.contains(parameter.name())?" (não incluído)":"";
+                    String suffix=filters.exclusiveEnds().contains(parameter.name())?" (não incluído)":"";
                     formats.put("text",parameter.value()+suffix);
                     if(parameter.type().equals("date"))formats.put("date",date(parameter.value())+suffix);
                 }
@@ -74,7 +85,7 @@ public class AssistantAnswerFormatter {
             }
             var payload=new LinkedHashMap<String,Object>();
             payload.put("question",input.question());payload.put("messages",input.history());payload.put("conversationMemory",input.memory());
-            payload.put("interpretation",input.plan().interpretation());
+            payload.put("interpretation",interpretation);
             payload.put("rowCount",rows.size());payload.put("resultMayBeLimited",rows.size()>=100);payload.put("queriedAt",result.path("executedAt").asText());
             payload.put("facts",List.copyOf(sent));payload.put("currency","BRL");payload.put("timezone","America/Sao_Paulo");
             return new Evidence(fingerprint(input,mapper),Collections.unmodifiableMap(payload),Map.copyOf(facts),result);
@@ -102,28 +113,29 @@ public class AssistantAnswerFormatter {
         if(text.matches("\\d{4}-\\d{2}-\\d{2}")) formats.put("date",date(text));
         return Map.copyOf(formats);
     }
-    // Lê somente a AST já validada: nenhum regex sobre literais para inferir limites.
-    private Set<String> exclusiveEnds(String sql) {
-        var ends=new HashSet<String>();
+    // Lê somente a AST já validada, sem inferir filtros pelo conteúdo dos literais.
+    private FilterParameters filterParameters(String sql) {
+        var filters=new FilterParameters(new HashSet<>(),new HashSet<>());
         try {
-            scanBounds(CCJSqlParserUtil.parse(sql,p->p.withTimeOut(1000)),ends,Collections.newSetFromMap(new IdentityHashMap<>()),0);
-            return ends;
+            scanFilters(CCJSqlParserUtil.parse(sql,p->p.withTimeOut(1000)),filters,Collections.newSetFromMap(new IdentityHashMap<>()),0);
+            return filters;
         } catch(Exception failure) { throw new AssistantAnswerException("INVALID",failure); }
     }
-    private void scanBounds(Object node,Set<String> ends,Set<Object> seen,int depth) throws IllegalAccessException {
+    private void scanFilters(Object node,FilterParameters filters,Set<Object> seen,int depth) throws IllegalAccessException {
         if(node==null || seen.contains(node))return;
         if(depth>64)throw invalid();
         if(seen.size()>2500)throw invalid();
-        if(node instanceof Iterable<?> list) { seen.add(node);for(var child:list)scanBounds(child,ends,seen,depth+1);return; }
+        if(node instanceof Iterable<?> list) { seen.add(node);for(var child:list)scanFilters(child,filters,seen,depth+1);return; }
         if(!node.getClass().getPackageName().startsWith("net.sf.jsqlparser"))return;
         seen.add(node);
-        if(node instanceof MinorThan comparison) { String key=parameter(comparison.getRightExpression());if(key!=null)ends.add(key); }
-        if(node instanceof GreaterThan comparison) { String key=parameter(comparison.getLeftExpression());if(key!=null)ends.add(key); }
+        if(node instanceof MinorThan comparison) { String key=parameter(comparison.getRightExpression());if(key!=null)filters.exclusiveEnds().add(key); }
+        if(node instanceof GreaterThan comparison) { String key=parameter(comparison.getLeftExpression());if(key!=null)filters.exclusiveEnds().add(key); }
+        if(node instanceof LikeExpression comparison) { String key=parameter(comparison.getRightExpression());if(key!=null)filters.likePatterns().add(key); }
         for(Class<?> type=node.getClass();type!=null && type.getPackageName().startsWith("net.sf.jsqlparser");type=type.getSuperclass()) {
             if(type.getSimpleName().equals("ASTNodeAccessImpl"))continue;
             for(var field:type.getDeclaredFields()) {
                 if(Modifier.isStatic(field.getModifiers()) || field.isSynthetic())continue;
-                field.setAccessible(true);scanBounds(field.get(node),ends,seen,depth+1);
+                field.setAccessible(true);scanFilters(field.get(node),filters,seen,depth+1);
             }
         }
     }

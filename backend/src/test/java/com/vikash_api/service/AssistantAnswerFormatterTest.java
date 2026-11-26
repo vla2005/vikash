@@ -45,6 +45,18 @@ class AssistantAnswerFormatterTest {
         var end=new FinancialAnswerInput(source.ownerUuid(),source.questionId(),source.question(),List.of(),plan,source.resultJson());
         assertThat(parse(end,"Total {{r0c0:money}}, antes de {{p0:date}}.").content()).contains("01/11/2026 (não incluído)");
     }
+    @Test void presentsLikeFiltersWithoutWildcardsAndKeepsLiteralPercentSigns() {
+        var source=input();
+        var plan=new FinancialPlan(source.plan().catalogVersion(),FinancialPlan.Decision.query,"Saída de caixa para %Inter%",
+                "SELECT SUM(amount) AS total FROM assistant_finance.transactions WHERE institution_name ILIKE :instituicao AND category_name LIKE :categoria AND description=:descricao",
+                List.of(new FinancialPlan.Parameter("instituicao","text","%Inter%"),
+                        new FinancialPlan.Parameter("categoria","text","%Poupança 100\\%%"),
+                        new FinancialPlan.Parameter("descricao","text","%Literal%")),source.plan().views(),null);
+        var filtered=new FinancialAnswerInput(source.ownerUuid(),source.questionId(),source.question(),List.of(),plan,source.resultJson());
+        assertThat(parse(filtered,"Em {{p0:text}}, categoria {{p1:text}}, descrição {{p2:text}}: {{r0c0:money}}.").content())
+                .isEqualTo("Em Inter, categoria Poupança 100%, descrição %Literal%: R$ 1.234.567.890.123.456,78.");
+        assertThat(formatter.prepare(filtered).payload()).containsEntry("interpretation","Saída de caixa para Inter");
+    }
     @Test void rejectsWrongSchemaControlCharactersAndOversizedFinalText() {
         var evidence=formatter.prepare(input());
         for(String json:List.of("{}","{\"template\":null}","{\"template\":3}","{\"template\":\"x\",\"extra\":true}"))
