@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Platform, RefreshControl, Text } from 'react-native';
+import { Platform, RefreshControl, Text, TextInput } from 'react-native';
 import DockBackdrop from '../src/components/silver/DockBackdrop';
 import AssistantExperience from '../src/components/assistant/AssistantExperience';
 import MainTabs from '../src/navigation/MainTabs';
@@ -129,6 +129,9 @@ test('cadastra uma dívida em andamento com descrição e registra a última par
   await act(async () => button('Mostrar cartões').props.onPress());
   expect(labels()).toContain('Dívidas');
   await act(async () => button('Nova dívida').props.onPress());
+  const amountInput = renderer.root.findAllByType(TextInput).find(input => input.props.testID === 'debt-amount');
+  expect(amountInput.props.autoComplete).toBe('off');
+  expect(amountInput.props.importantForAutofill).toBe('no');
   await fillDebtField('debt-creditor', 'Fulano');
   await fillDebtField('debt-description', 'Empréstimo pessoal');
   await fillDebtField('debt-amount', '140000');

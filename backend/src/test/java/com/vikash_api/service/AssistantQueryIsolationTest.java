@@ -197,6 +197,18 @@ class AssistantQueryIsolationTest extends com.vikash_api.support.VerifiedUserFix
         finally { jdbc.execute("ALTER ROLE vikash_assistant_view_owner NOLOGIN"); }
         assertThat(amount(run(executor,two,plan))).isEqualByComparingTo("900");
     }
+    @Test void missingViewGrantOnlyBlocksQueriesUsingThatView() {
+        var monthlyCashFlow=plan("SELECT TO_CHAR(occurred_at,'YYYY-MM') AS mes, SUM(amount) AS total FROM assistant_finance.transactions WHERE is_cash_outflow=true AND account_name='Conta 100' GROUP BY mes ORDER BY mes","transactions");
+        var debts=plan("SELECT SUM(amount) AS total FROM assistant_finance.debt_installments","debt_installments");
+        jdbc.execute("REVOKE SELECT ON assistant_finance.debt_installments FROM vikash_assistant_reader");
+        try {
+            assertThat(amount(run(executor,one,monthlyCashFlow))).isEqualByComparingTo("100");
+            assertThat(run(executor,two,monthlyCashFlow).snapshot()).containsEntry("rowCount",0);
+            reason(()->run(executor,one,debts),"ISOLATION_GUARD");
+        } finally {
+            jdbc.execute("GRANT SELECT ON assistant_finance.debt_installments TO vikash_assistant_reader");
+        }
+    }
     @Test void estimatedCostRowsAndPlanComplexityAreCheckedBeforeExecution() {
         var plan=plan("SELECT SUM(balance) AS total FROM assistant_finance.accounts","accounts");
         try(var target=limited(p->p.setMaxEstimatedCost(new BigDecimal("0.01")))) { reason(()->run(target,one,plan),"COST_LIMIT"); }

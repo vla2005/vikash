@@ -88,6 +88,7 @@ aberto. A reserva tem 120 segundos. O app aguarda até 120 segundos para o fluxo
   categoria personalizada, compra/parcela/fatura e pagamento/dívida.
 - `current_user`, permissões efetivas, owner/barreira das views e postura do owner
   são verificados a cada empréstimo. Adicionar grants indevidos bloqueia a execução.
+  A ausência de acesso a uma view bloqueia apenas consultas que incluem essa view.
 - SQL validado não pode trocar sessão/usuário, chamar funções arbitrárias, ler
   tabelas-base, acessar catálogo do sistema nem gravar dados.
 

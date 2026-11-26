@@ -104,6 +104,7 @@ export default function DebtFormScreen({ debt, accessToken, onBack, onSaved, onS
       : 'Alterar o valor total ou o número de parcelas recalcula os valores do plano, inclusive o total já pago.'}</Text>}
     <View style={s.form}>
       <FormField label="Valor total da dívida" large keyboardType="number-pad" maxLength={22}
+        autoComplete="off" importantForAutofill="no"
         testID="debt-amount" {...field('totalAmount', maskCurrency, lockedPlan)} />
       <FormField label="Para quem você deve" placeholder="Nome da pessoa ou empresa" maxLength={100}
         autoCapitalize="words" testID="debt-creditor" {...field('creditor')} />

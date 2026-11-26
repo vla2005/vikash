@@ -77,7 +77,7 @@ public class AssistantQueryExecutor implements AutoCloseable {
         long started=System.nanoTime();
         log.info("event=assistant.query.start executionVersion={} policyVersion={}",VERSION,AssistantSqlValidator.POLICY_VERSION);
         try (var connection=pool().getConnection()) {
-            verifyReader(connection);
+            verifyReader(connection,plan.views());
             connection.setReadOnly(true);connection.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);connection.setAutoCommit(false);
             try {
                 try (var statement=connection.createStatement()) { statement.execute("SET TRANSACTION READ ONLY"); }
@@ -190,7 +190,7 @@ public class AssistantQueryExecutor implements AutoCloseable {
             return buffer.toString();
         } catch (java.io.IOException failure) { throw new AssistantQueryException("READER_UNAVAILABLE",failure); }
     }
-    private void verifyReader(Connection connection) throws SQLException {
+    private void verifyReader(Connection connection,List<String> requiredViews) throws SQLException {
         String roleSql="SELECT session_user,current_user,rolsuper,rolbypassrls,rolcreaterole,rolcreatedb,rolreplication,rolinherit,rolcanlogin,"+
             "current_setting('server_version_num')::int,current_setting('default_transaction_read_only'),"+
             "(SELECT count(*) FROM pg_catalog.pg_auth_members WHERE member=role.oid) FROM pg_catalog.pg_roles role WHERE rolname=current_user";
@@ -216,7 +216,7 @@ public class AssistantQueryExecutor implements AutoCloseable {
                 }
             }
         }
-        if (!readable.equals(catalog.viewNames())) throw new AssistantQueryException("ISOLATION_GUARD");
+        if (!readable.containsAll(requiredViews)) throw new AssistantQueryException("ISOLATION_GUARD");
         String ownerSql="SELECT NOT(rolcanlogin OR rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb OR rolreplication OR rolinherit) AND NOT EXISTS(SELECT 1 FROM pg_catalog.pg_auth_members WHERE member=owner.oid OR roleid=owner.oid) FROM pg_catalog.pg_roles owner WHERE rolname='vikash_assistant_view_owner'";
         try (var statement=connection.createStatement();var rows=statement.executeQuery(ownerSql)) {
             if (!rows.next() || !rows.getBoolean(1)) throw new AssistantQueryException("ISOLATION_GUARD");
